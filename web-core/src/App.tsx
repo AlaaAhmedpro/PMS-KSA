@@ -6,6 +6,8 @@ import { useOrgModules } from "./hooks/useOrgModules";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { ChangePassword } from "./pages/ChangePassword";
+import { ActivateAccount } from "./pages/ActivateAccount";
 import { HierarchyDashboard } from "./pages/HierarchyDashboard";
 import { PortfoliosPage } from "./pages/PortfoliosPage";
 import { PortfolioFormPage } from "./pages/PortfolioFormPage";
@@ -16,6 +18,7 @@ import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { TasksPage } from "./pages/TasksPage";
 import { PeoplePage } from "./pages/PeoplePage";
+import { VendorsPage } from "./pages/VendorsPage";
 import { Permissions } from "./pages/Permissions";
 import { Reports } from "./pages/Reports";
 import { Archive } from "./pages/Archive";
@@ -39,6 +42,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
       /* ignore */
     }
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  if (
+    user.mustChangePassword &&
+    location.pathname !== "/change-password"
+  ) {
+    return <Navigate to="/change-password" replace />;
   }
   return <>{children}</>;
 }
@@ -65,6 +74,15 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/activate" element={<ActivateAccount />} />
+      <Route
+        path="/change-password"
+        element={
+          <RequireAuth>
+            <ChangePassword />
+          </RequireAuth>
+        }
+      />
 
       <Route
         element={
@@ -213,6 +231,16 @@ export default function App() {
           element={
             <RequirePerm allow={can.managePeople(role)}>
               <PeoplePage />
+            </RequirePerm>
+          }
+        />
+        <Route
+          path="/vendors"
+          element={
+            <RequirePerm
+              allow={role === "org_admin" || role === "vendor_admin"}
+            >
+              <VendorsPage />
             </RequirePerm>
           }
         />

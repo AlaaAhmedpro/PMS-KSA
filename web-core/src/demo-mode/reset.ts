@@ -29,6 +29,7 @@ import {
   SEED_WORK_ATTACHMENTS,
   SEED_WORK_COMMENTS,
 } from "../lib/projectWorkSeed";
+import { SEED_VENDORS, SEED_VENDOR_USERS } from "../lib/vendorSeed";
 import { ENTITIES, SEED_NOTIFICATIONS, SEED_RECORDS } from "../lib/mockData";
 import {
   DEFAULT_MATRIX,
@@ -38,12 +39,12 @@ import {
   SEED_DEPARTMENTS,
 } from "../lib/constants";
 
-export const DEMO_DATA_VERSION = 20261116;
+export const DEMO_DATA_VERSION = 20261121;
 
 /** Wipe demo localStorage collections and restore seed datasets. */
 export function resetAllDemoData(): void {
   saveJson(LS.demoVersion, String(DEMO_DATA_VERSION));
-  saveJson(LS.users, SEED_DEMO_USERS);
+  saveJson(LS.users, [...SEED_DEMO_USERS, ...SEED_VENDOR_USERS]);
   saveJson(LS.organizations, [SEED_ORG]);
   saveJson(LS.objectives, SEED_OBJECTIVES);
   saveJson(LS.portfolios, SEED_PORTFOLIOS);
@@ -58,6 +59,7 @@ export function resetAllDemoData(): void {
   saveJson(LS.projectExpenses, SEED_PROJECT_EXPENSES);
   saveJson(LS.projectActivities, SEED_PROJECT_ACTIVITIES);
   saveJson(LS.projectMaterials, SEED_PROJECT_MATERIALS);
+  saveJson(LS.vendors, SEED_VENDORS);
   saveJson(LS.invites, SEED_INVITES);
   saveJson(LS.relationships, SEED_RELATIONSHIPS);
   saveJson(LS.relationshipHistory, SEED_RELATIONSHIP_HISTORY);

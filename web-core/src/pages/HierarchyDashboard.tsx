@@ -146,7 +146,7 @@ export function HierarchyDashboard() {
             to="/tasks"
             className="mt-3 inline-flex text-sm font-bold text-brand-600 hover:underline"
           >
-            عرض كل المهام
+            مهامي
           </Link>
         </Card>
       </div>

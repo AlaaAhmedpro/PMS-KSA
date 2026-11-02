@@ -57,6 +57,7 @@ const AR: Dict = {
   "role.external": "مستخدم خارجي",
   "role.executive": "الإدارة العليا",
   "role.pr": "التواصل المؤسسي",
+  "role.vendorAdmin": "مسؤول المورد",
   "lang.ar": "عربي",
   "lang.en": "English",
 };
@@ -104,6 +105,7 @@ const EN: Dict = {
   "role.external": "External user",
   "role.executive": "Executive",
   "role.pr": "Corporate communications",
+  "role.vendorAdmin": "Vendor admin",
   "lang.ar": "عربي",
   "lang.en": "English",
 };

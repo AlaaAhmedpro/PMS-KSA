@@ -77,7 +77,11 @@ export function filterProjectsForUser(
   },
 ): Project[] {
   if (opts.role === "org_admin" || opts.role === "executive") return projects;
-  if (opts.role === "external") {
+  if (
+    opts.role === "external" ||
+    opts.role === "vendor_admin" ||
+    opts.role === "vendor_member"
+  ) {
     const ids = new Set(opts.scopedProjectIds ?? []);
     return projects.filter((p) => ids.has(p.id));
   }

@@ -503,6 +503,7 @@ export function ProjectsPage() {
         open={open}
         onClose={closeModal}
         title={editingId ? "تعديل مشروع" : "إضافة مشروع"}
+        subtitle={editingId ? name || undefined : "إنشاء مشروع جديد ضمن المنشأة"}
         size="lg"
         footer={
           <>

@@ -1,0 +1,78 @@
+import { DEMO_MODE } from "../demo-mode/config";
+import type { DemoUser, Vendor } from "../models/domain";
+import { SEED_ORG } from "./hierarchySeed";
+
+export const SEED_VENDORS: Vendor[] = [
+  {
+    id: "vnd-1",
+    organizationId: SEED_ORG.id,
+    name: "شركة أفق للمقاولات العامة",
+    commercialRegister: "1010897452",
+    city: "الرياض",
+    contactName: "خالد فهد القحطاني",
+    contactEmail: "vendor.admin@ofoq.sa",
+    contactPhone: "0558123490",
+    contactUserId: "u-vnd-admin-1",
+    website: "https://ofoq.sa",
+    status: "active",
+    projectIds: ["prj-1", "prj-standalone-1"],
+    createdAt: "2026-02-10T08:00:00.000Z",
+  },
+  {
+    id: "vnd-2",
+    organizationId: SEED_ORG.id,
+    name: "مؤسسة نُور للخدمات الفنية",
+    commercialRegister: "4030788121",
+    city: "جدة",
+    contactName: "سارة منصور الغامدي",
+    contactEmail: "vendor.admin@noor.sa",
+    contactPhone: "0547231865",
+    contactUserId: "u-vnd-admin-2",
+    website: "https://noor-tech.sa",
+    status: "active",
+    projectIds: ["prj-2"],
+    createdAt: "2026-03-01T09:00:00.000Z",
+  },
+];
+
+export const SEED_VENDOR_USERS: DemoUser[] = [
+  {
+    id: "u-vnd-admin-1",
+    name: "خالد فهد القحطاني",
+    email: "vendor.admin@ofoq.sa",
+    phone: "0558123490",
+    password: DEMO_MODE.defaultPassword,
+    role: "vendor_admin",
+    organizationId: SEED_ORG.id,
+    vendorId: "vnd-1",
+    scopedProjectIds: ["prj-1", "prj-standalone-1"],
+    active: true,
+    emailVerified: true,
+  },
+  {
+    id: "u-vnd-member-1",
+    name: "عبدالرحمن سعيد الحربي",
+    email: "tech@ofoq.sa",
+    phone: "0534412789",
+    password: DEMO_MODE.defaultPassword,
+    role: "vendor_member",
+    organizationId: SEED_ORG.id,
+    vendorId: "vnd-1",
+    scopedProjectIds: ["prj-1"],
+    active: true,
+    emailVerified: true,
+  },
+  {
+    id: "u-vnd-admin-2",
+    name: "سارة منصور الغامدي",
+    email: "vendor.admin@noor.sa",
+    phone: "0547231865",
+    password: DEMO_MODE.defaultPassword,
+    role: "vendor_admin",
+    organizationId: SEED_ORG.id,
+    vendorId: "vnd-2",
+    scopedProjectIds: ["prj-2"],
+    active: true,
+    emailVerified: true,
+  },
+];

@@ -28,6 +28,7 @@ export const LS = {
   projectExpenses: "pms_core_project_expenses_v1",
   projectActivities: "pms_core_project_activities_v1",
   projectMaterials: "pms_core_project_materials_v1",
+  vendors: "pms_core_vendors_v1",
   invites: "pms_core_invites_v1",
   relationships: "pms_core_relationships_v1",
   relationshipHistory: "pms_core_relationship_history_v1",

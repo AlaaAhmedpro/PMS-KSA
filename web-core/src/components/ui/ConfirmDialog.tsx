@@ -1,4 +1,4 @@
-import { Modal } from "./Modal";
+import { Modal, ModalCard } from "./Modal";
 import { Button } from "./Button";
 
 export interface ConfirmDialogProps {
@@ -39,9 +39,11 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm leading-relaxed text-steel-600 dark:text-steel-300">
-        {message}
-      </p>
+      <ModalCard>
+        <p className="text-sm leading-relaxed text-steel-600 dark:text-steel-300">
+          {message}
+        </p>
+      </ModalCard>
     </Modal>
   );
 }

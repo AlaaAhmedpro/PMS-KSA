@@ -37,6 +37,7 @@ import {
   SEED_WORK_ATTACHMENTS,
   SEED_WORK_COMMENTS,
 } from "../lib/projectWorkSeed";
+import { SEED_VENDORS } from "../lib/vendorSeed";
 import {
   generatePortfolioCode,
   normalizePortfolio,
@@ -67,6 +68,7 @@ import type {
   StrategicEntityType,
   StrategicObjective,
   TaskItem,
+  Vendor,
   WorkAttachment,
   WorkComment,
 } from "../models/domain";
@@ -107,12 +109,17 @@ interface HierarchyCtx {
   projectExpenses: ProjectExpense[];
   projectActivities: ProjectActivity[];
   projectMaterials: ProjectMaterial[];
+  vendors: Vendor[];
   invites: DemoInvite[];
   relationships: EntityRelationship[];
   relationshipHistory: RelationshipHistoryEvent[];
   portfolioRisks: PortfolioRisk[];
   portfolioBenefits: PortfolioBenefit[];
   portfolioAudit: PortfolioAuditEvent[];
+  addVendor: (v: Omit<Vendor, "id" | "createdAt">) => Vendor;
+  updateVendor: (id: string, patch: Partial<Vendor>) => void;
+  removeVendor: (id: string) => void;
+  setVendorProjects: (vendorId: string, projectIds: string[]) => void;
   addPortfolio: (p: Omit<Portfolio, "id">) => Portfolio;
   updatePortfolio: (id: string, patch: Partial<Portfolio>, actorUserId?: string) => void;
   removePortfolio: (id: string) => { ok: boolean; reason?: string };
@@ -265,6 +272,9 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
   const [materialsAll, setMaterials] = useState(() =>
     loadJson(LS.projectMaterials, SEED_PROJECT_MATERIALS),
   );
+  const [vendorsAll, setVendors] = useState(() =>
+    loadJson(LS.vendors, SEED_VENDORS),
+  );
   const [invitesAll, setInvites] = useState(() => loadJson(LS.invites, SEED_INVITES));
   const [relationshipsAll, setRelationships] = useState(() =>
     loadJson(LS.relationships, SEED_RELATIONSHIPS),
@@ -298,6 +308,7 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
   useEffect(() => saveJson(LS.projectExpenses, expensesAll), [expensesAll]);
   useEffect(() => saveJson(LS.projectActivities, activitiesAll), [activitiesAll]);
   useEffect(() => saveJson(LS.projectMaterials, materialsAll), [materialsAll]);
+  useEffect(() => saveJson(LS.vendors, vendorsAll), [vendorsAll]);
   useEffect(() => saveJson(LS.invites, invitesAll), [invitesAll]);
   useEffect(() => saveJson(LS.relationships, relationshipsAll), [relationshipsAll]);
   useEffect(
@@ -406,6 +417,10 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
     () => portfolioAuditAll.filter((r) => r.organizationId === orgId),
     [portfolioAuditAll, orgId],
   );
+  const vendors = useMemo(
+    () => vendorsAll.filter((v) => v.organizationId === orgId),
+    [vendorsAll, orgId],
+  );
 
   const syncProjectProgress = (projectId: string, nextTasks: TaskItem[]) => {
     const progress = recalcProjectProgress(nextTasks.filter((t) => t.projectId === projectId));
@@ -430,12 +445,32 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       projectExpenses,
       projectActivities,
       projectMaterials,
+      vendors,
       invites,
       relationships,
       relationshipHistory,
       portfolioRisks,
       portfolioBenefits,
       portfolioAudit,
+      addVendor: (v) => {
+        const row: Vendor = {
+          ...v,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        };
+        setVendors((prev) => [row, ...prev]);
+        return row;
+      },
+      updateVendor: (id, patch) =>
+        setVendors((prev) =>
+          prev.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        ),
+      removeVendor: (id) =>
+        setVendors((prev) => prev.filter((v) => v.id !== id)),
+      setVendorProjects: (vendorId, projectIds) =>
+        setVendors((prev) =>
+          prev.map((v) => (v.id === vendorId ? { ...v, projectIds } : v)),
+        ),
       addPortfolio: (p) => {
         const stamp = new Date().toISOString();
         const code =
@@ -1170,6 +1205,7 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
         setExpenses(SEED_PROJECT_EXPENSES);
         setActivities(SEED_PROJECT_ACTIVITIES);
         setMaterials(SEED_PROJECT_MATERIALS);
+        setVendors(SEED_VENDORS);
         setInvites(SEED_INVITES);
         setRelationships(SEED_RELATIONSHIPS);
         setRelationshipHistory(SEED_RELATIONSHIP_HISTORY);
@@ -1193,6 +1229,7 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       projectExpenses,
       projectActivities,
       projectMaterials,
+      vendors,
       invites,
       relationships,
       relationshipHistory,

@@ -1,28 +1,172 @@
-import { useState } from "react";
-import { Users, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Mail, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "../components/common/PageHeader";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Field, Input } from "../components/ui/Input";
+import { Field, Input, NativeSelect } from "../components/ui/Input";
 import { SearchableSelect } from "../components/ui/SearchableSelect";
 import { useAuth } from "../store/AuthContext";
 import { useHierarchy } from "../store/HierarchyStore";
 import { useCan, useRbac } from "../store/RbacContext";
-import type { CoreRoleId } from "../models/domain";
+import type { CoreRoleId, UserProvisionMethod } from "../models/domain";
+import type { User } from "../lib/types";
+import { cn } from "../lib/cn";
+import { listSentMail, type DemoMailMessage } from "../lib/demoMail";
+
+type StatusFilter = "all" | "active" | "pending" | "must_change" | "disabled";
+
+function provisionMethodOf(u: User): UserProvisionMethod | null {
+  if (u.provisionMethod === "temp_password" || u.provisionMethod === "activation_link") {
+    return u.provisionMethod;
+  }
+  if (u.emailVerified === false || u.activationToken) return "activation_link";
+  if (u.mustChangePassword) return "temp_password";
+  return null;
+}
+
+function activationLabel(u: User): { label: string; className: string } {
+  if (u.active === false) {
+    return {
+      label: "معطّل",
+      className:
+        "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:text-red-300",
+    };
+  }
+  if (u.emailVerified === false) {
+    return {
+      label: "لم يُفعَّل",
+      className:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:text-amber-200",
+    };
+  }
+  if (u.mustChangePassword) {
+    return {
+      label: "مفعّل — بانتظار تغيير كلمة المرور",
+      className:
+        "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:text-sky-300",
+    };
+  }
+  return {
+    label: "مفعّل",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:text-emerald-300",
+  };
+}
+
+function statusBucket(u: User): StatusFilter {
+  if (u.active === false) return "disabled";
+  if (u.emailVerified === false) return "pending";
+  if (u.mustChangePassword) return "must_change";
+  return "active";
+}
+
+function methodLabel(method: UserProvisionMethod | null): string {
+  if (method === "temp_password") return "كلمة مرور مؤقتة";
+  if (method === "activation_link") return "رابط تفعيل";
+  return "—";
+}
+
+function resendActionLabel(method: UserProvisionMethod | null, u: User): string {
+  const m = method ?? (u.emailVerified === false ? "activation_link" : "temp_password");
+  return m === "activation_link" ? "إعادة إرسال الرابط" : "إعادة كلمة المرور";
+}
+
+function ActiveToggle({
+  active,
+  disabled,
+  onToggle,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      disabled={disabled}
+      onClick={onToggle}
+      title={active ? "تعطيل الحساب" : "تفعيل الحساب"}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
+        active
+          ? "border-brand-500 bg-brand-500"
+          : "border-steel-300 bg-steel-200 dark:border-steel-600 dark:bg-steel-700",
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[inset-inline-start] duration-150",
+          active ? "end-0.5 start-auto" : "start-0.5",
+        )}
+      />
+    </button>
+  );
+}
 
 export function PeoplePage() {
-  const { users, setUserRole, organization, provisionFromInvite } = useAuth();
-  const { invites, projects, addInvite, acceptInvite, addProjectMember } = useHierarchy();
+  const {
+    users,
+    setUserRole,
+    toggleActive,
+    provisionUser,
+    resendProvisionMail,
+    organization,
+  } = useAuth();
+  const { projects, addProjectMember } = useHierarchy();
   const can = useCan();
   const { roles } = useRbac();
   const { user } = useAuth();
 
-  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState<CoreRoleId>("member");
   const [projectId, setProjectId] = useState("");
-  const [inviteToken, setInviteToken] = useState("");
+  const [method, setMethod] = useState<UserProvisionMethod>("temp_password");
   const [msg, setMsg] = useState("");
+  const [mailPreview, setMailPreview] = useState("");
+  const [mailTick, setMailTick] = useState(0);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+
+  const sentMail = useMemo(() => listSentMail(), [mailTick, msg]);
+
+  const lastMailByEmail = useMemo(() => {
+    const map = new Map<string, DemoMailMessage>();
+    for (const m of sentMail) {
+      const key = m.to.toLowerCase();
+      if (!map.has(key)) map.set(key, m);
+    }
+    return map;
+  }, [sentMail]);
+
+  const orgUsers = useMemo(() => {
+    const base = users.filter(
+      (u) =>
+        !organization?.id ||
+        u.organizationId === organization.id ||
+        !u.organizationId,
+    );
+    if (user?.role === "vendor_admin" && user.vendorId) {
+      return base.filter((u) => u.vendorId === user.vendorId);
+    }
+    return base;
+  }, [users, organization?.id, user?.role, user?.vendorId]);
+
+  const filteredUsers = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return orgUsers.filter((u) => {
+      if (statusFilter !== "all" && statusBucket(u) !== statusFilter) return false;
+      if (!term) return true;
+      return (
+        u.name.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term)
+      );
+    });
+  }, [orgUsers, q, statusFilter]);
 
   if (!can.managePeople(user?.role)) {
     return (
@@ -32,43 +176,73 @@ export function PeoplePage() {
     );
   }
 
-  const sendInvite = () => {
+  const createUser = () => {
     setMsg("");
-    if (!email.trim() || !name.trim()) {
-      setMsg("الاسم والبريد مطلوبان.");
-      return;
-    }
-    const inv = addInvite({
-      organizationId: organization?.id || "org-namaa",
-      email: email.trim(),
-      name: name.trim(),
+    setMailPreview("");
+    const res = provisionUser({
+      name,
+      email,
       role,
       projectId: projectId || undefined,
+      method,
     });
-    setMsg(`تم إنشاء الدعوة. رمز Demo: ${inv.token}`);
-    setEmail("");
+    if (!res.ok || !res.user) {
+      setMsg(res.reason || "تعذّر إنشاء المستخدم.");
+      return;
+    }
+    if (projectId) addProjectMember(projectId, res.user.id);
+    setMsg(
+      method === "temp_password"
+        ? "تم إنشاء الحساب وإرسال كلمة مرور مؤقتة (محاكاة Demo)."
+        : "تم إنشاء الحساب وإرسال رابط التفعيل (محاكاة Demo).",
+    );
+    setMailPreview(res.mailPreview || "");
+    setMailTick((n) => n + 1);
+    setPreviewUserId(res.user.id);
     setName("");
+    setEmail("");
   };
+
+  const statusTabs: { id: StatusFilter; label: string }[] = [
+    { id: "all", label: "الكل" },
+    { id: "active", label: "مفعّل" },
+    { id: "pending", label: "لم يُفعَّل" },
+    { id: "must_change", label: "تغيير كلمة المرور" },
+    { id: "disabled", label: "معطّل" },
+  ];
+
+  const previewUser = previewUserId
+    ? filteredUsers.find((u) => u.id === previewUserId) ||
+      orgUsers.find((u) => u.id === previewUserId)
+    : null;
+  const previewMail = previewUser
+    ? lastMailByEmail.get(previewUser.email.toLowerCase())
+    : null;
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="الأعضاء والدعوات"
-        subtitle="محاكاة دعوة الموظفين وتحديد الأدوار وعضوية المشاريع"
+        title="الأعضاء والحسابات"
+        subtitle="إنشاء مستخدمين بكلمة مرور مؤقتة أو رابط تفعيل البريد"
         icon={<Users className="h-6 w-6" />}
       />
 
-      <Card className="space-y-3">
+      <Card className="space-y-3 p-4">
         <p className="flex items-center gap-2 text-sm font-bold">
           <UserPlus className="h-4 w-4" />
-          إرسال دعوة (Demo)
+          إضافة مستخدم
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="الاسم" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label="البريد" required>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              dir="ltr"
+              placeholder="name@company.sa"
+            />
           </Field>
           <Field label="الدور">
             <SearchableSelect
@@ -76,12 +250,14 @@ export function PeoplePage() {
               onChange={(v) => setRole(v as CoreRoleId)}
               options={roles
                 .filter((r) =>
-                  ["member", "project_manager", "external", "pr"].includes(String(r.id)),
+                  ["member", "project_manager", "external", "pr"].includes(
+                    String(r.id),
+                  ),
                 )
                 .map((r) => ({ value: String(r.id), label: r.name }))}
             />
           </Field>
-          <Field label="مشروع (اختياري لمدير المشروع / خارجي)">
+          <Field label="مشروع (اختياري)">
             <SearchableSelect
               value={projectId}
               onChange={setProjectId}
@@ -92,90 +268,228 @@ export function PeoplePage() {
             />
           </Field>
         </div>
-        {msg && <p className="text-sm text-brand-600">{msg}</p>}
-        <Button onClick={sendInvite}>إنشاء دعوة</Button>
-      </Card>
 
-      <Card className="space-y-3">
-        <p className="text-sm font-bold">قبول دعوة (محاكاة العضو)</p>
-        <div className="flex flex-wrap gap-2">
-          <Input
-            value={inviteToken}
-            onChange={(e) => setInviteToken(e.target.value)}
-            placeholder="الصق رمز الدعوة"
-            className="max-w-xs"
-            dir="ltr"
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              const res = acceptInvite(inviteToken.trim());
-              if (!res.ok || !res.invite) {
-                setMsg(res.reason || "فشل");
-                return;
-              }
-              const provisioned = provisionFromInvite(res.invite);
-              if (!provisioned.ok) {
-                setMsg(provisioned.reason || "تعذّر إنشاء المستخدم.");
-                return;
-              }
-              if (res.invite.projectId && provisioned.user) {
-                addProjectMember(res.invite.projectId, provisioned.user.id);
-              }
-              setMsg("تم قبول الدعوة وإنشاء المستخدم في Demo.");
-            }}
-          >
-            قبول
-          </Button>
+        <div>
+          <p className="mb-2 text-xs font-bold text-steel-500">طريقة الإنشاء</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setMethod("temp_password")}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                method === "temp_password"
+                  ? "border-brand-500 bg-brand-500 text-white"
+                  : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
+              )}
+            >
+              كلمة مرور مؤقتة
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod("activation_link")}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                method === "activation_link"
+                  ? "border-brand-500 bg-brand-500 text-white"
+                  : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
+              )}
+            >
+              رابط تفعيل البريد
+            </button>
+          </div>
         </div>
+
+        {msg ? <p className="text-sm text-brand-700">{msg}</p> : null}
+        {mailPreview ? (
+          <div className="rounded-md border border-steel-200 bg-steel-50 p-3 dark:border-steel-700 dark:bg-steel-800/50">
+            <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-steel-500">
+              <Mail className="h-3.5 w-3.5" />
+              معاينة الميل (Demo)
+            </p>
+            <pre className="whitespace-pre-wrap text-xs text-steel-700 dark:text-steel-200">
+              {mailPreview}
+            </pre>
+          </div>
+        ) : null}
+
+        <Button onClick={createUser}>إنشاء وإرسال</Button>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="overflow-hidden p-0">
-          <div className="border-b border-steel-100 px-4 py-3 text-sm font-extrabold dark:border-steel-800">
-            المستخدمون
-          </div>
-          <ul className="divide-y divide-steel-100 dark:divide-steel-800">
-            {users.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-                <div>
-                  <p className="font-semibold">{u.name}</p>
-                  <p className="text-xs text-steel-500" dir="ltr">
-                    {u.email}
-                  </p>
-                </div>
-                <SearchableSelect
-                  value={String(u.role)}
-                  onChange={(v) => setUserRole(u.id, v)}
-                  options={roles.map((r) => ({ value: String(r.id), label: r.name }))}
-                  className="min-w-[140px]"
-                />
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card className="overflow-hidden p-0">
-          <div className="border-b border-steel-100 px-4 py-3 text-sm font-extrabold dark:border-steel-800">
-            الدعوات
-          </div>
-          <ul className="divide-y divide-steel-100 dark:divide-steel-800">
-            {invites.map((inv) => (
-              <li key={inv.id} className="px-4 py-3 text-sm">
-                <p className="font-semibold">
-                  {inv.name} · {inv.role}
-                </p>
-                <p className="text-xs text-steel-500" dir="ltr">
-                  {inv.email}
-                </p>
-                <p className="text-[11px] text-steel-400">
-                  الحالة: {inv.status} · token: {inv.token}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </Card>
+      <div className="flex flex-wrap gap-2">
+        {statusTabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setStatusFilter(t.id)}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+              statusFilter === t.id
+                ? "border-brand-500 bg-brand-500 text-white"
+                : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      <Input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="بحث بالاسم أو البريد"
+        aria-label="بحث في المستخدمين"
+      />
+
+      <Card className="overflow-hidden p-0">
+        <table className="w-full min-w-[980px] table-fixed text-sm">
+          <colgroup>
+            <col className="w-[22%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[18%]" />
+            <col className="w-[10%]" />
+            <col className="w-[22%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
+              <th className="px-4 py-3 text-start font-bold">المستخدم</th>
+              <th className="px-4 py-3 text-start font-bold">الدور</th>
+              <th className="px-4 py-3 text-start font-bold">طريقة الإنشاء</th>
+              <th className="px-4 py-3 text-start font-bold">حالة التفعيل</th>
+              <th className="px-4 py-3 text-start font-bold">الحساب</th>
+              <th className="px-4 py-3 text-start font-bold">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-4 py-8 text-center text-sm text-steel-500"
+                >
+                  لا مستخدمين مطابقين للبحث أو التصفية.
+                </td>
+              </tr>
+            ) : (
+              filteredUsers.map((u) => {
+                const methodOf = provisionMethodOf(u);
+                const act = activationLabel(u);
+                const isSelf = user?.id === u.id;
+                return (
+                  <tr
+                    key={u.id}
+                    className="border-b border-steel-100 dark:border-steel-800"
+                  >
+                    <td className="px-4 py-3 align-middle">
+                      <p className="truncate font-semibold text-steel-800 dark:text-steel-100">
+                        {u.name}
+                      </p>
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-steel-400"
+                        dir="ltr"
+                      >
+                        {u.email}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <NativeSelect
+                        value={String(u.role)}
+                        onChange={(e) => setUserRole(u.id, e.target.value)}
+                        className="min-w-[8rem]"
+                        aria-label={`دور ${u.name}`}
+                      >
+                        {roles.map((r) => (
+                          <option key={r.id} value={String(r.id)}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span className="inline-flex rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
+                        {methodLabel(methodOf)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span
+                        className={cn(
+                          "inline-flex max-w-full rounded border px-1.5 py-0.5 text-[11px] font-bold",
+                          act.className,
+                        )}
+                      >
+                        {act.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-2">
+                        <ActiveToggle
+                          active={u.active !== false}
+                          disabled={isSelf}
+                          onToggle={() => toggleActive(u.id)}
+                        />
+                        <span className="text-[11px] font-bold text-steel-500">
+                          {u.active === false ? "معطّل" : "مفعّل"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="inline-flex flex-wrap items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const res = resendProvisionMail(u.id);
+                            if (!res.ok) {
+                              setMsg(res.reason || "تعذّر إعادة الإرسال.");
+                              return;
+                            }
+                            setMsg(
+                              methodOf === "activation_link" ||
+                                u.emailVerified === false
+                                ? "أُعيد إرسال رابط التفعيل (Demo)."
+                                : "أُعيدت كلمة مرور مؤقتة (Demo).",
+                            );
+                            setMailPreview(res.mailPreview || "");
+                            setMailTick((n) => n + 1);
+                            setPreviewUserId(u.id);
+                          }}
+                        >
+                          {resendActionLabel(methodOf, u)}
+                        </Button>
+                        {lastMailByEmail.has(u.email.toLowerCase()) ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              setPreviewUserId(
+                                previewUserId === u.id ? null : u.id,
+                              )
+                            }
+                          >
+                            {previewUserId === u.id ? "إخفاء الميل" : "معاينة"}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </Card>
+
+      {previewUserId && (mailPreview || previewMail) ? (
+        <Card className="space-y-2 p-4">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-steel-500">
+            <Mail className="h-3.5 w-3.5" />
+            معاينة الميل — {previewUser?.email ?? ""}
+          </p>
+          <pre className="whitespace-pre-wrap rounded-md border border-steel-200 bg-steel-50 p-3 text-xs text-steel-700 dark:border-steel-700 dark:bg-steel-800/50 dark:text-steel-200">
+            {mailPreview || previewMail?.body || ""}
+          </pre>
+        </Card>
+      ) : null}
     </div>
   );
 }

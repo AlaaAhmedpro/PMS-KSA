@@ -23,6 +23,8 @@ export type RoleId =
   | "external"
   | "executive"
   | "pr"
+  | "vendor_admin"
+  | "vendor_member"
   /** @deprecated legacy aliases kept for migration */
   | "super_admin"
   | "planning"
@@ -56,6 +58,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: AnyRoleId;
   organizationId?: string;
   branchId?: string;
@@ -63,6 +66,11 @@ export interface User {
   active?: boolean;
   mfaRequired?: boolean;
   scopedProjectIds?: string[];
+  vendorId?: string;
+  emailVerified?: boolean;
+  mustChangePassword?: boolean;
+  activationToken?: string;
+  provisionMethod?: "temp_password" | "activation_link";
   /** Demo-only; never treat as production secret store */
   password?: string;
 }

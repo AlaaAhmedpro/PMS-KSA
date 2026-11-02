@@ -81,6 +81,16 @@ export const ROLES: Role[] = [
     name: "التواصل المؤسسي",
     description: "إدارة شريط الأخبار",
   },
+  {
+    id: "vendor_admin",
+    name: "مسؤول المورد",
+    description: "إدارة موظفي شركة المورد ضمن المشاريع المسموحة",
+  },
+  {
+    id: "vendor_member",
+    name: "موظف المورد",
+    description: "تنفيذ المهام على مشاريع المورد فقط",
+  },
 ];
 
 export const PERMISSION_DEFS: { key: PermissionKey; label: string }[] = [
@@ -122,6 +132,8 @@ export const DEFAULT_MATRIX: Record<AnyRoleId, PermissionKey[]> = {
   external: ["dashboard", "execute"],
   executive: ["dashboard", "urgent", "viewStrategic"],
   pr: ["dashboard"],
+  vendor_admin: ["dashboard", "execute", "managePeople"],
+  vendor_member: ["dashboard", "execute"],
 };
 
 export interface StatusMeta {

@@ -97,7 +97,14 @@ export function useSidebarNav() {
     map.set("initiatives", modules.initiative && canAccessInitiative("view"));
     map.set("projects", showProjectsNav);
     map.set("tasks", showProjectsNav);
-    map.set("people", can.managePeople(role));
+    map.set(
+      "people",
+      can.managePeople(role) && role !== "vendor_admin",
+    );
+    map.set(
+      "vendors",
+      role === "org_admin" || role === "vendor_admin",
+    );
     map.set("lookups", can.viewSettings(role));
     map.set("reports", can.viewSettings(role));
     map.set("archive", can.viewSettings(role));

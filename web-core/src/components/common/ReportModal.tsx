@@ -62,36 +62,37 @@ export function ReportModal({
     <AnimatePresence>
       {open && report && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:p-8"
+          className="ui-modal-root fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:p-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
         >
           <div
-            className="no-print absolute inset-0 bg-steel-950/50 backdrop-blur-sm"
+            className="ui-modal-backdrop no-print absolute inset-0"
             onClick={onClose}
           />
           <motion.div
-            className="surface relative z-10 w-full max-w-5xl rounded-2xl"
-            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 8 }}
-            transition={{ type: "spring", stiffness: 300, damping: 26 }}
+            className="ui-modal relative z-10 w-full max-w-5xl"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
           >
             {/* Header (hidden in print) */}
-            <div className="no-print flex items-center justify-between gap-3 border-b border-steel-100 p-5 dark:border-steel-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+            <div className="ui-modal__header no-print">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400">
                   <FileBarChart className="h-5 w-5" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-steel-800 dark:text-steel-100">
-                    {report.title}
-                  </h3>
-                  <p className="text-xs text-steel-400">{report.subtitle}</p>
+                <div className="min-w-0">
+                  <h3 className="ui-modal__title truncate">{report.title}</h3>
+                  {report.subtitle ? (
+                    <p className="ui-modal__subtitle">{report.subtitle}</p>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handlePrint}>
                   <Printer className="h-4 w-4" />
                   طباعة
@@ -105,8 +106,10 @@ export function ReportModal({
                   تصدير Excel
                 </Button>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-steel-400 transition-colors hover:bg-steel-100 hover:text-steel-700 dark:hover:bg-steel-800"
+                  aria-label="إغلاق"
+                  className="ui-modal__close"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -150,13 +153,13 @@ export function ReportModal({
               </div>
 
               {/* Table */}
-              <div className="overflow-hidden rounded-xl border border-steel-200 dark:border-steel-700 print:border-0">
+              <div className="ui-modal-panel print:border-0">
                 <div className="max-h-[55vh] overflow-auto print:max-h-none print:overflow-visible">
-                  <table className="w-full text-right text-sm">
+                  <table className="w-full text-start text-sm">
                     <thead className="sticky top-0 z-10 bg-steel-50 dark:bg-steel-800/80">
                       <tr className="border-b border-steel-200 text-xs text-steel-500 dark:border-steel-700">
                         {report.columns.map((c) => (
-                          <th key={c} className="whitespace-nowrap px-4 py-3 font-bold">
+                          <th key={c} className="whitespace-nowrap px-4 py-3 text-start font-bold">
                             {c}
                           </th>
                         ))}

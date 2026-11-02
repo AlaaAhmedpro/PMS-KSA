@@ -317,6 +317,7 @@ export function ProgramsPage() {
         open={open}
         onClose={closeModal}
         title={editingId ? "تعديل برنامج" : "إضافة برنامج"}
+        subtitle={editingId ? undefined : "إنشاء برنامج جديد ضمن المحفظة"}
         footer={
           <>
             <Button variant="outline" onClick={closeModal}>

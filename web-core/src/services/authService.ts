@@ -101,8 +101,14 @@ export async function authenticateCredentials(
       "هذا الحساب معطّل. تواصل مع مسؤول المؤسسة.",
     );
   }
+  if (found.emailVerified === false) {
+    throw new AuthServiceError(
+      "inactive",
+      "الحساب بانتظار تفعيل البريد. افتح رابط التفعيل المرسل إليك.",
+    );
+  }
   clearAttempts();
-  if (found.mfaRequired) {
+  if (found.mfaRequired && !found.mustChangePassword) {
     return { user: found, needsMfa: true };
   }
   return { user: found, needsMfa: false };

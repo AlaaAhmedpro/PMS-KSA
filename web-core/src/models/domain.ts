@@ -7,7 +7,32 @@ export type CoreRoleId =
   | "member"
   | "external"
   | "executive"
-  | "pr";
+  | "pr"
+  | "vendor_admin"
+  | "vendor_member";
+
+export type VendorStatus = "active" | "inactive";
+
+/** مورد / مقاول خارجي تابع للمنشأة */
+export interface Vendor {
+  id: string;
+  organizationId: string;
+  name: string;
+  commercialRegister: string;
+  city: string;
+  contactName: string;
+  contactEmail: string;
+  /** جوال جهة الاتصال بصيغة 05XXXXXXXX */
+  contactPhone: string;
+  /** مستخدم النظام المعيَّن كجهة اتصال / مسؤول المورد */
+  contactUserId?: string;
+  /** موقع المورد (اختياري) */
+  website?: string;
+  status: VendorStatus;
+  /** مشاريع المنشأة المسموح للمورد بالعمل عليها */
+  projectIds: string[];
+  createdAt: string;
+}
 
 export type ProjectStatus =
   | "draft"
@@ -381,10 +406,14 @@ export interface DemoInvite {
   token: string;
 }
 
+export type UserProvisionMethod = "temp_password" | "activation_link";
+
 export interface DemoUser {
   id: string;
   name: string;
   email: string;
+  /** جوال بصيغة 05XXXXXXXX */
+  phone?: string;
   /** Demo-only plaintext password — never production */
   password: string;
   role: CoreRoleId | AnyRoleId;
@@ -393,8 +422,17 @@ export interface DemoUser {
   departmentId?: string;
   active?: boolean;
   mfaRequired?: boolean;
-  /** External users limited to these project ids */
+  /** External / vendor users limited to these project ids */
   scopedProjectIds?: string[];
+  /** إن وُجد: المستخدم تابع لمورد */
+  vendorId?: string;
+  /** false = بانتظار تأكيد البريد / رابط التفعيل */
+  emailVerified?: boolean;
+  /** true = يجب تغيير كلمة المرور عند أول دخول */
+  mustChangePassword?: boolean;
+  /** رمز تفعيل الحساب (مسار رابط التفعيل) */
+  activationToken?: string;
+  provisionMethod?: UserProvisionMethod;
 }
 
 export interface DemoSession {

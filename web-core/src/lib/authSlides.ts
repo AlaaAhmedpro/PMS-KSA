@@ -1,14 +1,13 @@
-/** صور خلفية صفحة الدخول — مشاريع / إدارة / تنظيم في بيئة أعمال سعودية */
+/** صور خلفية صفحة الدخول — إدارة مشاريع وبيئة أعمال سعودية بألوان فاتحة */
 import { publicAsset } from "./assets";
 
 export const AUTH_SLIDESHOW = [
-  publicAsset("/slides/kingdom-tower.jpg"),
-  publicAsset("/slides/corporate-towers.jpg"),
-  publicAsset("/slides/project-planning.jpg"),
-  publicAsset("/slides/management-meeting.jpg"),
-  publicAsset("/slides/architecture-plans.jpg"),
-  publicAsset("/slides/construction-site.jpg"),
-  publicAsset("/slides/7.jpg"),
+  publicAsset("/slides/auth-riyadh-skyline.jpg"),
+  publicAsset("/slides/auth-pm-workshop.jpg"),
+  publicAsset("/slides/auth-pmo-room.jpg"),
+  publicAsset("/slides/auth-ksa-infra.jpg"),
+  publicAsset("/slides/auth-portfolio-screen.jpg"),
+  publicAsset("/slides/auth-vision-district.jpg"),
 ];
 
 /** مدة عرض كل صورة قبل الانتقال للتالية */

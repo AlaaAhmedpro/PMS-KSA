@@ -263,6 +263,7 @@ export function ObjectivesPage() {
         open={open}
         onClose={closeModal}
         title={editingId ? "تعديل هدف" : "إضافة هدف"}
+        subtitle={editingId ? undefined : "إضافة هدف استراتيجي للمنشأة"}
         footer={
           <>
             <Button variant="outline" onClick={closeModal}>

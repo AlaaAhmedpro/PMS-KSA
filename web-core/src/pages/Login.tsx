@@ -36,6 +36,10 @@ const QUICK_ROW_1: QuickRoleItem[] = [
 const QUICK_ROW_2: QuickRoleItem[] = [
   { labelKey: "role.executive", findUser: (us) => us.find((u) => u.role === "executive") },
   { labelKey: "role.pr", findUser: (us) => us.find((u) => u.role === "pr") },
+  {
+    labelKey: "role.vendorAdmin",
+    findUser: (us) => us.find((u) => u.role === "vendor_admin"),
+  },
 ];
 
 const RETURN_KEY = "pms_core_return_path";
@@ -104,11 +108,15 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const [mfaPending, setMfaPending] = useState<DemoUser | null>(null);
 
-  const goAfterAuth = () => {
+  const goAfterAuth = (needsPasswordChange?: boolean) => {
     try {
       sessionStorage.removeItem(RETURN_KEY);
     } catch {
       /* ignore */
+    }
+    if (needsPasswordChange) {
+      navigate("/change-password", { replace: true });
+      return;
     }
     navigate(returnTo || "/", { replace: true });
   };
@@ -139,7 +147,7 @@ export function Login() {
       setOtp("");
       return;
     }
-    goAfterAuth();
+    goAfterAuth(res.needsPasswordChange);
   };
 
   const submitMfa = async (e: React.FormEvent) => {
@@ -153,7 +161,7 @@ export function Login() {
       setError(res.reason || t("mfa.error"));
       return;
     }
-    goAfterAuth();
+    goAfterAuth(res.needsPasswordChange);
   };
 
   const submitForgot = (e: React.FormEvent) => {

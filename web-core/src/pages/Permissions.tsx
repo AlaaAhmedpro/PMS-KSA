@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   ShieldCheck,
   Check,
@@ -6,276 +6,781 @@ import {
   Trash2,
   Users,
   RotateCcw,
-  X,
+  Pencil,
+  Copy,
+  Search,
+  UserRound,
 } from "lucide-react";
 import { PageHeader } from "../components/common/PageHeader";
-import { Card, CardHeader } from "../components/ui/Card";
+import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
+import { Field, Input } from "../components/ui/Input";
 import { SearchableSelect } from "../components/ui/SearchableSelect";
+import {
+  Modal,
+  ModalEmpty,
+  ModalPanel,
+  ModalToolbar,
+} from "../components/ui/Modal";
+import { Pagination } from "../components/ui/Pagination";
+import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
 import { useRbac } from "../store/RbacContext";
 import { useAuth } from "../store/AuthContext";
-import { useData } from "../store/DataStore";
-import { useNotifications } from "../store/NotificationStore";
-import { PERMISSION_DEFS } from "../lib/constants";
+import { useConfirm } from "../store/ConfirmContext";
+import { DEFAULT_MATRIX, PERMISSION_DEFS } from "../lib/constants";
 import { cn } from "../lib/cn";
-import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
-import { Pagination } from "../components/ui/Pagination";
+import type { AnyRoleId, PermissionKey, Role } from "../lib/types";
+
+type TabId = "roles" | "users";
+
+const PERMISSION_GROUPS: {
+  id: string;
+  label: string;
+  keys: PermissionKey[];
+}[] = [
+  {
+    id: "workspace",
+    label: "مساحة العمل",
+    keys: ["dashboard", "viewStrategic"],
+  },
+  {
+    id: "execution",
+    label: "التنفيذ",
+    keys: ["manageRecords", "execute", "close", "urgent"],
+  },
+  {
+    id: "strategic",
+    label: "التخطيط الاستراتيجي",
+    keys: ["managePortfolio", "manageProgram", "manageInitiative"],
+  },
+  {
+    id: "admin",
+    label: "الإدارة",
+    keys: ["managePeople", "settings"],
+  },
+];
+
+const iconBtn =
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-steel-400 transition-colors duration-150";
+const iconBtnEdit = `${iconBtn} hover:bg-brand-500/10 hover:text-brand-600`;
+const iconBtnDelete = `${iconBtn} hover:bg-red-500/10 hover:text-red-500`;
+
+function StatusToggle({
+  active,
+  disabled,
+  onToggle,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      disabled={disabled}
+      onClick={onToggle}
+      title={active ? "تعطيل الحساب" : "تفعيل الحساب"}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
+        active
+          ? "border-brand-500 bg-brand-500"
+          : "border-steel-300 bg-steel-200 dark:border-steel-600 dark:bg-steel-700",
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[inset-inline-start] duration-150",
+          active ? "end-0.5 start-auto" : "start-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
+function permLabel(key: PermissionKey): string {
+  return PERMISSION_DEFS.find((p) => p.key === key)?.label ?? key;
+}
 
 export function Permissions() {
-  const { roles, matrix, togglePermission, addRole, removeRole, resetRbac } =
-    useRbac();
-  const { users, setUserRole, toggleActive } = useAuth();
-  const { resetDemo, branches, departments } = useData();
-  const { resetNotifications } = useNotifications();
-  const [newRole, setNewRole] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
+  const confirm = useConfirm();
+  const {
+    roles,
+    matrix,
+    togglePermission,
+    addRole,
+    updateRole,
+    duplicateRole,
+    removeRole,
+    resetRolePermissions,
+    resetRbac,
+  } = useRbac();
+  const { user, users, setUserRole, toggleActive } = useAuth();
 
-  const handleAddRole = () => {
-    if (!newRole.trim()) return;
-    addRole(newRole.trim());
-    setNewRole("");
-    setShowAdd(false);
+  const [tab, setTab] = useState<TabId>("roles");
+  const [selectedRoleId, setSelectedRoleId] = useState<AnyRoleId>(
+    () => roles[0]?.id ?? "org_admin",
+  );
+  const [roleQuery, setRoleQuery] = useState("");
+  const [userQuery, setUserQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">(
+    "all",
+  );
+
+  const [roleFormOpen, setRoleFormOpen] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState<AnyRoleId | null>(null);
+  const [roleName, setRoleName] = useState("");
+  const [roleDescription, setRoleDescription] = useState("");
+  const [formError, setFormError] = useState("");
+  const [usersMsg, setUsersMsg] = useState("");
+
+  const selectedRole = useMemo(
+    () => roles.find((r) => r.id === selectedRoleId) ?? roles[0] ?? null,
+    [roles, selectedRoleId],
+  );
+
+  const usersByRole = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const u of users) {
+      const key = String(u.role);
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    return map;
+  }, [users]);
+
+  const orgAdminCount = useMemo(
+    () => users.filter((u) => u.role === "org_admin" && u.active !== false).length,
+    [users],
+  );
+
+  const filteredRoles = useMemo(() => {
+    const term = roleQuery.trim().toLowerCase();
+    if (!term) return roles;
+    return roles.filter(
+      (r) =>
+        r.name.toLowerCase().includes(term) ||
+        r.description.toLowerCase().includes(term) ||
+        String(r.id).toLowerCase().includes(term),
+    );
+  }, [roles, roleQuery]);
+
+  const filteredUsers = useMemo(() => {
+    const term = userQuery.trim().toLowerCase();
+    return users.filter((u) => {
+      if (roleFilter !== "all" && String(u.role) !== roleFilter) return false;
+      if (statusFilter === "active" && u.active === false) return false;
+      if (statusFilter === "disabled" && u.active !== false) return false;
+      if (!term) return true;
+      return (
+        u.name.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term)
+      );
+    });
+  }, [users, userQuery, roleFilter, statusFilter]);
+
+  const pagination = usePagination(filteredUsers, PAGE_SIZE_DEFAULT, [
+    userQuery,
+    roleFilter,
+    statusFilter,
+    filteredUsers.length,
+  ]);
+
+  const selectedPerms = selectedRole
+    ? (matrix[selectedRole.id] ?? [])
+    : [];
+
+  const openCreateRole = () => {
+    setEditingRoleId(null);
+    setRoleName("");
+    setRoleDescription("");
+    setFormError("");
+    setRoleFormOpen(true);
   };
 
-  const {
-    paginated: pageUsers,
-    page,
-    setPage,
-    totalPages,
-    total,
-    rangeStart,
-    rangeEnd,
-  } = usePagination(users, PAGE_SIZE_DEFAULT, [users.length]);
+  const openEditRole = (role: Role) => {
+    setEditingRoleId(role.id);
+    setRoleName(role.name);
+    setRoleDescription(role.description || "");
+    setFormError("");
+    setRoleFormOpen(true);
+  };
+
+  const submitRoleForm = () => {
+    setFormError("");
+    const name = roleName.trim();
+    if (!name) {
+      setFormError("اسم الدور مطلوب.");
+      return;
+    }
+    if (editingRoleId) {
+      const res = updateRole(editingRoleId, {
+        name,
+        description: roleDescription,
+      });
+      if (!res.ok) {
+        setFormError(res.reason || "تعذّر تحديث الدور.");
+        return;
+      }
+    } else {
+      const created = addRole(name, roleDescription.trim());
+      setSelectedRoleId(created.id);
+    }
+    setRoleFormOpen(false);
+  };
+
+  const handleDeleteRole = async (role: Role) => {
+    if (!role.custom) return;
+    const assigned = usersByRole.get(String(role.id)) || 0;
+    if (assigned > 0) {
+      await confirm({
+        title: "تعذّر الحذف",
+        message: `الدور «${role.name}» معيّن لـ ${assigned} مستخدم. أعد تعيينهم أولاً ثم احذف الدور.`,
+        confirmLabel: "حسناً",
+        cancelLabel: "إغلاق",
+      });
+      return;
+    }
+    const ok = await confirm({
+      title: "حذف الدور",
+      message: `هل تريد حذف الدور المخصص «${role.name}»؟`,
+      confirmLabel: "حذف",
+      cancelLabel: "إلغاء",
+      danger: true,
+    });
+    if (!ok) return;
+    const res = removeRole(role.id);
+    if (!res.ok) {
+      await confirm({
+        title: "تعذّر الحذف",
+        message: res.reason || "تعذّر حذف الدور.",
+        confirmLabel: "حسناً",
+        cancelLabel: "إغلاق",
+      });
+      return;
+    }
+    if (selectedRoleId === role.id) {
+      setSelectedRoleId(roles.find((r) => r.id !== role.id)?.id ?? "org_admin");
+    }
+  };
+
+  const handleDuplicateRole = (role: Role) => {
+    const res = duplicateRole(role.id);
+    if (res.ok && res.role) setSelectedRoleId(res.role.id);
+  };
+
+  const handleResetRolePerms = async (role: Role) => {
+    if (!DEFAULT_MATRIX[role.id]) return;
+    const ok = await confirm({
+      title: "استعادة الصلاحيات الافتراضية",
+      message: `استعادة صلاحيات الدور «${role.name}» إلى الإعداد الافتراضي؟`,
+      confirmLabel: "استعادة",
+      cancelLabel: "إلغاء",
+    });
+    if (!ok) return;
+    resetRolePermissions(role.id);
+  };
+
+  const handleResetAll = async () => {
+    const ok = await confirm({
+      title: "إعادة ضبط الأدوار والصلاحيات",
+      message:
+        "سيتم استعادة قائمة الأدوار ومصفوفة الصلاحيات الافتراضية. لن يُعاد ضبط بيانات المشاريع أو المستخدمين.",
+      confirmLabel: "إعادة الضبط",
+      cancelLabel: "إلغاء",
+      danger: true,
+    });
+    if (!ok) return;
+    resetRbac();
+    setSelectedRoleId("org_admin");
+  };
+
+  const canToggleUser = (userId: string) => {
+    if (user?.id === userId) return false;
+    return true;
+  };
+
+  const canChangeRole = (targetId: string, nextRole: string) => {
+    if (user?.id !== targetId) return true;
+    if (user.role === "org_admin" && nextRole !== "org_admin" && orgAdminCount <= 1) {
+      return false;
+    }
+    return true;
+  };
 
   return (
-    <div>
+    <div className="space-y-4">
       <PageHeader
-        title="الصلاحيات والأدوار"
-        subtitle="تحكم كامل في صلاحيات كل دور وإدارة المستخدمين (RBAC)"
+        title="الأدوار والصلاحيات"
+        subtitle="إدارة أدوار النظام وصلاحياتها وتعيينها للمستخدمين"
         icon={<ShieldCheck className="h-6 w-6" />}
         actions={
-          <Button
-            variant="outline"
-            onClick={() => {
-              resetRbac();
-              resetDemo();
-              resetNotifications();
-            }}
-            className="no-print"
-          >
+          <Button variant="outline" onClick={() => void handleResetAll()}>
             <RotateCcw className="h-4 w-4" />
-            إعادة الضبط
+            إعادة ضبط الأدوار
           </Button>
         }
       />
 
-      {/* Permission matrix */}
-      <Card className="mb-4 overflow-hidden">
-        <CardHeader
-          title="مصفوفة الصلاحيات حسب الدور"
-          subtitle="اضغط على الخلية لتفعيل/إلغاء الصلاحية"
-          action={
-            showAdd ? (
-              <div className="flex items-center gap-2">
+      <div className="flex flex-wrap gap-1 rounded-md border border-steel-200 bg-white p-1 dark:border-steel-700 dark:bg-steel-900">
+        <button
+          type="button"
+          onClick={() => setTab("roles")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold transition-colors duration-150",
+            tab === "roles"
+              ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+              : "text-steel-500 hover:bg-steel-50 dark:hover:bg-steel-800",
+          )}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          الأدوار والصلاحيات
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("users")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold transition-colors duration-150",
+            tab === "users"
+              ? "bg-brand-500/10 text-brand-700 dark:text-brand-300"
+              : "text-steel-500 hover:bg-steel-50 dark:hover:bg-steel-800",
+          )}
+        >
+          <Users className="h-4 w-4" />
+          تعيين الأدوار
+        </button>
+      </div>
+
+      {tab === "roles" ? (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+          <Card className="overflow-hidden p-0">
+            <div className="space-y-3 border-b border-steel-100 p-3 dark:border-steel-800">
+              <div className="relative">
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
                 <Input
-                  autoFocus
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddRole()}
-                  placeholder="اسم الدور الجديد"
-                  className="h-9 w-44"
+                  className="ps-9"
+                  value={roleQuery}
+                  onChange={(e) => setRoleQuery(e.target.value)}
+                  placeholder="بحث في الأدوار…"
                 />
-                <Button size="sm" onClick={handleAddRole}>
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-            ) : (
-              <Button size="sm" onClick={() => setShowAdd(true)} className="no-print">
+              <Button className="w-full" size="sm" onClick={openCreateRole}>
                 <Plus className="h-4 w-4" />
                 إضافة دور
               </Button>
-            )
-          }
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full text-right text-sm">
-            <thead>
-              <tr className="border-y border-steel-100 bg-steel-50 text-xs text-steel-500 dark:border-steel-800 dark:bg-steel-800/40">
-                <th className="sticky right-0 z-10 bg-steel-50 px-4 py-3 font-bold dark:bg-steel-800/40">
-                  الدور
-                </th>
-                {PERMISSION_DEFS.map((p) => (
-                  <th
-                    key={p.key}
-                    className="px-3 py-3 text-center font-bold"
-                  >
-                    <span className="block max-w-[110px] leading-tight">
-                      {p.label}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((r) => (
-                <tr
-                  key={r.id}
-                  className="border-b border-steel-50 dark:border-steel-800/60"
-                >
-                  <td className="sticky right-0 z-10 bg-white px-4 py-3 dark:bg-steel-900">
-                    <div className="flex items-center gap-2">
-                      <span className="whitespace-nowrap font-bold text-steel-700 dark:text-steel-200">
-                        {r.name}
-                      </span>
-                      {r.custom && (
-                        <>
-                          <span className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-500">
+            </div>
+            <div className="max-h-[34rem] overflow-y-auto">
+              {filteredRoles.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-steel-500">
+                  لا أدوار مطابقة.
+                </p>
+              ) : (
+                filteredRoles.map((role) => {
+                  const count = usersByRole.get(String(role.id)) || 0;
+                  const permCount = matrix[role.id]?.length ?? 0;
+                  const active = selectedRole?.id === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setSelectedRoleId(role.id)}
+                      className={cn(
+                        "flex w-full flex-col gap-1 border-b border-steel-100 px-3 py-3 text-start transition-colors duration-150 last:border-b-0 dark:border-steel-800",
+                        active
+                          ? "bg-brand-500/10"
+                          : "hover:bg-steel-50 dark:hover:bg-steel-800/40",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-bold text-steel-800 dark:text-steel-100">
+                          {role.name}
+                        </span>
+                        {role.custom ? (
+                          <span className="shrink-0 rounded border border-brand-200 bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-700 dark:border-brand-800 dark:text-brand-300">
                             مخصص
                           </span>
-                          <button
-                            onClick={() => removeRole(r.id)}
-                            className="rounded p-0.5 text-steel-400 hover:bg-red-500/10 hover:text-red-500"
-                            title="حذف الدور"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </>
+                        ) : (
+                          <span className="shrink-0 rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[10px] font-bold text-steel-500 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
+                            نظام
+                          </span>
+                        )}
+                      </div>
+                      <p className="line-clamp-2 text-[11px] text-steel-500">
+                        {role.description || "بدون وصف"}
+                      </p>
+                      <p className="text-[11px] font-bold text-steel-400">
+                        {permCount} صلاحية · {count} مستخدم
+                      </p>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-4 p-4">
+            {selectedRole ? (
+              <>
+                <div className="flex flex-col gap-3 border-b border-steel-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-steel-800">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-bold text-steel-800 dark:text-steel-100">
+                        {selectedRole.name}
+                      </h3>
+                      {selectedRole.custom ? (
+                        <span className="rounded border border-brand-200 bg-brand-500/10 px-1.5 py-0.5 text-[11px] font-bold text-brand-700">
+                          مخصص
+                        </span>
+                      ) : (
+                        <span className="rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-500 dark:border-steel-700 dark:bg-steel-800">
+                          دور نظام
+                        </span>
                       )}
                     </div>
-                  </td>
-                  {PERMISSION_DEFS.map((p) => {
-                    const enabled = matrix[r.id]?.includes(p.key) ?? false;
-                    return (
-                      <td key={p.key} className="px-3 py-2 text-center">
-                        <button
-                          onClick={() => togglePermission(r.id, p.key)}
-                          className={cn(
-                            "mx-auto flex h-7 w-7 items-center justify-center rounded-lg border transition-all",
-                            enabled
-                              ? "border-brand-500 bg-brand-500 text-white shadow-soft"
-                              : "border-steel-200 bg-steel-50 text-transparent hover:border-brand-400 dark:border-steel-700 dark:bg-steel-800",
-                          )}
-                          title={enabled ? "مفعّلة" : "غير مفعّلة"}
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                    <p className="mt-1 text-xs text-steel-500">
+                      {selectedRole.description || "بدون وصف"}
+                    </p>
+                    <p className="mt-1 text-[11px] font-bold text-steel-400">
+                      {selectedPerms.length} صلاحية مفعّلة ·{" "}
+                      {usersByRole.get(String(selectedRole.id)) || 0} مستخدم
+                    </p>
+                  </div>
+                  <div className="inline-flex flex-nowrap items-center gap-0.5">
+                    <button
+                      type="button"
+                      className={iconBtnEdit}
+                      title="تعديل"
+                      aria-label="تعديل"
+                      onClick={() => openEditRole(selectedRole)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={iconBtnEdit}
+                      title="نسخ الدور"
+                      aria-label="نسخ الدور"
+                      onClick={() => handleDuplicateRole(selectedRole)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    {DEFAULT_MATRIX[selectedRole.id] ? (
+                      <button
+                        type="button"
+                        className={iconBtnEdit}
+                        title="استعادة الافتراضي"
+                        aria-label="استعادة الافتراضي"
+                        onClick={() => void handleResetRolePerms(selectedRole)}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                    {selectedRole.custom ? (
+                      <button
+                        type="button"
+                        className={iconBtnDelete}
+                        title="حذف"
+                        aria-label="حذف"
+                        onClick={() => void handleDeleteRole(selectedRole)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
 
-      {/* Users table */}
-      <Card className="overflow-hidden">
-        <CardHeader
-          title="إدارة المستخدمين"
-          subtitle={`${users.length} مستخدم — تعيين الأدوار وتفعيل/تعطيل الحسابات`}
-          icon={<Users className="h-5 w-5" />}
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full text-right text-sm">
-            <thead>
-              <tr className="border-y border-steel-100 bg-steel-50 text-xs text-steel-500 dark:border-steel-800 dark:bg-steel-800/40">
-                <th className="px-4 py-3 font-bold">اسم المستخدم</th>
-                <th className="px-4 py-3 font-bold">البريد الإلكتروني</th>
-                <th className="px-4 py-3 font-bold">الفرع / المنطقة</th>
-                <th className="px-4 py-3 font-bold">الأدارات / الفروع</th>
-                <th className="px-4 py-3 font-bold">الدور</th>
-                <th className="px-4 py-3 text-center font-bold">الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageUsers.map((u) => {
-                const active = u.active !== false;
-                return (
-                  <tr
-                    key={u.id}
-                    className="border-b border-steel-50 dark:border-steel-800/60"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
-                          {u.name.charAt(0)}
-                        </div>
-                        <span className="font-bold text-steel-700 dark:text-steel-200">
-                          {u.name}
-                        </span>
+                <div className="space-y-4">
+                  {PERMISSION_GROUPS.map((group) => (
+                    <div key={group.id}>
+                      <p className="mb-2 text-xs font-bold text-steel-500">
+                        {group.label}
+                      </p>
+                      <div className="space-y-2">
+                        {group.keys.map((key) => {
+                          const enabled = selectedPerms.includes(key);
+                          const lockSettings =
+                            selectedRole.id === "org_admin" &&
+                            key === "settings" &&
+                            enabled;
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center justify-between gap-3 rounded-md border border-steel-200 bg-steel-50/60 px-3 py-2.5 dark:border-steel-700 dark:bg-steel-800/40"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-steel-800 dark:text-steel-100">
+                                  {permLabel(key)}
+                                </p>
+                                <p className="text-[11px] text-steel-400">
+                                  {key}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={enabled}
+                                disabled={lockSettings}
+                                title={
+                                  lockSettings
+                                    ? "صلاحية الإعدادات مطلوبة لمسؤول المنشأة"
+                                    : enabled
+                                      ? "إلغاء الصلاحية"
+                                      : "تفعيل الصلاحية"
+                                }
+                                onClick={() =>
+                                  togglePermission(selectedRole.id, key)
+                                }
+                                className={cn(
+                                  "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
+                                  enabled
+                                    ? "border-brand-500 bg-brand-500"
+                                    : "border-steel-300 bg-steel-200 dark:border-steel-600 dark:bg-steel-700",
+                                  lockSettings &&
+                                    "cursor-not-allowed opacity-60",
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-[inset-inline-start] duration-150",
+                                    enabled
+                                      ? "end-0.5 start-auto"
+                                      : "start-0.5",
+                                  )}
+                                />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-steel-500" dir="ltr">
-                      {u.email}
-                    </td>
-                    <td className="px-4 py-3 text-steel-500">
-                      {branches.find((b) => b.id === u.branchId)?.name || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-steel-500">
-                      {departments.find((d) => d.id === u.departmentId)?.name || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <SearchableSelect
-                        value={u.role}
-                        onChange={(roleId) => setUserRole(u.id, roleId)}
-                        options={roles.map((r) => ({ value: r.id, label: r.name }))}
-                        className="w-48"
-                        searchPlaceholder="بحث في الأدوار..."
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => toggleActive(u.id)}
-                          className={cn(
-                            "relative h-7 w-12 rounded-full transition-colors",
-                            active
-                              ? "bg-brand-500"
-                              : "bg-steel-300 dark:bg-steel-700",
-                          )}
-                          title={active ? "تعطيل المستخدم" : "تفعيل المستخدم"}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-1 h-5 w-5 rounded-full bg-white transition-all",
-                              active ? "right-1" : "right-6",
-                            )}
-                          />
-                        </button>
-                        <span
-                          className={cn(
-                            "w-12 text-xs font-bold",
-                            active
-                              ? "text-brand-600 dark:text-brand-400"
-                              : "text-steel-400",
-                          )}
-                        >
-                          {active ? "مُفعّل" : "معطّل"}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <ModalEmpty>اختر دوراً من القائمة.</ModalEmpty>
+            )}
+          </Card>
         </div>
-        {users.length > 0 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            total={total}
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-          />
-        )}
-      </Card>
+      ) : (
+        <div className="space-y-4">
+          <ModalToolbar className="items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
+              <Input
+                className="ps-9"
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="بحث بالاسم أو البريد…"
+              />
+            </div>
+            <SearchableSelect
+              className="min-w-[12rem]"
+              value={roleFilter}
+              onChange={setRoleFilter}
+              options={[
+                { value: "all", label: "كل الأدوار" },
+                ...roles.map((r) => ({ value: String(r.id), label: r.name })),
+              ]}
+            />
+            <SearchableSelect
+              className="min-w-[10rem]"
+              value={statusFilter}
+              onChange={(v) =>
+                setStatusFilter(v as "all" | "active" | "disabled")
+              }
+              options={[
+                { value: "all", label: "كل الحالات" },
+                { value: "active", label: "مفعّل" },
+                { value: "disabled", label: "معطّل" },
+              ]}
+            />
+          </ModalToolbar>
+          {usersMsg ? (
+            <p className="text-sm text-amber-700 dark:text-amber-300">{usersMsg}</p>
+          ) : null}
+
+          <Card className="overflow-hidden p-0">
+            <ModalPanel className="border-0">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[880px] table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[28%]" />
+                    <col className="w-[24%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-steel-200 bg-steel-50/90 dark:border-steel-700 dark:bg-steel-800/60">
+                      <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
+                        المستخدم
+                      </th>
+                      <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
+                        البريد
+                      </th>
+                      <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
+                        الدور
+                      </th>
+                      <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
+                        الحالة
+                      </th>
+                      <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
+                        {" "}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagination.paginated.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-4 py-10 text-center text-sm text-steel-500"
+                        >
+                          لا مستخدمين مطابقين.
+                        </td>
+                      </tr>
+                    ) : (
+                      pagination.paginated.map((u) => {
+                        const isSelf = user?.id === u.id;
+                        const active = u.active !== false;
+                        const disableToggle = !canToggleUser(u.id);
+                        return (
+                          <tr
+                            key={u.id}
+                            className="border-b border-steel-100 last:border-b-0 dark:border-steel-800"
+                          >
+                            <td className="px-4 py-3 align-middle">
+                              <div className="flex min-w-0 items-center gap-2.5">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-brand-200 bg-brand-500/10 text-xs font-bold text-brand-700 dark:border-brand-800 dark:text-brand-300">
+                                  {u.name.charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-steel-800 dark:text-steel-100">
+                                    {u.name}
+                                  </p>
+                                  {isSelf ? (
+                                    <span className="mt-0.5 inline-flex items-center gap-1 rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
+                                      <UserRound className="h-3 w-3" />
+                                      أنت
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-middle">
+                              <span
+                                className="block truncate text-xs text-steel-600 dark:text-steel-300"
+                                dir="ltr"
+                              >
+                                {u.email}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 align-middle">
+                              <SearchableSelect
+                                value={String(u.role)}
+                                onChange={(roleId) => {
+                                  if (!canChangeRole(u.id, roleId)) {
+                                    setUsersMsg(
+                                      "لا يمكن تخفيض دورك وأنت مسؤول المنشأة الوحيد النشط.",
+                                    );
+                                    return;
+                                  }
+                                  setUsersMsg("");
+                                  setUserRole(u.id, roleId);
+                                }}
+                                options={roles.map((r) => ({
+                                  value: String(r.id),
+                                  label: r.name,
+                                }))}
+                                className="min-w-[10rem]"
+                                searchPlaceholder="بحث في الأدوار…"
+                              />
+                            </td>
+                            <td className="px-4 py-3 align-middle">
+                              <div className="flex items-center gap-2">
+                                <StatusToggle
+                                  active={active}
+                                  disabled={disableToggle}
+                                  onToggle={() => toggleActive(u.id)}
+                                />
+                                <span className="text-[11px] font-bold text-steel-500">
+                                  {active ? "مفعّل" : "معطّل"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-2 py-3 align-middle">
+                              {isSelf ? (
+                                <span className="text-[11px] font-bold text-steel-400">
+                                  حسابك
+                                </span>
+                              ) : (
+                                <span className="text-steel-300">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={pagination.setPage}
+                total={pagination.total}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+              />
+            </ModalPanel>
+          </Card>
+        </div>
+      )}
+
+      <Modal
+        open={roleFormOpen}
+        onClose={() => setRoleFormOpen(false)}
+        title={editingRoleId ? "تعديل دور" : "إضافة دور"}
+        subtitle={
+          editingRoleId
+            ? "تحديث اسم الدور ووصفه"
+            : "إنشاء دور مخصص بصلاحية لوحة المؤشرات افتراضياً"
+        }
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setRoleFormOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={submitRoleForm}>
+              <Check className="h-4 w-4" />
+              حفظ
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="اسم الدور" required>
+            <Input
+              value={roleName}
+              onChange={(e) => setRoleName(e.target.value)}
+              placeholder="مثال: منسق مشاريع"
+            />
+          </Field>
+          <Field label="الوصف">
+            <Input
+              value={roleDescription}
+              onChange={(e) => setRoleDescription(e.target.value)}
+              placeholder="وصف مختصر لمسؤوليات الدور"
+            />
+          </Field>
+          {formError ? (
+            <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }

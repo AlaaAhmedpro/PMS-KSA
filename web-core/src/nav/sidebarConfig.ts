@@ -9,6 +9,7 @@ import {
   Briefcase,
   Layers,
   Users,
+  Building2,
   GitBranch,
   Flag,
   Compass,
@@ -45,6 +46,7 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
     label: "التخطيط الاستراتيجي",
     caption: "ارتباطات اختيارية · ليست شجرة إلزامية",
     items: [
+      { id: "objectives", to: "/objectives", label: "الأهداف الاستراتيجية", icon: Flag },
       {
         id: "portfolios",
         to: "/portfolios",
@@ -52,9 +54,8 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
         hint: "لوحة · إدارة",
         icon: Briefcase,
       },
-      { id: "initiatives", to: "/initiatives", label: "المبادرات", icon: Compass },
       { id: "programs", to: "/programs", label: "البرامج", icon: Layers },
-      { id: "objectives", to: "/objectives", label: "الأهداف الاستراتيجية", icon: Flag },
+      { id: "initiatives", to: "/initiatives", label: "المبادرات", icon: Compass },
     ],
   },
   {
@@ -70,7 +71,7 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
         icon: FolderKanban,
         matchPrefix: true,
       },
-      { id: "tasks", to: "/tasks", label: "المهام والمعالم", icon: ListTodo },
+      { id: "tasks", to: "/tasks", label: "مهامي", icon: ListTodo },
     ],
   },
   {
@@ -78,7 +79,13 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
     label: "الموارد",
     items: [
       { id: "people", to: "/people", label: "الأعضاء والدعوات", icon: Users },
-      { id: "lookups", to: "/lookups", label: "إدارة القوائم", icon: List },
+      {
+        id: "vendors",
+        to: "/vendors",
+        label: "الموردون",
+        icon: Building2,
+        matchPrefix: true,
+      },
     ],
   },
   {
@@ -94,6 +101,7 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
     label: "الإدارة",
     items: [
       { id: "permissions", to: "/permissions", label: "الصلاحيات", icon: ShieldCheck },
+      { id: "lookups", to: "/lookups", label: "إدارة القوائم", icon: List },
       {
         id: "portfolio-settings",
         to: "/settings/portfolio",
