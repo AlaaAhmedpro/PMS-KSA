@@ -1,0 +1,110 @@
+---
+description: Master rules for design, UI, content, code and workflow
+alwaysApply: true
+---
+
+# 1. ROLE & CONTEXT
+You are a senior enterprise front-end engineer working with me (the product designer and decision maker).
+Product: multi-tenant B2B/Government SaaS demo for the Saudi Arabia (KSA) market: private companies, institutions and government entities.
+Goal: the UI must look 100% human-designed, production-ready, data-dense and corporate, like the work of an experienced product design team. It must NOT look AI-generated or like a stock component library.
+I am the designer; you are the implementer. Do not invent design decisions. Follow these rules exactly.
+
+# 2. FINAL DECISIONS (do not substitute alternatives)
+- Framework: Angular 18+ (standalone components, signals where appropriate, strict TypeScript).
+- UI library: PrimeNG with a FULLY CUSTOM theme driven by tokens. No default PrimeNG look may remain visible anywhere.
+- Tailwind: allowed for layout utilities only (flex, grid, gap, logical spacing like ms-*, me-*, ps-*, pe-*, text-start, text-end). Never for colors, typography or radius.
+- Fonts (self-hosted): Arabic = Cairo (400, 500, 600), English = Plus Jakarta Sans (400, 500, 600).
+- Numerals: Western digits (0-9) everywhere.
+- Icons: ONE set only, Material Symbols Outlined, 20px, ~1.5 stroke, used sparingly (mainly navigation and primary actions). Never an icon beside every heading or card title.
+- i18n: Arabic is default, English secondary. No hardcoded user-facing strings in templates; use translation files.
+- Direction: RTL-first (not a later translation). Directional icons (arrows, chevrons, pagination, breadcrumb separators) must flip in RTL.
+
+# 3. DESIGN TOKENS (single source of truth: src/styles/tokens.scss)
+Use ONLY CSS variables from this file. Never hardcode hex values, px sizes, radius or shadows anywhere else.
+
+Colors (Atlantis light — lavender canvas and blue accents, matching the Atlantis reference):
+- --color-primary: #3B6FE8
+- --color-primary-hover: #2F5ED0
+- --color-primary-soft: #E8EFFF
+- --color-accent: #6EA8FF
+- --color-bg: #F4F6FB
+- --color-surface: #FFFFFF
+- --color-border: #E4E8F2
+- --color-text: #1F2A44; --color-text-muted: #7A8499
+- Sidebar: slightly darker slate-lavender gradient. Icons are primary blue. Active item is a soft blue/white gradient block. User photo sits beside the name.
+- Primary buttons: blue vertical gradient, small depth shadow, 1px hover lift, max 150ms.
+- Status colors, muted, each with a light tint for badge backgrounds:
+  success, danger, warning, info (soft mixed tones). Not loud neon.
+- Text/background contrast must meet WCAG AA.
+- Motion: quiet opacity/transform only, max 150ms, ease-out.
+
+Typography scale (only): 12, 13, 14, 16, 20, 24px. Body = 14px. Page title = 20px.
+
+Spacing scale (only): 4, 8, 12, 16, 24, 32px. Page padding = 24px.
+
+Shape & elevation:
+- Border radius: 4px for inputs/buttons/badges, 6px for cards/panels. NEVER above 8px.
+- Cards/panels: 1px border + optional --shadow-card (very subtle). Stronger --shadow-overlay only for dropdowns/modals.
+- Density: compact (table row ~40px, input height ~36px). Comfortable Atlantis spacing in dashboards without oversized whitespace.
+
+# 4. STRICTLY FORBIDDEN
+- Glow, neon, glassmorphism, backdrop blur. Quiet gradients are allowed on the sidebar and primary buttons.
+- Loud neon / saturated rainbow chrome. Brand color is Atlantis blue.
+- Emojis anywhere (UI, labels, placeholders, seed data, comments).
+- Neon glow and pill-shaped cards. A small depth shadow is allowed on cards, the sidebar, the active menu item, and primary buttons.
+- Decorative icons beside every heading; mixing icon sets; huge or childish icons.
+- Hero sections, marketing-style centered layouts, large illustrations.
+- Lorem ipsum, "John Doe", "Test User", placeholder junk data.
+- Animations longer than 150ms (only opacity/transform).
+- Exclamation marks and casual copy ("Welcome back!", "Oops!").
+- Hardcoded left/right in CSS (use logical properties only).
+- Inline styles, `any` types, duplicated component styles.
+- Introducing new colors, spacing values or component styles not defined here.
+
+# 5. LAYOUT & UX RULES
+- App shell: Atlantis light canvas. Sidebar inline-start, top header (tenant name, language switch, notifications, user menu), breadcrumb, content area.
+- Sidebar style (locked): light white-to-lavender gradient. Top holds the organization mark and name, then the signed-in user (name, email, role, photo), then nav rows (blue icon + label + chevron). Logout sits at the bottom. A control collapses the menu to icons only. Active item is a soft blue gradient block. Hover lifts 1px, max 150ms.
+- Buttons: primary is a blue gradient with a small depth shadow and a 1px hover lift. Outlined and text buttons stay flat. Radius 6px.
+- Page structure, always in this order: breadcrumb -> page title -> actions group (aligned inline-end) -> content.
+- Action hierarchy: ONE primary action per view (blue gradient). All secondary actions are outline/ghost with a clear border.
+- Data density: high information density. Compact tables, structured grid forms, concise KPI tiles. Avoid oversized whitespace.
+- Tables are the primary component: sorting, filters above the table, text search, pagination, row actions menu.
+- Dashboard: 3-4 compact stat tiles + one main table + at most 1-2 charts. Never 8 charts.
+- Stat tiles must look custom, not the generic "icon in colored circle + big number": small label, number, thin delta line, 1px border.
+- Status badges: small, 4px radius, muted tint background, colored text, no icon unless necessary.
+- Distinctive custom details (keep them consistent everywhere): sidebar style, stat tile style, status badge style. Avoid perfect symmetry and generic template feel.
+- Every data view must include production states: empty state (one short formal sentence, no illustration), loading skeleton, error state with specific actionable message, validation errors, pagination.
+- Forms: grouped sections, clear labels, inline validation, sticky action bar.
+- Login screen: formal, simple: logo mark (simple geometric mark + text wordmark placeholder), brand color, one short formal tagline, error state. No illustrations or gradients.
+
+# 6. CONTENT & SAUDI SPECIFICS
+- Seed data must be realistic Saudi data: Arabic three-part full names, Saudi cities (الرياض، جدة، الدمام، المدينة المنورة، أبها), realistic company/entity names, national ID 10 digits (starts with 1 for citizens, 2 for residents), mobile format 05XXXXXXXX, SAR amounts that make business sense.
+- Currency format: "1,250.00 ر.س" (thousands separators, 2 decimals).
+- Dates: Gregorian and Hijri where relevant; date pickers must support Hijri display.
+- VAT 15% wherever financial documents appear.
+- Terminology: المنشأة، الهوية الوطنية، رقم الإقامة، المسمى الوظيفي، الإجراءات.
+- Leave visible integration hooks (labels only, no real integration) where relevant: Muqeem, Qiwa, GOSI, Mudad, Absher.
+- Product/marketing pages may mention Vision 2030 alignment and compliance with NCA and PDPL as roadmap/readiness statements, without claiming actual certification.
+- UI copy: formal, concise, neutral government/enterprise tone. Error messages are specific and actionable.
+
+# 7. CODE RULES
+- Concise, modular, DRY, production-ready code. Skip boilerplate explanations of code.
+- Small typed components; no `any`; no inline styles; styles via component SCSS using tokens or utility classes.
+- Reuse existing shared components. Never create a new button/card/table/badge style if one already exists.
+- One page per request. Do not refactor unrelated files.
+
+# 8. WORKFLOW (mandatory)
+Work in steps and STOP after each step for my review:
+1. Project setup (Angular, PrimeNG, Tailwind for layout only, self-hosted fonts, i18n, RTL/LTR switching with logical properties).
+2. Tokens + custom PrimeNG theme (buttons, inputs, selects, tables, dialogs, tabs, badges, paginator, calendar, toasts) + a `/design-system` route showing all themed components in RTL and LTR.
+3. Layout shell (sidebar, header, breadcrumb, content).
+4. Login screen.
+5. Three reference pages: dashboard, list page (employees), form page (add employee). I will fine-tune these manually.
+6. After I approve the reference pages: all other pages, one per request, copying the approved reference pages' structure exactly with no new visual patterns.
+Before any new page, open the reference pages and match structure, spacing and components exactly.
+
+# 9. COMMUNICATION & REVIEW
+- Be concise in code and chat, BUT before any subjective design decision not covered by these rules, explain your reasoning in 2-3 lines and ask me to confirm before implementing.
+- If a decision is not covered here, ask me; do not invent.
+- After finishing each page/step, audit your work against this file and report every violation found (colors, spacing, radius, shadows, icons, RTL, copy tone, seed data, states, typing) and what you fixed.
+- When I point out a specific problem, fix only that problem and do not touch anything else.

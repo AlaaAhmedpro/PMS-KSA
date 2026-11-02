@@ -1,0 +1,30 @@
+stateDiagram-v2
+  [*] --> draft: create
+  draft --> submitted: submit\n(policy validate)
+  returned --> submitted: resubmit\n(policy validate)
+  submitted --> under_review: start_review\n(standard/formal)
+  submitted --> approved: approve\n(simple mode)
+  submitted --> returned: return + reason
+  submitted --> rejected: reject + reason
+  under_review --> returned: return + reason
+  under_review --> pending_approval: recommend_approve
+  under_review --> approved: approve\n(exec)
+  under_review --> rejected: reject + reason
+  pending_approval --> approved: approve
+  pending_approval --> returned: return + reason
+  pending_approval --> rejected: reject + reason
+  rejected --> submitted: resubmit
+  approved --> active: activate\n(activation policy)
+  active --> on_hold: suspend + reason
+  on_hold --> active: resume
+  active --> closed: close + reason
+  approved --> closed: close + reason
+  on_hold --> closed: close + reason
+  rejected --> closed: close + reason
+  closed --> archived: archive
+
+  note right of approved
+    SoD when policy.separationOfDuties:
+    approver ≠ submitter.
+    Exact path from OrgPortfolioPolicy.workflowMode.
+  end note

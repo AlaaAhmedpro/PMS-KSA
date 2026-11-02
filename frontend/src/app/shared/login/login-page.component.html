@@ -1,0 +1,40 @@
+<div class="login-page flex flex-col">
+  <div class="login-toolbar flex justify-between items-center">
+    <a class="login-home" [routerLink]="homeLink()">{{ 'app.name' | translate }}</a>
+    <div class="flex gap-2">
+      <button type="button" class="login-lang" [class.is-active]="language() === 'ar'" (click)="setLanguage('ar')">
+        {{ 'app.arabic' | translate }}
+      </button>
+      <button type="button" class="login-lang" [class.is-active]="language() === 'en'" (click)="setLanguage('en')">
+        {{ 'app.english' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <div class="login-card flex flex-col gap-4">
+    <div class="flex items-center gap-3">
+      <span class="login-mark" aria-hidden="true"></span>
+      <div class="flex flex-col gap-1">
+        <h1 class="login-title">{{ titleKey() | translate }}</h1>
+        <p class="login-tagline">{{ taglineKey() | translate }}</p>
+      </div>
+    </div>
+
+    @if (errorKey()) {
+      <p class="login-error" role="alert">{{ errorKey()! | translate }}</p>
+    }
+
+    <label class="login-field flex flex-col gap-1">
+      <span>{{ 'login.email' | translate }}</span>
+      <input pInputText type="email" [(ngModel)]="email" [placeholder]="'login.emailPlaceholder' | translate" />
+    </label>
+
+    <label class="login-field flex flex-col gap-1">
+      <span>{{ 'login.password' | translate }}</span>
+      <p-password [(ngModel)]="password" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" />
+    </label>
+
+    <p-button [label]="'login.submit' | translate" styleClass="w-full" (onClick)="submit()" />
+    <p class="login-hint">{{ 'login.demoHint' | translate }}</p>
+  </div>
+</div>

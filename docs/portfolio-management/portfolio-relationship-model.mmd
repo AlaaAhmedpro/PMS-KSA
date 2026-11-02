@@ -1,0 +1,21 @@
+flowchart LR
+  subgraph Containment["Contains / Owns"]
+    PF[Portfolio] --> INI[Initiative]
+    PF --> PRG[Program]
+    PF --> PRJ1[Project portfolio-standalone]
+    INI --> PRG2[Program]
+    PRG --> PRJ2[Project under program]
+  end
+
+  subgraph Alignment["Aligns With"]
+    PRJ3[Project] -.->|aligns_with| INI2[Initiative]
+    PRJ3 -.->|aligns_with| PF2[Portfolio]
+  end
+
+  subgraph Dependency["Depends On"]
+    PRJ4[Project A] -->|depends_on| PRJ5[Project B]
+  end
+
+  subgraph Association["Related To"]
+    PRJ6[Project] ---|related_to| PRJ7[Project]
+  end

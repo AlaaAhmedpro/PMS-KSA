@@ -1,0 +1,24 @@
+flowchart TD
+  A[Create Draft] --> B[Complete required fields]
+  B --> C{Validate submission}
+  C -->|fail| B
+  C -->|ok| D[Submit]
+  D --> E[Audit: submit]
+  E --> F[Submitted]
+  F --> G[PMO start_review]
+  G --> H[Under Review]
+  H --> I{PMO decision}
+  I -->|return + reason| J[Returned]
+  J --> B
+  I -->|reject + reason| K[Rejected]
+  I -->|recommend_approve| L[Pending Approval]
+  L --> M{Executive decision}
+  M -->|approve| N[Approved]
+  M -->|return| J
+  M -->|reject| K
+  N --> O[Activate]
+  O --> P[Active]
+  P --> Q[Notifications demo: audit trail]
+  D --> Q
+  I --> Q
+  M --> Q

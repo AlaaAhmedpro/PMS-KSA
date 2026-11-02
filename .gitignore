@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build / output
+dist/
+**/dist/
+tmp/
+out-tsc/
+.angular/
+**/.angular/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+**/appsettings.*.local.json
+**/secrets.json
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs / coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+coverage/
+**/coverage/
+
+# Misc
+*.tsbuildinfo
+.sass-cache/
+connect.lock
+libpeerconnection.log
+testem.log
+typings/

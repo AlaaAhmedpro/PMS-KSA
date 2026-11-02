@@ -1,0 +1,46 @@
+<div class="site flex flex-col">
+  <header class="site-header flex flex-wrap items-center justify-between gap-3">
+    <a routerLink="/" class="site-brand flex items-center gap-2">
+      <span class="site-mark" aria-hidden="true"></span>
+      <span class="site-brand-name">{{ 'site.brand' | translate }}</span>
+    </a>
+
+    <nav class="site-nav flex flex-wrap items-center gap-2">
+      <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" class="site-nav-link">
+        {{ 'site.nav.home' | translate }}
+      </a>
+      <a routerLink="/features" routerLinkActive="is-active" class="site-nav-link">
+        {{ 'site.nav.features' | translate }}
+      </a>
+      <a routerLink="/pricing" routerLinkActive="is-active" class="site-nav-link">
+        {{ 'site.nav.pricing' | translate }}
+      </a>
+      <a routerLink="/demo" routerLinkActive="is-active" class="site-nav-link">
+        {{ 'site.nav.demo' | translate }}
+      </a>
+    </nav>
+
+    <div class="site-actions flex flex-wrap items-center gap-2">
+      <div class="site-lang flex items-center gap-1" role="group" [attr.aria-label]="'app.language' | translate">
+        <button type="button" class="site-lang-btn" [class.is-active]="language() === 'ar'" (click)="setLanguage('ar')">
+          {{ 'app.arabic' | translate }}
+        </button>
+        <button type="button" class="site-lang-btn" [class.is-active]="language() === 'en'" (click)="setLanguage('en')">
+          {{ 'app.english' | translate }}
+        </button>
+      </div>
+      <a routerLink="/app/login" class="site-link">{{ 'site.nav.appLogin' | translate }}</a>
+      <a routerLink="/admin/login" class="site-link site-link--muted">{{ 'site.nav.adminLogin' | translate }}</a>
+      <a routerLink="/demo" class="site-cta">{{ 'site.nav.requestDemo' | translate }}</a>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <router-outlet />
+  </main>
+
+  <footer class="site-footer flex flex-wrap justify-between gap-3">
+    <span>{{ 'site.footer.copy' | translate }}</span>
+    <span>{{ 'site.footer.compliance' | translate }}</span>
+  </footer>
+</div>

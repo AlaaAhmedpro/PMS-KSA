@@ -1,0 +1,362 @@
+{
+  "app": {
+    "name": "Project Management Platform",
+    "setupLine": "Frontend environment is ready.",
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "shell": {
+    "logout": "Sign out",
+    "home": "Home",
+    "collapseMenu": "Hide menu",
+    "expandMenu": "Show menu"
+  },
+  "login": {
+    "email": "Email",
+    "emailPlaceholder": "name@entity.gov.sa",
+    "password": "Password",
+    "submit": "Sign in",
+    "demoHint": "Any valid email and password work in this preview.",
+    "appTitle": "Organization sign-in",
+    "appTagline": "Project and resource operations for entities in the Kingdom.",
+    "adminTitle": "Platform admin sign-in",
+    "adminTagline": "Manage tenants, plans, and demo requests.",
+    "errors": {
+      "required": "Enter email and password to continue."
+    }
+  },
+  "core": {
+    "brand": "Project Development Authority",
+    "nav": {
+      "dashboard": "Dashboard",
+      "employees": "Employees",
+      "projects": "Projects",
+      "reports": "Reports"
+    },
+    "status": {
+      "active": "Active",
+      "delayed": "Delayed",
+      "done": "Completed",
+      "suspended": "Suspended",
+      "pending": "Pending"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Organization summary of projects, tasks, and budget.",
+      "projectsTitle": "Active projects",
+      "kpi": {
+        "activeProjects": "Active projects",
+        "activeProjectsDelta": "+3 vs previous month",
+        "openTasks": "Open tasks",
+        "openTasksDelta": "+12 need follow-up",
+        "budget": "Budget expended",
+        "budgetDelta": "Within plan"
+      },
+      "col": {
+        "name": "Project",
+        "city": "City",
+        "manager": "Project manager",
+        "budget": "Budget",
+        "status": "Status"
+      }
+    },
+    "employees": {
+      "title": "Employees",
+      "subtitle": "Organization employee records, IDs, and job titles.",
+      "add": "Add employee",
+      "search": "Search by name, city, or title",
+      "empty": "No records match the search criteria.",
+      "col": {
+        "name": "Name",
+        "nationalId": "National ID",
+        "city": "City",
+        "mobile": "Mobile",
+        "role": "Job title",
+        "status": "Status"
+      }
+    },
+    "employeeForm": {
+      "title": "Add employee",
+      "subtitle": "Register a new employee in the organization.",
+      "name": "Full name",
+      "namePh": "Example: Abdullah Mohammed Al-Otaibi",
+      "nationalId": "National ID",
+      "nationalIdPh": "1XXXXXXXXX",
+      "mobile": "Mobile",
+      "mobilePh": "05XXXXXXXX",
+      "city": "City",
+      "cityPh": "Select a city",
+      "role": "Job title",
+      "rolePh": "Select a title",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saved": "Record saved. Returning to the list."
+    }
+  },
+  "admin": {
+    "brand": "Platform administration",
+    "nav": {
+      "dashboard": "Dashboard",
+      "tenants": "Tenants",
+      "plans": "Plans",
+      "demoRequests": "Demo requests"
+    },
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "suspended": "Suspended"
+    },
+    "dashboard": {
+      "title": "Platform dashboard",
+      "subtitle": "Summary of tenants, revenue, and demo requests.",
+      "tenantsTitle": "Recent tenants",
+      "kpi": {
+        "tenants": "Tenants",
+        "tenantsDelta": "+4 this month",
+        "trials": "Trials",
+        "trialsDelta": "+2 new",
+        "mrr": "Monthly revenue",
+        "mrrDelta": "+6.2%",
+        "demoRequests": "Demo requests",
+        "demoRequestsDelta": "3 awaiting follow-up"
+      }
+    },
+    "tenants": {
+      "title": "Tenants",
+      "subtitle": "Organizations and entities subscribed to the platform.",
+      "add": "Add tenant",
+      "search": "Search by name, city, or plan",
+      "empty": "No organizations match the search criteria.",
+      "col": {
+        "name": "Organization",
+        "cr": "CR number",
+        "city": "City",
+        "plan": "Plan",
+        "seats": "Seats",
+        "status": "Status"
+      }
+    },
+    "plans": {
+      "title": "Plans",
+      "subtitle": "Published subscription plans and drafts.",
+      "basic": "Basic",
+      "pro": "Professional",
+      "enterprise": "Enterprise",
+      "gov": "Government",
+      "col": {
+        "name": "Plan",
+        "price": "Monthly price",
+        "seats": "Seats",
+        "status": "Status"
+      },
+      "status": {
+        "published": "Published",
+        "draft": "Draft"
+      }
+    },
+    "demoRequests": {
+      "title": "Demo requests",
+      "subtitle": "Inbound requests from the public website.",
+      "search": "Search by organization, contact, or city",
+      "empty": "No matching requests.",
+      "col": {
+        "org": "Organization",
+        "contact": "Contact",
+        "mobile": "Mobile",
+        "city": "City",
+        "date": "Date",
+        "status": "Status"
+      },
+      "status": {
+        "new": "New",
+        "contacted": "Contacted",
+        "qualified": "Qualified",
+        "closed": "Closed"
+      }
+    }
+  },
+  "site": {
+    "brand": "Project Management Platform",
+    "nav": {
+      "home": "Home",
+      "features": "Features",
+      "pricing": "Pricing",
+      "demo": "Request demo",
+      "requestDemo": "Request a demo",
+      "appLogin": "Organization sign-in",
+      "adminLogin": "Platform sign-in"
+    },
+    "footer": {
+      "copy": "Project Management Platform — Kingdom of Saudi Arabia",
+      "compliance": "Roadmap readiness for Vision 2030, NCA, and PDPL"
+    },
+    "home": {
+      "eyebrow": "Multi-tenant platform for government and private entities",
+      "lead": "Operate projects, resources, and compliance in one interface built for the Saudi market.",
+      "explore": "Explore features",
+      "p1Title": "Project operations",
+      "p1Body": "Track stages, tasks, and budgets at a density suited to institutional teams.",
+      "p2Title": "Organization management",
+      "p2Body": "Employee records, IDs, and job titles under organization policies.",
+      "p3Title": "Local integrations",
+      "p3Body": "Extension-ready hooks: Muqeem, Qiwa, GOSI, Mudad, Absher.",
+      "visionTitle": "National alignment",
+      "visionBody": "Designed to support governance and privacy readiness without claiming unearned certifications."
+    },
+    "features": {
+      "title": "Features",
+      "subtitle": "Operational capabilities for organizations and government entities.",
+      "f1Title": "Dashboards",
+      "f1Body": "Compact project, task, and budget indicators for daily review.",
+      "f2Title": "Employee registry",
+      "f2Body": "National ID, residency number, and job titles in Kingdom formats.",
+      "f3Title": "Multi-tenant",
+      "f3Body": "Isolated organization data with central platform administration.",
+      "f4Title": "Subscription plans",
+      "f4Body": "Basic, Professional, Enterprise, and Government plans with 15% VAT.",
+      "f5Title": "Demo requests",
+      "f5Body": "A clear path from the public site to platform follow-up.",
+      "f6Title": "Arabic-first UI",
+      "f6Body": "RTL by default with English secondary and Western numerals.",
+      "integrations": "Extension-ready hooks (labels only): Muqeem · Qiwa · GOSI · Mudad · Absher"
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": "Indicative monthly prices for the demo. Final pricing is contractual.",
+      "basicName": "Basic",
+      "basicPrice": "SAR 1,250.00 / month",
+      "basicBody": "Up to 15 seats and limited projects for smaller organizations.",
+      "proName": "Professional",
+      "proPrice": "SAR 3,900.00 / month",
+      "proBody": "Up to 50 seats with operational reports and stage tracking.",
+      "entName": "Enterprise",
+      "entPrice": "SAR 9,800.00 / month",
+      "entBody": "Unlimited seats and dedicated support for large entities.",
+      "vatNote": "15% VAT is added to all financial invoices."
+    },
+    "demo": {
+      "title": "Request a demo",
+      "subtitle": "Enter organization details and we will respond within two business days.",
+      "org": "Organization name",
+      "orgPh": "Example: Namaa Development Co.",
+      "contact": "Contact person",
+      "contactPh": "Example: Meshaal Al-Otaibi",
+      "mobile": "Mobile",
+      "mobilePh": "05XXXXXXXX",
+      "email": "Email",
+      "emailPh": "name@company.sa",
+      "city": "City",
+      "cityPh": "Select a city",
+      "notes": "Notes",
+      "notesPh": "Brief need or expected user count",
+      "submit": "Submit request",
+      "success": "Request received. It will appear in the platform admin demo-request list."
+    }
+  },
+  "designSystem": {
+    "eyebrow": "Design system",
+    "title": "Project operations board",
+    "subtitle": "Atlantis style: light lavender canvas, blue icons, and a quiet gradient with light depth on the menu and buttons.",
+    "tenant": "Project Development Authority",
+    "searchPlaceholder": "Search projects and tasks",
+    "user": {
+      "name": "Abdullah Mohammed Al-Otaibi",
+      "email": "a.alotaibi@projects.gov.sa",
+      "role": "Project manager"
+    },
+    "logout": "Sign out",
+    "logoutNotice": "The preview session was ended.",
+    "collapseMenu": "Hide menu",
+    "expandMenu": "Show menu",
+    "nav": {
+      "dashboard": "Dashboard",
+      "projects": "Projects",
+      "employees": "Employees",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "kpi": {
+      "activeProjects": "Active projects",
+      "activeProjectsDelta": "+3 vs previous month",
+      "openTasks": "Open tasks",
+      "openTasksDelta": "+12 need follow-up",
+      "budgetUsed": "Budget expended",
+      "budgetUsedDelta": "Within plan"
+    },
+    "activity": {
+      "payment": "Stage payment",
+      "paymentMeta": "Waterfront development · Today",
+      "refund": "Contractor advance refund",
+      "refundMeta": "Contract 4821 · Yesterday",
+      "milestone": "Design stage closed",
+      "milestoneMeta": "Housing development · Yesterday"
+    },
+    "sections": {
+      "buttons": "Buttons",
+      "inputs": "Fields",
+      "badges": "Status badges",
+      "tabs": "Tabs",
+      "table": "Team members",
+      "activity": "Recent activity"
+    },
+    "actions": {
+      "primary": "Primary action",
+      "secondary": "Secondary action",
+      "ghost": "Text action",
+      "danger": "Delete",
+      "openDialog": "Open dialog",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "fields": {
+      "name": "Full name",
+      "namePlaceholder": "Example: Abdullah Mohammed Al-Otaibi",
+      "city": "City",
+      "cityPlaceholder": "Select a city",
+      "date": "Date",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter a brief note"
+    },
+    "cities": {
+      "riyadh": "Riyadh",
+      "jeddah": "Jeddah",
+      "dammam": "Dammam",
+      "madinah": "Madinah",
+      "abha": "Abha"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "pending": "Pending",
+      "revoked": "Revoked",
+      "info": "Info"
+    },
+    "tags": {
+      "sample": "Tag"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "members": "Members",
+      "settings": "Settings",
+      "overviewBody": "Brief summary of organization status and active projects.",
+      "membersBody": "Organization members and their permissions.",
+      "settingsBody": "Organization settings and operating policies."
+    },
+    "table": {
+      "name": "Name",
+      "city": "City",
+      "role": "Job title",
+      "status": "Status",
+      "empty": "No records to display."
+    },
+    "dialog": {
+      "title": "Confirm action",
+      "body": "Do you want to continue? This can be reviewed later in the activity log."
+    },
+    "toast": {
+      "summary": "Saved",
+      "detail": "The action was recorded successfully."
+    }
+  }
+}

@@ -1,0 +1,42 @@
+flowchart TB
+  subgraph SB["Sample default — Small Business (simple)"]
+    S1[Draft] -->|submit + policy validate| S2[Submitted]
+    S2 -->|approve executive/owner<br/>SoD if enabled| S3[Approved]
+    S2 -->|reject + reason| S4[Rejected]
+    S2 -->|return + reason| S5[Returned]
+    S5 -->|resubmit| S2
+    S3 -->|activate| S6[Active]
+    S6 -->|notify/audit| S7[Dashboard refresh]
+  end
+
+  subgraph LE["Sample default — Large Enterprise (standard)"]
+    E1[Draft] -->|submit<br/>sponsor+budget+dept| E2[Submitted]
+    E2 -->|start_review PMO| E3[Under Review]
+    E3 -->|return + reason| E4[Returned]
+    E4 -->|resubmit| E2
+    E3 -->|recommend_approve| E5[Pending Approval]
+    E5 -->|finance/exec approve| E6[Approved]
+    E3 -->|reject + reason| E7[Rejected]
+    E6 -->|activate if approvedBudget| E8[Active]
+    E8 --> E9[Budget + relationship reporting]
+  end
+
+  subgraph GV["Sample default — Government Entity (formal)"]
+    G1[Draft] -->|submit<br/>objectives+docs+budget| G2[Submitted]
+    G2 -->|start_review strategy/PMO| G3[Under Review]
+    G3 -->|return + mandatory reason| G4[Returned]
+    G4 -->|resubmit preserves history| G2
+    G3 -->|recommend_approve| G5[Pending Approval]
+    G5 -->|authorized approve| G6[Approved<br/>field locks]
+    G3 -->|reject + mandatory reason| G7[Rejected]
+    G6 -->|activate| G8[Active]
+    G2 --> G9[Audit + notifications]
+    G3 --> G9
+    G5 --> G9
+    G6 --> G9
+  end
+
+  note1["These are starter defaults from OrgPortfolioPolicy presets — not mandatory for all customers in each category."]
+  SB -.-> note1
+  LE -.-> note1
+  GV -.-> note1

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول — منظومة المكاتبات والتكليفات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js"></script>
+  <style>
+    :root {
+      --bg-base: #080c14;
+      --bg-hero: #0a0f1c;
+      --bg-card: rgba(13, 18, 30, 0.82);
+      --bg-card-solid: #0d121e;
+      --bg-input: rgba(255, 255, 255, 0.05);
+      --bg-input-focus: rgba(196, 255, 0, 0.06);
+      --bg-role-btn: rgba(255, 255, 255, 0.04);
+      --bg-role-hover: rgba(196, 255, 0, 0.08);
+      --accent: #c4ff00;
+      --accent-dim: #a8d900;
+      --accent-glow: rgba(196, 255, 0, 0.25);
+      --accent-glow-lg: rgba(196, 255, 0, 0.12);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.55);
+      --text-muted: rgba(255, 255, 255, 0.28);
+      --text-label: rgba(255, 255, 255, 0.60);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --border-input: rgba(255, 255, 255, 0.10);
+      --border-input-focus: rgba(196, 255, 0, 0.50);
+      --border-role: rgba(255, 255, 255, 0.08);
+      --border-role-hover: rgba(196, 255, 0, 0.35);
+      --border-accent: #c4ff00;
+      --r-card: 20px;
+      --r-input: 10px;
+      --r-btn: 10px;
+      --r-role: 10px;
+      --r-badge: 100px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      font-family: "Cairo", sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      direction: ltr;
+    }
+
+    .left-panel {
+      width: 45%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: linear-gradient(135deg, #080c14 0%, #0a1020 40%, #080c14 100%);
+    }
+
+    .left-panel::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(196, 255, 0, 0.07) 0%, transparent 70%);
+      pointer-events: none;
+      animation: ambientPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes ambientPulse {
+      0%,
+      100% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+    }
+
+    .login-card {
+      width: 420px;
+      background: var(--bg-card);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-card);
+      border-radius: var(--r-card);
+      padding: 40px 36px 32px;
+      position: relative;
+      z-index: 2;
+      border-right: 3px solid var(--border-accent);
+      border-left: none;
+      animation: cardSlideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes cardSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(32px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin: 0 0 8px;
+      letter-spacing: -0.3px;
+      text-align: center;
+      animation: fadeUp 0.6s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      text-align: center;
+      margin: 0 0 28px;
+      animation: fadeUp 0.6s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .field-group {
+      margin-bottom: 18px;
+    }
+
+    .field-group--email {
+      animation: fadeUp 0.6s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .field-group--password {
+      animation: fadeUp 0.6s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-label);
+      margin-bottom: 8px;
+      letter-spacing: 0.2px;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      right: 14px;
+      font-size: 18px;
+      color: var(--text-muted);
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .field-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-input);
+      border-radius: var(--r-input);
+      color: var(--text-primary);
+      font-family: "Cairo", sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      padding: 13px 44px 13px 16px;
+      outline: none;
+      transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+      direction: ltr;
+      text-align: right;
+    }
+
+    .field-input::placeholder {
+      color: var(--text-muted);
+      direction: rtl;
+    }
+
+    .field-input:focus {
+      border-color: var(--border-input-focus);
+      background: var(--bg-input-focus);
+      box-shadow: 0 0 0 3px rgba(196, 255, 0, 0.10);
+    }
+
+    .input-wrap:focus-within .input-icon {
+      color: var(--accent);
+    }
+
+    .toggle-pass {
+      position: absolute;
+      left: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .toggle-pass:hover {
+      color: var(--accent);
+    }
+
+    .forgot-wrap {
+      text-align: right;
+      margin: -8px 0 20px;
+    }
+
+    .forgot-link {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .forgot-link:hover {
+      opacity: 1;
+    }
+
+    .form-error {
+      display: none;
+      margin: -6px 0 14px;
+      padding: 10px 12px;
+      border-radius: var(--r-input);
+      border: 1px solid rgba(255, 80, 80, 0.35);
+      background: rgba(255, 80, 80, 0.08);
+      color: #ffb4b4;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.45;
+      text-align: right;
+    }
+
+    .form-error.is-visible {
+      display: block;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .btn-login {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--r-btn);
+      color: #000000;
+      font-family: "Cairo", sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+      transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
+      animation: fadeUp 0.6s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+      box-shadow: 0 4px 24px var(--accent-glow);
+    }
+
+    .btn-login:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(196, 255, 0, 0.35);
+    }
+
+    .btn-login:active {
+      transform: scale(0.985) translateY(0);
+      filter: brightness(0.96);
+    }
+
+    .btn-login:disabled {
+      cursor: not-allowed;
+      opacity: 0.92;
+    }
+
+    .btn-login::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .btn-login:hover::after {
+      left: 150%;
+    }
+
+    .btn-icon {
+      font-size: 20px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinning {
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 22px 0 16px;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .divider-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .role-btn {
+      background: var(--bg-role-btn);
+      border: 1px solid var(--border-role);
+      border-radius: var(--r-role);
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      font-family: "Cairo", sans-serif;
+    }
+
+    .role-btn:hover {
+      background: var(--bg-role-hover);
+      border-color: var(--border-role-hover);
+      transform: translateY(-2px);
+    }
+
+    .role-btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    .role-icon {
+      font-size: 22px;
+      color: var(--accent);
+    }
+
+    .role-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .role-btn:nth-child(1) {
+      animation: fadeUp 0.5s 0.45s both;
+    }
+
+    .role-btn:nth-child(2) {
+      animation: fadeUp 0.5s 0.5s both;
+    }
+
+    .role-btn:nth-child(3) {
+      animation: fadeUp 0.5s 0.55s both;
+    }
+
+    .role-btn:nth-child(4) {
+      animation: fadeUp 0.5s 0.6s both;
+    }
+
+    .role-btn:nth-child(5) {
+      animation: fadeUp 0.5s 0.65s both;
+    }
+
+    .role-btn:nth-child(6) {
+      animation: fadeUp 0.5s 0.7s both;
+    }
+
+    .card-footer {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 12.5px;
+      animation: fadeUp 0.5s 0.75s both;
+    }
+
+    .footer-muted {
+      color: var(--text-muted);
+    }
+
+    .footer-link {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      margin-right: 4px;
+      opacity: 0.85;
+      transition: opacity 0.2s;
+    }
+
+    .footer-link:hover {
+      opacity: 1;
+    }
+
+    .right-panel {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-height: 100vh;
+      background: var(--bg-hero);
+    }
+
+    .hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      filter: brightness(0.40) saturate(0.85);
+      transform: scale(1.03);
+      animation: slowZoom 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes slowZoom {
+      from {
+        transform: scale(1);
+      }
+      to {
+        transform: scale(1.06);
+      }
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(to right, rgba(8, 12, 20, 0.92) 0%, transparent 35%),
+        linear-gradient(to top, rgba(8, 12, 20, 0.80) 0%, transparent 55%),
+        rgba(8, 12, 20, 0.20);
+    }
+
+    .hero-content {
+      position: absolute;
+      bottom: 80px;
+      right: 60px;
+      left: 60px;
+      z-index: 2;
+      text-align: right;
+      animation: heroFadeIn 1s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes heroFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin: 0 0 12px;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-title-accent {
+      color: var(--accent);
+      display: block;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.65);
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .logo-badge {
+      position: absolute;
+      top: 28px;
+      left: 28px;
+      z-index: 3;
+      animation: badgeDrop 0.7s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes badgeDrop {
+      from {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .logo-badge-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(8, 12, 20, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(196, 255, 0, 0.20);
+      border-radius: var(--r-badge);
+      padding: 10px 20px 10px 14px;
+    }
+
+    .logo-img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+
+    .logo-text {
+      text-align: right;
+    }
+
+    .logo-name {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .logo-dept {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.45);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        overflow: auto;
+        height: auto;
+      }
+
+      .right-panel {
+        height: 220px;
+        min-height: unset;
+      }
+
+      .hero-title {
+        font-size: 24px;
+      }
+
+      .hero-content {
+        bottom: 20px;
+        right: 20px;
+        left: 20px;
+      }
+
+      .logo-badge {
+        top: 16px;
+        left: 16px;
+      }
+
+      .left-panel {
+        width: 100%;
+        padding: 24px 16px 40px;
+        min-height: unset;
+      }
+
+      .login-card {
+        width: 100%;
+        padding: 28px 20px 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="left-panel" dir="rtl">
+    <div class="login-card">
+      <div class="card-header">
+        <h1 class="card-title">تسجيل الدخول</h1>
+        <p class="card-subtitle">يرجى إدخال بياناتك للوصول إلى حسابك</p>
+      </div>
+
+      <div class="field-group field-group--email">
+        <label class="field-label" for="emailInput">البريد الإلكتروني</label>
+        <div class="input-wrap">
+          <ph-envelope class="input-icon" weight="regular"></ph-envelope>
+          <input
+            id="emailInput"
+            class="field-input"
+            type="email"
+            placeholder="example@ezzsteel.com"
+            autocomplete="email"
+          />
+        </div>
+      </div>
+
+      <div class="field-group field-group--password">
+        <label class="field-label" for="passwordInput">كلمة المرور</label>
+        <div class="input-wrap">
+          <ph-lock class="input-icon" weight="regular"></ph-lock>
+          <input
+            id="passwordInput"
+            class="field-input"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password"
+          />
+          <button class="toggle-pass" id="togglePass" type="button" aria-label="إظهار/إخفاء كلمة المرور">
+            <ph-eye id="eyeIcon" weight="regular"></ph-eye>
+          </button>
+        </div>
+      </div>
+
+      <div class="forgot-wrap">
+        <a href="#" class="forgot-link">نسيت كلمة المرور؟</a>
+      </div>
+
+      <div id="formError" class="form-error" role="alert" aria-live="polite"></div>
+
+      <button class="btn-login" id="loginBtn" type="button">
+        <ph-sign-in weight="bold" class="btn-icon"></ph-sign-in>
+        دخول
+      </button>
+
+      <div class="divider">
+        <span class="divider-line"></span>
+        <span class="divider-text">دخول سريع بحسب الدور</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <div class="roles-grid">
+        <button class="role-btn" type="button" data-role="employee">
+          <ph-user class="role-icon" weight="regular"></ph-user>
+          <span class="role-label">موظف</span>
+        </button>
+        <button class="role-btn" type="button" data-role="sector-head">
+          <ph-briefcase class="role-icon" weight="regular"></ph-briefcase>
+          <span class="role-label">رئيس قطاع</span>
+        </button>
+        <button class="role-btn" type="button" data-role="manager">
+          <ph-user-circle-gear class="role-icon" weight="regular"></ph-user-circle-gear>
+          <span class="role-label">مدير إدارة</span>
+        </button>
+        <button class="role-btn" type="button" data-role="admin-affairs">
+          <ph-users-three class="role-icon" weight="regular"></ph-users-three>
+          <span class="role-label">الشؤون الإدارية</span>
+        </button>
+        <button class="role-btn" type="button" data-role="correspondence">
+          <ph-files class="role-icon" weight="regular"></ph-files>
+          <span class="role-label">المراسلات</span>
+        </button>
+        <button class="role-btn" type="button" data-role="follow-up">
+          <ph-clipboard-text class="role-icon" weight="regular"></ph-clipboard-text>
+          <span class="role-label">المتابعة</span>
+        </button>
+      </div>
+
+      <div class="card-footer">
+        <span class="footer-muted">ليس لديك حساب؟</span>
+        <a href="#" class="footer-link">تواصل مع مسؤول النظام</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel" dir="rtl">
+    <div class="hero-overlay"></div>
+    <img class="hero-img" src="./factory.jpg" alt="Egyptian Steel Factory" />
+    <div class="hero-content">
+      <h2 class="hero-title">
+        منظومة متابعة<br />
+        <span class="hero-title-accent">المكاتبات والتكليفات</span>
+      </h2>
+      <p class="hero-subtitle">بوابة الموظفين — حديد المصريين</p>
+    </div>
+    <div class="logo-badge">
+      <div class="logo-badge-inner">
+        <img src="./logo.png" alt="Egyptian Steel Logo" class="logo-img" />
+        <div class="logo-text">
+          <span class="logo-name">حديد المصريين</span>
+          <span class="logo-dept">قطاع تكنولوجيا المعلومات</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const passwordInput = document.getElementById("passwordInput");
+    const togglePass = document.getElementById("togglePass");
+    const eyeIcon = document.getElementById("eyeIcon");
+    const loginBtn = document.getElementById("loginBtn");
+    const emailInput = document.getElementById("emailInput");
+    const formError = document.getElementById("formError");
+
+    togglePass.addEventListener("click", function () {
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        eyeIcon.setAttribute("weight", "fill");
+      } else {
+        passwordInput.type = "password";
+        eyeIcon.setAttribute("weight", "regular");
+      }
+    });
+
+    function showError(message) {
+      formError.textContent = message;
+      formError.classList.add("is-visible");
+    }
+
+    function hideError() {
+      formError.textContent = "";
+      formError.classList.remove("is-visible");
+    }
+
+    function setLoginButtonContent(iconName, label, spinning) {
+      loginBtn.innerHTML = "";
+      const icon = document.createElement(iconName);
+      icon.className = "btn-icon";
+      icon.setAttribute("weight", "bold");
+      if (spinning) {
+        icon.classList.add("spinning");
+      }
+      loginBtn.appendChild(icon);
+      loginBtn.appendChild(document.createTextNode(" " + label));
+    }
+
+    function restoreLoginButton() {
+      loginBtn.disabled = false;
+      setLoginButtonContent("ph-sign-in", "دخول", false);
+    }
+
+    loginBtn.addEventListener("click", function () {
+      hideError();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!email || !password) {
+        showError("يرجى إدخال البريد الإلكتروني وكلمة المرور.");
+        return;
+      }
+
+      loginBtn.disabled = true;
+      setLoginButtonContent("ph-spinner", "جاري الدخول...", true);
+
+      window.setTimeout(function () {
+        restoreLoginButton();
+        showError("تعذّر تسجيل الدخول. تحقق من البيانات أو استخدم الدخول السريع بالأسفل.");
+      }, 2000);
+    });
+
+    document.querySelectorAll(".role-btn").forEach(function (button) {
+      button.addEventListener("click", function () {
+        hideError();
+        const roleLabel = button.querySelector(".role-label").textContent.trim();
+        showError("تم اختيار دور «" + roleLabel + "» — Demo فقط.");
+      });
+    });
+
+    emailInput.addEventListener("input", hideError);
+    passwordInput.addEventListener("input", hideError);
+  </script>
+</body>
+</html>

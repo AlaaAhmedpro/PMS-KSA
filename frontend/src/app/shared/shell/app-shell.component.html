@@ -1,0 +1,90 @@
+<div class="shell flex" [class.is-collapsed]="menuCollapsed()">
+  <aside class="shell-sidebar flex flex-col">
+    <div class="shell-sidebar-head flex items-center justify-between gap-2">
+      <div class="shell-brand flex items-center gap-2">
+        <span class="shell-logo-mark" aria-hidden="true"></span>
+        <span class="shell-brand-name">{{ brandKey() | translate }}</span>
+      </div>
+      <button
+        type="button"
+        class="shell-icon-btn"
+        [attr.aria-label]="(menuCollapsed() ? 'shell.expandMenu' : 'shell.collapseMenu') | translate"
+        [attr.title]="(menuCollapsed() ? 'shell.expandMenu' : 'shell.collapseMenu') | translate"
+        (click)="toggleMenu()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{ menuCollapsed() ? 'menu' : 'menu_open' }}</span>
+      </button>
+    </div>
+
+    @if (session(); as user) {
+      <div class="shell-user flex items-center gap-3">
+        <img class="shell-user-photo" src="assets/user-avatar.jpg" alt="" width="48" height="48" />
+        <span class="material-symbols-outlined shell-user-fallback" aria-hidden="true">account_circle</span>
+        <div class="shell-user-meta flex flex-col gap-1">
+          <span class="shell-user-name">{{ user.name }}</span>
+          <span class="shell-user-email">{{ user.email }}</span>
+          <span class="shell-user-role">{{ user.role }}</span>
+        </div>
+      </div>
+    }
+
+    <nav class="shell-nav flex flex-col gap-1">
+      @for (item of navItems(); track item.id) {
+        <a
+          class="shell-nav-item flex items-center gap-2"
+          [routerLink]="item.route"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: item.route.split('/').length <= 3 }"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+          <span class="shell-nav-label flex-1">{{ item.labelKey | translate }}</span>
+          @if (item.expandable) {
+            <span class="material-symbols-outlined shell-nav-chevron" aria-hidden="true">expand_more</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <button type="button" class="shell-logout flex items-center gap-2" (click)="logout()">
+      <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+      <span class="shell-logout-label">{{ 'shell.logout' | translate }}</span>
+    </button>
+  </aside>
+
+  <div class="shell-main flex flex-col flex-1">
+    <header class="shell-topbar flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="shell-logo-mark" aria-hidden="true"></span>
+        <div class="flex flex-col gap-1">
+          <span class="shell-top-title">{{ brandKey() | translate }}</span>
+          <span class="shell-top-sub">{{ 'app.name' | translate }}</span>
+        </div>
+      </div>
+
+      <div class="shell-top-actions flex flex-wrap items-center gap-2">
+        <div class="shell-lang flex items-center gap-2" role="group" [attr.aria-label]="'app.language' | translate">
+          <button type="button" class="shell-lang-btn" [class.is-active]="language() === 'ar'" (click)="setLanguage('ar')">
+            {{ 'app.arabic' | translate }}
+          </button>
+          <button type="button" class="shell-lang-btn" [class.is-active]="language() === 'en'" (click)="setLanguage('en')">
+            {{ 'app.english' | translate }}
+          </button>
+        </div>
+        <span class="material-symbols-outlined shell-top-icon" aria-hidden="true">notifications</span>
+      </div>
+    </header>
+
+    <div class="shell-content flex flex-col gap-4">
+      @if (breadcrumbs().length) {
+        <nav class="shell-breadcrumb flex items-center gap-2" aria-label="Breadcrumb">
+          <a [routerLink]="homeRoute()" class="shell-crumb-link">{{ 'shell.home' | translate }}</a>
+          @for (crumb of breadcrumbs(); track crumb.labelKey) {
+            <span class="material-symbols-outlined shell-crumb-sep" aria-hidden="true">chevron_left</span>
+            <span class="shell-crumb-current">{{ crumb.labelKey | translate }}</span>
+          }
+        </nav>
+      }
+      <router-outlet />
+    </div>
+  </div>
+</div>

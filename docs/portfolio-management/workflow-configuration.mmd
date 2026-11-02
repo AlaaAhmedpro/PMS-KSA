@@ -1,0 +1,17 @@
+flowchart TD
+  A[Org Admin opens /settings/portfolio] --> B[Select profile template<br/>small / enterprise / government]
+  B --> C[Load PORTFOLIO_POLICY_PRESETS]
+  C --> D[Customize stages, required fields,<br/>finance thresholds, relationship types]
+  D --> E{validatePolicyConfig}
+  E -->|invalid| F[Block activate/save<br/>show errors]
+  F --> D
+  E -->|valid| G[Preview impact<br/>required fields / approvals / locks]
+  G --> H{Admin confirms save}
+  H -->|cancel| D
+  H -->|confirm| I[updateOrganizationPortfolioPolicy]
+  I --> J[Persist OrgPortfolioPolicy on Organization<br/>bump version if stages/mode change]
+  J --> K[Optional alsoSetClientType<br/>sync modulesForClientType]
+  K --> L[New portfolio submit/resubmit<br/>uses normalizePortfolioPolicy]
+  L --> M[applyWorkflowAction with policy]
+  N[In-progress portfolios] -.->|not silently rewritten| O[Keep status + history<br/>audit notes policy version on next action]
+  J -.-> N

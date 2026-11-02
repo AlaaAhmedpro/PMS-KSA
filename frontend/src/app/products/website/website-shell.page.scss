@@ -1,0 +1,102 @@
+.site {
+  min-block-size: 100vh;
+  background: var(--color-bg);
+}
+
+.site-header {
+  padding: var(--space-4) var(--page-padding);
+  background: var(--color-surface);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.site-mark {
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-button);
+  box-shadow: var(--shadow-3d-btn);
+}
+
+.site-brand {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.site-brand-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.site-nav-link,
+.site-link {
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease);
+}
+
+.site-nav-link:hover,
+.site-link:hover,
+.site-nav-link.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.site-link--muted {
+  color: var(--color-text-muted);
+}
+
+.site-cta {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--input-height);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-btn);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--gradient-button);
+  box-shadow: var(--shadow-3d-btn);
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.site-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-3d-btn-hover);
+}
+
+.site-lang-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.site-lang-btn.is-active {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  background: var(--color-primary-soft);
+}
+
+.site-main {
+  flex: 1;
+  padding: var(--page-padding);
+}
+
+.site-footer {
+  padding: var(--space-4) var(--page-padding);
+  border-block-start: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

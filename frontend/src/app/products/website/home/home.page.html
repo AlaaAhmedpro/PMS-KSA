@@ -1,0 +1,25 @@
+<div class="home flex flex-col gap-5">
+  <section class="intro panel flex flex-col gap-3">
+    <p class="eyebrow">{{ 'site.home.eyebrow' | translate }}</p>
+    <h1 class="title">{{ 'site.brand' | translate }}</h1>
+    <p class="lead">{{ 'site.home.lead' | translate }}</p>
+    <div class="actions flex flex-wrap gap-2">
+      <a routerLink="/demo" class="btn-primary">{{ 'site.nav.requestDemo' | translate }}</a>
+      <a routerLink="/features" class="btn-outline">{{ 'site.home.explore' | translate }}</a>
+    </div>
+  </section>
+
+  <section class="pillars">
+    @for (item of pillars; track item.titleKey) {
+      <article class="pillar panel flex flex-col gap-2">
+        <h2 class="pillar-title">{{ item.titleKey | translate }}</h2>
+        <p class="pillar-body">{{ item.bodyKey | translate }}</p>
+      </article>
+    }
+  </section>
+
+  <section class="panel note flex flex-col gap-2">
+    <h2 class="pillar-title">{{ 'site.home.visionTitle' | translate }}</h2>
+    <p class="pillar-body">{{ 'site.home.visionBody' | translate }}</p>
+  </section>
+</div>

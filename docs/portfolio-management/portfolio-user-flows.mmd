@@ -1,0 +1,68 @@
+flowchart TB
+  subgraph F1["1. Create portfolio"]
+    a1[Open /portfolios/new] --> a2[Fill steps per policy hints]
+    a2 --> a3[Save draft]
+    a3 --> a4[Persist + audit created]
+  end
+
+  subgraph F2["2. Configure organization profile"]
+    p1[Admin /settings/portfolio] --> p2[Select template or client type]
+    p2 --> p3[Customize flags / stages / finance]
+    p3 --> p4[Preview impact]
+    p4 --> p5[Confirm save → portfolioPolicy.version]
+  end
+
+  subgraph F3["3. Configure approval workflow"]
+    w1[Workflow section] --> w2[Set mode simple/standard/formal]
+    w2 --> w3[Enable/rename stages]
+    w3 --> w4{validatePolicyConfig}
+    w4 -->|fail| w3
+    w4 -->|ok| p4
+  end
+
+  subgraph F4["4. Submit and approve"]
+    b1[Submit] --> b2[validatePortfolioAgainstPolicy]
+    b2 --> b3[Status submitted + audit policy vN]
+    b3 --> b4{workflowMode}
+    b4 -->|simple| b5[Exec approve]
+    b4 -->|standard/formal| b6[start_review → recommend → approve]
+    b5 --> b7[Approved]
+    b6 --> b7
+    b7 --> b8[Activate if activation rules pass]
+  end
+
+  subgraph F5["5. Return and resubmit"]
+    c1[Return + reason] --> c2[returned]
+    c2 --> c3[Edit permitted fields]
+    c3 --> c4[Resubmit + re-validate policy]
+  end
+
+  subgraph F6["6. Link project or initiative"]
+    d1[Structure tab] --> d2[AddRelationshipModal]
+    d2 --> d3{allowed types / direct project?}
+    d3 -->|blocked| d4[Error from HierarchyStore]
+    d3 -->|ok| d5[validateRelationship + sync FK]
+  end
+
+  subgraph F7["7. Request budget change"]
+    e1[Financials tab] --> e2[canApplyBudgetChangeDirectly]
+    e2 -->|threshold| e3[Blocked message demo]
+    e2 -->|ok| e4[update approvedBudget + audit]
+  end
+
+  subgraph F8["8. Suspend and resume"]
+    f1[suspend + reason] --> f2[on_hold]
+    f2 --> f3[resume → active]
+  end
+
+  subgraph F9["9. Close portfolio"]
+    g1[close + reason] --> g2[closed]
+    g2 --> g3[archive optional]
+  end
+
+  subgraph F10["10. Change organization policy"]
+    h1[Edit policy] --> h2[Preview warn]
+    h2 --> h3[Save new version]
+    h3 --> h4[In-progress statuses unchanged]
+    h4 --> h5[New submits use new rules]
+  end

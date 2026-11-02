@@ -1,0 +1,44 @@
+<div class="page flex flex-col gap-4">
+  <div class="page-head flex flex-wrap items-end justify-between gap-3">
+    <div class="flex flex-col gap-1">
+      <h1 class="page-title">{{ 'core.employeeForm.title' | translate }}</h1>
+      <p class="page-sub">{{ 'core.employeeForm.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  <form class="panel form-grid" (ngSubmit)="save()">
+    <label class="field flex flex-col gap-1">
+      <span>{{ 'core.employeeForm.name' | translate }}</span>
+      <input pInputText [(ngModel)]="name" name="name" [placeholder]="'core.employeeForm.namePh' | translate" />
+    </label>
+
+    <label class="field flex flex-col gap-1">
+      <span>{{ 'core.employeeForm.nationalId' | translate }}</span>
+      <input pInputText [(ngModel)]="nationalId" name="nationalId" [placeholder]="'core.employeeForm.nationalIdPh' | translate" />
+    </label>
+
+    <label class="field flex flex-col gap-1">
+      <span>{{ 'core.employeeForm.mobile' | translate }}</span>
+      <input pInputText [(ngModel)]="mobile" name="mobile" [placeholder]="'core.employeeForm.mobilePh' | translate" />
+    </label>
+
+    <label class="field flex flex-col gap-1">
+      <span>{{ 'core.employeeForm.city' | translate }}</span>
+      <p-select [(ngModel)]="city" name="city" [options]="cities" optionLabel="label" optionValue="value" [placeholder]="'core.employeeForm.cityPh' | translate" class="w-full" />
+    </label>
+
+    <label class="field flex flex-col gap-1">
+      <span>{{ 'core.employeeForm.role' | translate }}</span>
+      <p-select [(ngModel)]="role" name="role" [options]="roles" optionLabel="label" optionValue="value" [placeholder]="'core.employeeForm.rolePh' | translate" class="w-full" />
+    </label>
+
+    <div class="actions flex justify-end gap-2">
+      <p-button type="button" [label]="'core.employeeForm.cancel' | translate" severity="secondary" [outlined]="true" routerLink="/app/employees" />
+      <p-button type="submit" [label]="'core.employeeForm.save' | translate" />
+    </div>
+
+    @if (saved()) {
+      <p class="saved">{{ 'core.employeeForm.saved' | translate }}</p>
+    }
+  </form>
+</div>

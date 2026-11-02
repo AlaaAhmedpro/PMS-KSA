@@ -1,0 +1,46 @@
+<div class="page flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <h1 class="title">{{ 'site.demo.title' | translate }}</h1>
+    <p class="sub">{{ 'site.demo.subtitle' | translate }}</p>
+  </div>
+
+  @if (submitted()) {
+    <p class="success panel">{{ 'site.demo.success' | translate }}</p>
+  } @else {
+    <form class="panel form-grid" (ngSubmit)="submit()">
+      <label class="field flex flex-col gap-1">
+        <span>{{ 'site.demo.org' | translate }}</span>
+        <input pInputText [(ngModel)]="orgName" name="orgName" [placeholder]="'site.demo.orgPh' | translate" />
+      </label>
+
+      <label class="field flex flex-col gap-1">
+        <span>{{ 'site.demo.contact' | translate }}</span>
+        <input pInputText [(ngModel)]="contactName" name="contactName" [placeholder]="'site.demo.contactPh' | translate" />
+      </label>
+
+      <label class="field flex flex-col gap-1">
+        <span>{{ 'site.demo.mobile' | translate }}</span>
+        <input pInputText [(ngModel)]="mobile" name="mobile" [placeholder]="'site.demo.mobilePh' | translate" />
+      </label>
+
+      <label class="field flex flex-col gap-1">
+        <span>{{ 'site.demo.email' | translate }}</span>
+        <input pInputText type="email" [(ngModel)]="email" name="email" [placeholder]="'site.demo.emailPh' | translate" />
+      </label>
+
+      <label class="field flex flex-col gap-1">
+        <span>{{ 'site.demo.city' | translate }}</span>
+        <p-select [(ngModel)]="city" name="city" [options]="cities" optionLabel="label" optionValue="value" [placeholder]="'site.demo.cityPh' | translate" class="w-full" />
+      </label>
+
+      <label class="field field--full flex flex-col gap-1">
+        <span>{{ 'site.demo.notes' | translate }}</span>
+        <textarea pTextarea [(ngModel)]="notes" name="notes" rows="3" [placeholder]="'site.demo.notesPh' | translate"></textarea>
+      </label>
+
+      <div class="actions flex justify-end">
+        <p-button type="submit" [label]="'site.demo.submit' | translate" />
+      </div>
+    </form>
+  }
+</div>

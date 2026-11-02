@@ -1,0 +1,112 @@
+erDiagram
+  Organization ||--o{ Portfolio : owns
+  Organization ||--o| OrgPortfolioPolicy : embeds_JSON
+  Organization ||--o{ StrategicObjective : owns
+  Organization ||--o{ Program : owns
+  Organization ||--o{ Initiative : owns
+  Organization ||--o{ Project : owns
+  Organization ||--o{ EntityRelationship : owns
+
+  OrgPortfolioPolicy ||--o{ PortfolioWorkflowStageDef : stages
+
+  Portfolio ||--o{ PortfolioRisk : has
+  Portfolio ||--o{ PortfolioBenefit : has
+  Portfolio ||--o{ PortfolioAuditEvent : audited_by
+  Portfolio }o--o{ StrategicObjective : objectiveIds
+  Portfolio }o--o| User : ownerUserId
+  Portfolio }o--o| User : sponsorUserId
+  Portfolio }o--o| Department : departmentId
+
+  Program }o--|| Portfolio : portfolioId_FK
+  Project }o--o| Portfolio : portfolioId_optional
+  Project }o--o| Program : programId_optional
+  Initiative }o--o| Program : programId_optional
+
+  EntityRelationship }o--|| Organization : organizationId
+
+  Organization {
+    string id PK
+    string name
+    string clientType
+    json enabledModules
+    json portfolioPolicy
+  }
+
+  OrgPortfolioPolicy {
+    number version
+    string profileTemplate
+    string workflowMode
+    string defaultCurrency
+    number fiscalYearStartMonth
+    boolean requireSponsor
+    boolean requireObjectivesOnSubmit
+    boolean requireBudgetOnSubmit
+    boolean allowDirectProjectLink
+    boolean lockFieldsAfterApproval
+    boolean separationOfDuties
+    number budgetApprovalThresholdSar
+    number varianceWarningPct
+  }
+
+  PortfolioWorkflowStageDef {
+    string id
+    string nameAr
+    string key
+    string requiredRole
+    boolean enabled
+  }
+
+  Portfolio {
+    string id PK
+    string organizationId FK
+    string code UK
+    string name
+    string status
+    string portfolioType
+    string priority
+    string health
+    number plannedBudgetSar
+    number approvedBudgetSar
+    number actualSpendSar
+    string currency
+    string[] objectiveIds
+    string submittedByUserId
+    string approvedByUserId
+  }
+
+  EntityRelationship {
+    string id PK
+    string sourceType
+    string sourceId
+    string targetType
+    string targetId
+    string relationshipType
+    boolean isActive
+  }
+
+  PortfolioRisk {
+    string id PK
+    string portfolioId FK
+    string severity
+    string status
+  }
+
+  PortfolioBenefit {
+    string id PK
+    string portfolioId FK
+    string status
+  }
+
+  PortfolioAuditEvent {
+    string id PK
+    string portfolioId FK
+    string action
+    string actorUserId
+    string fromStatus
+    string toStatus
+    string comment
+  }
+
+  %% PROPOSED not separate tables in demo:
+  %% WorkflowDefinition / WorkflowVersion / WorkflowInstance / ApprovalDecision
+  %% are represented by OrgPortfolioPolicy.version + portfolio status + audit log.

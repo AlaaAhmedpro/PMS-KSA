@@ -1,0 +1,19 @@
+<div class="page flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <h1 class="title">{{ 'site.pricing.title' | translate }}</h1>
+    <p class="sub">{{ 'site.pricing.subtitle' | translate }}</p>
+  </div>
+
+  <section class="plans">
+    @for (plan of plans; track plan.nameKey) {
+      <article class="plan" [class.is-featured]="plan.featured">
+        <h2 class="plan-name">{{ plan.nameKey | translate }}</h2>
+        <p class="plan-price">{{ plan.priceKey | translate }}</p>
+        <p class="plan-body">{{ plan.bodyKey | translate }}</p>
+        <a routerLink="/demo" class="plan-cta">{{ 'site.nav.requestDemo' | translate }}</a>
+      </article>
+    }
+  </section>
+
+  <p class="vat">{{ 'site.pricing.vatNote' | translate }}</p>
+</div>

@@ -1,0 +1,92 @@
+:host {
+  display: block;
+  min-block-size: 100vh;
+}
+
+.login-page {
+  min-block-size: 100vh;
+  padding: var(--page-padding);
+  background: var(--color-bg);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.login-toolbar {
+  inline-size: min(100%, 28rem);
+}
+
+.login-home {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-lang {
+  height: var(--input-height);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-btn);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.login-lang.is-active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.login-card {
+  inline-size: min(100%, 28rem);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.login-mark {
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-button);
+  box-shadow: var(--shadow-3d-btn-press);
+}
+
+.login-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.login-tagline,
+.login-hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.login-field span {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.login-error {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+:host ::ng-deep .p-password,
+:host ::ng-deep .p-password-input {
+  width: 100%;
+}

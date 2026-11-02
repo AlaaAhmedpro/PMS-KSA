@@ -1,0 +1,67 @@
+flowchart TB
+  subgraph UI["web-core UI"]
+    PR[PortfoliosPage KPI + Registry]
+    PF[PortfolioFormPage]
+    PDet[PortfolioDetailPage]
+    OPS["OrganizationPortfolioSettingsPage NEW"]
+    SO[StrategicOverviewPage]
+    RelModal[AddRelationshipModal]
+  end
+
+  subgraph Nav["Navigation"]
+    SB[sidebarConfig / useSidebarNav]
+    APP["App.tsx · /settings/portfolio NEW"]
+  end
+
+  subgraph Domain["Domain and services"]
+    PDom[portfolioDomain.ts]
+    PWf["portfolioWorkflow.ts policy-aware"]
+    PPerm[portfolioPermissions.ts]
+    Opp["orgPortfolioPolicy.ts NEW<br/>presets · validate · locks"]
+    RelRules[relationshipRules.ts]
+    RelSync[relationshipSync.ts]
+  end
+
+  subgraph Store["Persistence localStorage demo"]
+    Orgs[(organizations.portfolioPolicy NEW)]
+    Portfolios[(portfolios)]
+    Risks[(portfolioRisks)]
+    Benefits[(portfolioBenefits)]
+    Audit[(portfolioAudit)]
+    Rels[(relationships)]
+    RelHist[(relationshipHistory)]
+    Programs[(programs)]
+    Projects[(projects)]
+    Objectives[(objectives)]
+  end
+
+  subgraph Cross["Existing modules reused"]
+    Auth["AuthContext<br/>updateOrganizationPortfolioPolicy NEW"]
+    Hook["useOrgPortfolioPolicy NEW"]
+    Rbac[RbacContext]
+    Data[DataStore departments]
+    Notif[NotificationStore optional]
+  end
+
+  SB --> APP
+  APP --> PR & PF & PDet & OPS
+  PDet --> RelModal
+  OPS --> Auth
+  Auth --> Orgs
+  Hook --> Auth
+  PF & PDet --> Hook
+  PDet --> PWf
+  PWf --> Opp
+  PF --> Opp
+  HierarchyStore["HierarchyStore.runPortfolioWorkflow"] --> PWf
+  HierarchyStore --> Portfolios & Audit
+  RelModal --> RelRules
+  RelRules --> Rels
+  HierarchyStore -.->|allowedRelationshipTypes<br/>allowDirectProjectLink| Opp
+  RelSync --> Projects & Programs
+  Auth --> PPerm
+  PDet --> Data
+  PR --> Objectives & Portfolios
+
+  classDef neu fill:#E8EFFF,stroke:#3B6FE8
+  class OPS,Opp,Hook,Orgs neu

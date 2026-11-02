@@ -1,0 +1,17 @@
+<div class="page flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <h1 class="title">{{ 'site.features.title' | translate }}</h1>
+    <p class="sub">{{ 'site.features.subtitle' | translate }}</p>
+  </div>
+
+  <section class="grid">
+    @for (item of features; track item.titleKey) {
+      <article class="card flex flex-col gap-2">
+        <h2 class="card-title">{{ item.titleKey | translate }}</h2>
+        <p class="card-body">{{ item.bodyKey | translate }}</p>
+      </article>
+    }
+  </section>
+
+  <p class="integrations">{{ 'site.features.integrations' | translate }}</p>
+</div>

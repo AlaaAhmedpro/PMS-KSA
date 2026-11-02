@@ -1,0 +1,47 @@
+<div class="page flex flex-col gap-4">
+  <div class="page-head flex flex-wrap items-end justify-between gap-3">
+    <div class="flex flex-col gap-1">
+      <h1 class="page-title">{{ 'admin.tenants.title' | translate }}</h1>
+      <p class="page-sub">{{ 'admin.tenants.subtitle' | translate }}</p>
+    </div>
+    <p-button [label]="'admin.tenants.add' | translate" />
+  </div>
+
+  <div class="filters flex flex-wrap gap-2">
+    <input
+      pInputText
+      [(ngModel)]="search"
+      [placeholder]="'admin.tenants.search' | translate"
+      class="search-input"
+    />
+  </div>
+
+  <section class="panel">
+    @if (filtered().length === 0) {
+      <p class="empty">{{ 'admin.tenants.empty' | translate }}</p>
+    } @else {
+      <p-table [value]="filtered()" [tableStyle]="{ 'min-width': '48rem' }">
+        <ng-template #header>
+          <tr>
+            <th>{{ 'admin.tenants.col.name' | translate }}</th>
+            <th>{{ 'admin.tenants.col.cr' | translate }}</th>
+            <th>{{ 'admin.tenants.col.city' | translate }}</th>
+            <th>{{ 'admin.tenants.col.plan' | translate }}</th>
+            <th>{{ 'admin.tenants.col.seats' | translate }}</th>
+            <th>{{ 'admin.tenants.col.status' | translate }}</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.cr }}</td>
+            <td>{{ row.city }}</td>
+            <td>{{ row.plan }}</td>
+            <td>{{ row.seats }}</td>
+            <td><span [class]="statusClass(row.status)">{{ ('admin.status.' + row.status) | translate }}</span></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </section>
+</div>

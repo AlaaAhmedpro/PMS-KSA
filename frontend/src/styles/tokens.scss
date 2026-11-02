@@ -1,0 +1,82 @@
+// Single source of truth for colors, type, spacing, radius, shadows.
+// Atlantis light — lavender canvas, blue accents, quiet gradients.
+
+:root {
+  --color-primary: #3b6fe8;
+  --color-primary-hover: #2f5ed0;
+  --color-primary-soft: #e8efff;
+  --color-accent: #6ea8ff;
+  --color-accent-teal: #2fbe8c;
+  --color-accent-coral: #e25b6a;
+  --color-accent-amber: #f0b429;
+
+  --color-bg: #f4f6fb;
+  --color-surface: #ffffff;
+  --color-border: #e4e8f2;
+  --color-text: #1f2a44;
+  --color-text-muted: #7a8499;
+
+  /* Sidebar a bit darker than the canvas, still gradient (not flat solid) */
+  --color-sidebar: #2b3550;
+  --color-sidebar-text: #f4f6fb;
+  --color-sidebar-muted: #b7c0d4;
+  --color-sidebar-hover: color-mix(in srgb, #ffffff 10%, transparent);
+  --color-sidebar-active-text: #1f2a44;
+  --gradient-sidebar: linear-gradient(180deg, #3a4664 0%, #2b3550 55%, #232c44 100%);
+  --gradient-button: linear-gradient(180deg, #6d94f4 0%, #3b6fe8 100%);
+  --gradient-button-hover: linear-gradient(180deg, #7ea2f6 0%, #2f5ed0 100%);
+  --gradient-active: linear-gradient(180deg, #ffffff 0%, #edf2ff 100%);
+
+  --color-success: #1fa971;
+  --color-success-tint: #e7f8f1;
+  --color-danger: #e25b6a;
+  --color-danger-tint: #fdecee;
+  --color-warning: #d89a14;
+  --color-warning-tint: #fbf4e3;
+  --color-info: #3b6fe8;
+  --color-info-tint: #e8efff;
+
+  /* Typography */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --page-padding: 24px;
+
+  /* Shape — buttons slightly softer (6px), still <= 8px */
+  --radius-sm: 4px;
+  --radius-btn: 6px;
+  --radius-md: 6px;
+  --shadow-card: 0 8px 24px rgba(31, 42, 68, 0.06);
+  --shadow-overlay: 0 10px 28px rgba(31, 42, 68, 0.1);
+  --shadow-3d-sidebar: 0 8px 24px rgba(31, 42, 68, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-3d-btn: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(59, 111, 232, 0.28);
+  --shadow-3d-btn-hover: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 14px rgba(59, 111, 232, 0.32);
+  --shadow-3d-btn-press: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(59, 111, 232, 0.22);
+  --shadow-3d-nav: 0 4px 10px rgba(59, 111, 232, 0.16);
+
+  /* Density */
+  --row-height: 40px;
+  --input-height: 38px;
+  --sidebar-width: 268px;
+  --sidebar-width-collapsed: 72px;
+
+  /* Fonts — Cairo (AR), Plus Jakarta Sans (EN) */
+  --font-family-ar: 'Cairo', sans-serif;
+  --font-family-en: 'Plus Jakarta Sans', sans-serif;
+  --font-family-icon: 'Material Symbols Outlined';
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}

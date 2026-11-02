@@ -1,0 +1,47 @@
+<div class="page flex flex-col gap-4">
+  <div class="page-head flex flex-wrap items-end justify-between gap-3">
+    <div class="flex flex-col gap-1">
+      <h1 class="page-title">{{ 'core.employees.title' | translate }}</h1>
+      <p class="page-sub">{{ 'core.employees.subtitle' | translate }}</p>
+    </div>
+    <p-button [label]="'core.employees.add' | translate" routerLink="/app/employees/new" />
+  </div>
+
+  <div class="filters flex flex-wrap gap-2">
+    <input
+      pInputText
+      [(ngModel)]="search"
+      [placeholder]="'core.employees.search' | translate"
+      class="search-input"
+    />
+  </div>
+
+  <section class="panel">
+    @if (filtered().length === 0) {
+      <p class="empty">{{ 'core.employees.empty' | translate }}</p>
+    } @else {
+      <p-table [value]="filtered()" [tableStyle]="{ 'min-width': '48rem' }">
+        <ng-template #header>
+          <tr>
+            <th>{{ 'core.employees.col.name' | translate }}</th>
+            <th>{{ 'core.employees.col.nationalId' | translate }}</th>
+            <th>{{ 'core.employees.col.city' | translate }}</th>
+            <th>{{ 'core.employees.col.mobile' | translate }}</th>
+            <th>{{ 'core.employees.col.role' | translate }}</th>
+            <th>{{ 'core.employees.col.status' | translate }}</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.nationalId }}</td>
+            <td>{{ row.city }}</td>
+            <td>{{ row.mobile }}</td>
+            <td>{{ row.role }}</td>
+            <td><span [class]="statusClass(row.status)">{{ ('core.status.' + row.status) | translate }}</span></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </section>
+</div>

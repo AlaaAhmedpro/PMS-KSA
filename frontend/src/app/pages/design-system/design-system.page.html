@@ -1,0 +1,287 @@
+<p-toast />
+
+<div class="ds-shell flex">
+  <aside class="ds-sidebar flex flex-col" [class.is-collapsed]="menuCollapsed()" aria-label="Navigation preview">
+    <div class="ds-sidebar-head flex items-center justify-between gap-2">
+      <div class="ds-brand flex items-center gap-2">
+        <span class="ds-logo-mark" aria-hidden="true"></span>
+        <span class="ds-brand-name">{{ 'designSystem.tenant' | translate }}</span>
+      </div>
+      <button
+        type="button"
+        class="ds-icon-btn"
+        [attr.aria-label]="(menuCollapsed() ? 'designSystem.expandMenu' : 'designSystem.collapseMenu') | translate"
+        [attr.title]="(menuCollapsed() ? 'designSystem.expandMenu' : 'designSystem.collapseMenu') | translate"
+        (click)="toggleMenu()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{ menuCollapsed() ? 'menu' : 'menu_open' }}</span>
+      </button>
+    </div>
+
+    <div class="ds-user flex items-center gap-3">
+      <img
+        class="ds-user-photo"
+        src="assets/user-avatar.jpg"
+        alt=""
+        width="48"
+        height="48"
+      />
+      <span class="material-symbols-outlined ds-user-fallback" aria-hidden="true">account_circle</span>
+      <div class="ds-user-meta flex flex-col gap-1">
+        <span class="ds-user-name">{{ 'designSystem.user.name' | translate }}</span>
+        <span class="ds-user-email">{{ 'designSystem.user.email' | translate }}</span>
+        <span class="ds-user-role">{{ 'designSystem.user.role' | translate }}</span>
+      </div>
+    </div>
+
+    <nav class="ds-nav flex flex-col gap-1">
+      @for (item of navItems; track item.id) {
+        <button
+          type="button"
+          class="ds-nav-item flex items-center gap-2"
+          [class.is-active]="activeNav === item.id"
+          (click)="setNav(item.id)"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+          <span class="ds-nav-label flex-1">{{ item.labelKey | translate }}</span>
+          @if (item.expandable) {
+            <span class="material-symbols-outlined ds-nav-chevron" aria-hidden="true">expand_more</span>
+          }
+        </button>
+      }
+    </nav>
+
+    <button type="button" class="ds-logout flex items-center gap-2" (click)="logout()">
+      <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+      <span class="ds-logout-label">{{ 'designSystem.logout' | translate }}</span>
+    </button>
+  </aside>
+
+  <div class="ds-main flex flex-col flex-1">
+    <header class="ds-topbar flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="ds-logo-mark" aria-hidden="true"></span>
+        <div class="flex flex-col gap-1">
+          <span class="ds-logo-text">{{ 'app.name' | translate }}</span>
+          <span class="ds-tenant">{{ 'designSystem.tenant' | translate }}</span>
+        </div>
+      </div>
+
+      <div class="ds-top-actions flex flex-wrap items-center gap-2">
+        <span class="ds-search">{{ 'designSystem.searchPlaceholder' | translate }}</span>
+        <div class="ds-lang flex items-center gap-2" role="group" [attr.aria-label]="'app.language' | translate">
+          <button
+            type="button"
+            class="ds-lang-btn"
+            [class.is-active]="language() === 'ar'"
+            (click)="setLanguage('ar')"
+          >
+            {{ 'app.arabic' | translate }}
+          </button>
+          <button
+            type="button"
+            class="ds-lang-btn"
+            [class.is-active]="language() === 'en'"
+            (click)="setLanguage('en')"
+          >
+            {{ 'app.english' | translate }}
+          </button>
+        </div>
+        <span class="material-symbols-outlined ds-top-icon" aria-hidden="true">notifications</span>
+      </div>
+    </header>
+
+    <div class="ds-content flex flex-col gap-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div class="flex flex-col gap-1">
+          <p class="ds-eyebrow">{{ 'designSystem.eyebrow' | translate }}</p>
+          <h1 class="ds-title">{{ 'designSystem.title' | translate }}</h1>
+          <p class="ds-subtitle">{{ 'designSystem.subtitle' | translate }}</p>
+        </div>
+        <p-button [label]="'designSystem.actions.primary' | translate" (onClick)="showToast()" />
+      </div>
+
+      <section class="ds-kpi-row" aria-label="KPI preview">
+        @for (kpi of kpis; track kpi.labelKey) {
+          <article class="ds-kpi flex flex-col gap-1">
+            <span class="ds-kpi-label">{{ kpi.labelKey | translate }}</span>
+            <span class="ds-kpi-value">{{ kpi.value }}</span>
+            <span class="ds-kpi-delta" [class.is-up]="kpi.deltaPositive" [class.is-down]="!kpi.deltaPositive">
+              {{ kpi.deltaKey | translate }}
+            </span>
+          </article>
+        }
+      </section>
+
+      <div class="ds-split">
+        <section class="ds-panel flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="ds-section-title">{{ 'designSystem.sections.table' | translate }}</h2>
+            <p-button
+              [label]="'designSystem.actions.openDialog' | translate"
+              [outlined]="true"
+              severity="secondary"
+              (onClick)="openDialog()"
+            />
+          </div>
+
+          <p-table [value]="employees()" [tableStyle]="{ 'min-width': '36rem' }">
+            <ng-template #header>
+              <tr>
+                <th>{{ 'designSystem.table.name' | translate }}</th>
+                <th>{{ 'designSystem.table.city' | translate }}</th>
+                <th>{{ 'designSystem.table.role' | translate }}</th>
+                <th>{{ 'designSystem.table.status' | translate }}</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td>{{ row.name }}</td>
+                <td>{{ row.city }}</td>
+                <td>{{ row.role }}</td>
+                <td>
+                  <span [class]="statusClass(row.status)">{{ statusLabelKey(row.status) | translate }}</span>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="4">{{ 'designSystem.table.empty' | translate }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+
+          <p-paginator
+            [first]="first"
+            [rows]="rows"
+            [totalRecords]="employees().length"
+            [rowsPerPageOptions]="[5, 10]"
+            (onPageChange)="onPage($event)"
+          />
+        </section>
+
+        <section class="ds-panel flex flex-col gap-3">
+          <h2 class="ds-section-title">{{ 'designSystem.sections.activity' | translate }}</h2>
+          <ul class="ds-activity flex flex-col gap-2">
+            @for (item of activity; track item.titleKey) {
+              <li class="ds-activity-item flex items-start justify-between gap-3">
+                <div class="flex flex-col gap-1">
+                  <span class="ds-activity-title">{{ item.titleKey | translate }}</span>
+                  <span class="ds-activity-meta">{{ item.metaKey | translate }}</span>
+                </div>
+                <span [class]="activityToneClass(item.tone)">{{ item.amount }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      </div>
+
+      <section class="ds-panel flex flex-col gap-3">
+        <h2 class="ds-section-title">{{ 'designSystem.sections.buttons' | translate }}</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <p-button [label]="'designSystem.actions.primary' | translate" (onClick)="showToast()" />
+          <p-button [label]="'designSystem.actions.secondary' | translate" severity="secondary" [outlined]="true" />
+          <p-button [label]="'designSystem.actions.ghost' | translate" [text]="true" severity="secondary" />
+          <p-button [label]="'designSystem.actions.danger' | translate" severity="danger" [outlined]="true" />
+        </div>
+      </section>
+
+      <section class="ds-panel flex flex-col gap-3">
+        <h2 class="ds-section-title">{{ 'designSystem.sections.inputs' | translate }}</h2>
+        <div class="ds-form-grid">
+          <label class="ds-field flex flex-col gap-1">
+            <span class="ds-label">{{ 'designSystem.fields.name' | translate }}</span>
+            <input pInputText [(ngModel)]="name" [placeholder]="'designSystem.fields.namePlaceholder' | translate" />
+          </label>
+          <label class="ds-field flex flex-col gap-1">
+            <span class="ds-label">{{ 'designSystem.fields.city' | translate }}</span>
+            <p-select
+              [(ngModel)]="selectedCity"
+              [options]="cities"
+              optionLabel="labelKey"
+              optionValue="value"
+              [placeholder]="'designSystem.fields.cityPlaceholder' | translate"
+              class="w-full"
+            >
+              <ng-template #item let-item>
+                {{ item.labelKey | translate }}
+              </ng-template>
+              <ng-template #selectedItem let-item>
+                {{ item?.labelKey | translate }}
+              </ng-template>
+            </p-select>
+          </label>
+          <label class="ds-field flex flex-col gap-1">
+            <span class="ds-label">{{ 'designSystem.fields.date' | translate }}</span>
+            <p-datepicker [(ngModel)]="selectedDate" [showIcon]="true" dateFormat="yy/mm/dd" class="w-full" />
+          </label>
+          <label class="ds-field ds-field--full flex flex-col gap-1">
+            <span class="ds-label">{{ 'designSystem.fields.notes' | translate }}</span>
+            <textarea
+              pTextarea
+              [(ngModel)]="notes"
+              rows="3"
+              [placeholder]="'designSystem.fields.notesPlaceholder' | translate"
+            ></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="ds-panel flex flex-col gap-3">
+        <h2 class="ds-section-title">{{ 'designSystem.sections.badges' | translate }}</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="status-badge status-badge--success">{{ 'designSystem.status.active' | translate }}</span>
+          <span class="status-badge status-badge--warning">{{ 'designSystem.status.suspended' | translate }}</span>
+          <span class="status-badge status-badge--danger">{{ 'designSystem.status.revoked' | translate }}</span>
+          <span class="status-badge status-badge--info">{{ 'designSystem.status.info' | translate }}</span>
+          <span class="status-badge status-badge--neutral">{{ 'designSystem.status.pending' | translate }}</span>
+          <p-tag [value]="'designSystem.tags.sample' | translate" severity="secondary" />
+        </div>
+      </section>
+
+      <section class="ds-panel flex flex-col gap-3">
+        <h2 class="ds-section-title">{{ 'designSystem.sections.tabs' | translate }}</h2>
+        <p-tabs value="0">
+          <p-tablist>
+            <p-tab value="0">{{ 'designSystem.tabs.overview' | translate }}</p-tab>
+            <p-tab value="1">{{ 'designSystem.tabs.members' | translate }}</p-tab>
+            <p-tab value="2">{{ 'designSystem.tabs.settings' | translate }}</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="0">
+              <p class="ds-tab-body">{{ 'designSystem.tabs.overviewBody' | translate }}</p>
+            </p-tabpanel>
+            <p-tabpanel value="1">
+              <p class="ds-tab-body">{{ 'designSystem.tabs.membersBody' | translate }}</p>
+            </p-tabpanel>
+            <p-tabpanel value="2">
+              <p class="ds-tab-body">{{ 'designSystem.tabs.settingsBody' | translate }}</p>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </section>
+    </div>
+  </div>
+</div>
+
+<p-dialog
+  [(visible)]="dialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '28rem' }"
+  [header]="'designSystem.dialog.title' | translate"
+>
+  <p class="ds-dialog-body">{{ 'designSystem.dialog.body' | translate }}</p>
+  <ng-template #footer>
+    <div class="flex justify-end gap-2">
+      <p-button
+        [label]="'designSystem.actions.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        (onClick)="dialogVisible = false"
+      />
+      <p-button [label]="'designSystem.actions.confirm' | translate" (onClick)="dialogVisible = false" />
+    </div>
+  </ng-template>
+</p-dialog>
