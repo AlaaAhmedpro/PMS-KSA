@@ -19,6 +19,9 @@ export interface CategoryItem {
 export type RoleId =
   | "super_admin"
   | "platform_admin"
+  | "finance_admin"
+  | "support_agent"
+  | "readonly_admin"
   | "planning"
   | "branch_manager"
   | "employee"
@@ -173,8 +176,15 @@ export interface NewsItem {
   link?: string;
 }
 
-export type TenantPlanId = "starter" | "professional" | "enterprise";
-export type TenantStatus = "active" | "trial" | "suspended";
+export type TenantPlanId = string;
+export type TenantStatus =
+  | "pending"
+  | "active"
+  | "trial"
+  | "suspended"
+  | "expired"
+  | "cancelled"
+  | "archived";
 
 export type OrgClientType = "small" | "enterprise" | "government";
 
@@ -185,6 +195,7 @@ export type OrgEnabledModules = {
   strategicObjectives: boolean;
 };
 
+/** Legacy shape kept for migrations; prefer PlatformOrganization in platformDomain. */
 export interface PlatformTenant {
   id: string;
   name: string;
@@ -194,13 +205,25 @@ export interface PlatformTenant {
   seats: number;
   usedSeats: number;
   createdAt: string;
-  /** Links to web-core Organization.id when known */
   organizationId?: string;
   orgAdminEmail?: string;
   orgAdminName?: string;
-  /** Controlled by Super Admin — drives web-core modules & nav */
   clientType: OrgClientType;
   enabledModules: OrgEnabledModules;
+  logoInitials?: string;
+  industry?: string;
+  country?: string;
+  city?: string;
+  customerKind?: "standard" | "enterprise" | "government";
+  deploymentType?: "shared" | "dedicated";
+  renewalAt?: string;
+  trialEndsAt?: string;
+  usage?: {
+    users: number;
+    projects: number;
+    storageGb: number;
+    apiRequests: number;
+  };
 }
 
 /** Demo assignment record written by Platform Admin */
@@ -216,16 +239,24 @@ export interface OrgAdminAssignment {
 export interface SubscriptionPlan {
   id: TenantPlanId;
   name: string;
-  /** فئة الجهة المرتبطة بالخطة */
   clientType: OrgClientType;
   description: string;
   workflow: string;
   priceMonthly: number;
+  priceAnnual?: number;
+  trialDays?: number;
   seatsIncluded: number;
   features: string[];
-  /** الوحدات المفعّلة للمستأجر عند الاشتراك بهذه الخطة */
   enabledModules: OrgEnabledModules;
   active: boolean;
+  limits?: {
+    maxUsers: number;
+    maxProjects: number;
+    maxStorageGb: number;
+    maxApiRequests: number;
+  };
+  entitlements?: Record<string, boolean>;
+  billingCycleDefault?: "monthly" | "annual";
 }
 
 export type DemoRequestStatus = "new" | "contacted" | "scheduled" | "closed";

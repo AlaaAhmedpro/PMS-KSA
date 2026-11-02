@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   Bar,
   BarChart,
@@ -280,6 +280,65 @@ export function HorizontalBarChart({
         />
         <Tooltip cursor={{ fill: "rgba(124,179,66,0.08)" }} {...tooltipStyle(tooltipBg, tooltipBorder)} />
         <Bar dataKey="value" name="العدد" fill={color} radius={[0, 6, 6, 0]} maxBarSize={26} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** مقارنة بسيطة: الميزانية مقابل المنصرف لمشاريع مختارة */
+export function BudgetCompareChart({
+  data,
+}: {
+  data: { name: string; ميزانية: number; منصرف: number }[];
+}) {
+  const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(220, data.length * 48)}>
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
+        barGap={4}
+        barCategoryGap="22%"
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} horizontal={false} />
+        <XAxis
+          type="number"
+          tick={{ fill: tick, fontSize: 11, fontFamily: "Cairo" }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v: number) => formatNumber(v)}
+        />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={112}
+          tick={{ fill: tick, fontSize: 11, fontFamily: "Cairo" }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(14,165,233,0.06)" }}
+          {...tooltipStyle(tooltipBg, tooltipBorder)}
+          formatter={(value) =>
+            `${formatNumber(typeof value === "number" ? value : Number(value) || 0)} ر.س`
+          }
+        />
+        <Legend wrapperStyle={{ fontFamily: "Cairo", fontSize: 12 }} />
+        <Bar
+          dataKey="ميزانية"
+          name="ميزانية"
+          fill="#0ea5e9"
+          radius={[0, 4, 4, 0]}
+          maxBarSize={14}
+        />
+        <Bar
+          dataKey="منصرف"
+          name="منصرف"
+          fill="#7cb342"
+          radius={[0, 4, 4, 0]}
+          maxBarSize={14}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -114,6 +114,7 @@ export function useSidebarNav() {
       can.viewSettings(role) &&
         (modules.portfolio || canAccessPortfolio("view")),
     );
+    map.set("billing-settings", can.viewSettings(role));
     return map;
   }, [
     modules,

@@ -44,12 +44,18 @@ export const CLIENT_TYPE_META: Record<
   small: {
     label: "شركة صغيرة",
     shortLabel: "شركة",
-    description: "تنفيذ مباشر: مشاريع ومهام ومعالم فقط.",
-    workflow: "مشروع → مهام ومعالم",
-    modules: { ...ALL_MODULES_OFF },
+    description:
+      "محفظة مبسّطة مع مشاريع ومهام — مسار اعتماد واحد دون طبقات حوكمة ثقيلة.",
+    workflow: "محفظة (اختياري) → مشروع → مهام ومعالم",
+    modules: {
+      portfolio: true,
+      program: false,
+      initiative: false,
+      strategicObjectives: false,
+    },
     defaultFeatures: [
-      "مشاريع ومهام غير محدودة",
-      "معالم Deliverables",
+      "محفظة مبسّطة",
+      "مشاريع ومهام",
       "لوحة مؤشرات تنفيذية",
       "تقارير أساسية",
     ],
@@ -63,7 +69,7 @@ export const CLIENT_TYPE_META: Record<
       portfolio: true,
       program: true,
       initiative: false,
-      strategicObjectives: false,
+      strategicObjectives: true,
     },
     defaultFeatures: [
       "كل ميزات الشركة الصغيرة",
@@ -127,13 +133,18 @@ export function modulesForClientType(type: OrgClientType): OrgEnabledModules {
 
 const CORE_ORGS_KEY = "pms_core_organizations_v1";
 
-/** Demo sync: push tenant modules into web-core orgs in the same browser. */
+const CORE_SUSPENDED_KEY = "pms_core_suspended_orgs_v1";
+
+/** Demo sync: push tenant modules/status into web-core orgs in the same browser. */
 export function syncTenantModulesToCore(input: {
   organizationId: string;
   name: string;
   sector: string;
+  city?: string;
   clientType: OrgClientType;
   enabledModules: OrgEnabledModules;
+  active?: boolean;
+  suspended?: boolean;
 }): void {
   try {
     const raw = localStorage.getItem(CORE_ORGS_KEY);
@@ -143,8 +154,8 @@ export function syncTenantModulesToCore(input: {
       id: input.organizationId,
       name: input.name,
       sector: input.sector,
-      city: "الرياض",
-      active: true,
+      city: input.city || "الرياض",
+      active: input.active !== false && !input.suspended,
       createdAt: new Date().toISOString(),
       clientType: input.clientType,
       enabledModules: normalizeOrgModules(input.enabledModules),
@@ -155,7 +166,23 @@ export function syncTenantModulesToCore(input: {
       list.push(row);
     }
     localStorage.setItem(CORE_ORGS_KEY, JSON.stringify(list));
+
+    const suspendedRaw = localStorage.getItem(CORE_SUSPENDED_KEY);
+    const suspended: string[] = suspendedRaw ? JSON.parse(suspendedRaw) : [];
+    const nextSuspended = input.suspended
+      ? Array.from(new Set([...suspended, input.organizationId]))
+      : suspended.filter((id) => id !== input.organizationId);
+    localStorage.setItem(CORE_SUSPENDED_KEY, JSON.stringify(nextSuspended));
   } catch {
     /* ignore cross-app sync failures in demo */
+  }
+}
+
+export function readCoreSuspendedOrgIds(): string[] {
+  try {
+    const raw = localStorage.getItem(CORE_SUSPENDED_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
   }
 }

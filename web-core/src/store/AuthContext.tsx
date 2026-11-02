@@ -44,6 +44,7 @@ import {
   pushSentMail,
 } from "../lib/demoMail";
 import { organizationsRepository, usersRepository } from "../repositories";
+import { isCoreOrgSuspended } from "../lib/billingBridge";
 
 const SEED_USERS: DemoUser[] = [...SEED_DEMO_USERS, ...SEED_VENDOR_USERS].map(
   (u) => ({ ...u }),
@@ -203,6 +204,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const res = await authenticateCredentials(users, email, password);
+      if (
+        res.user.organizationId &&
+        isCoreOrgSuspended(res.user.organizationId)
+      ) {
+        return {
+          ok: false,
+          reason:
+            "تم تعليق اشتراك المنشأة من لوحة المنصة. راجع الفوترة أو تواصل مع الدعم.",
+        };
+      }
       if (res.needsMfa) {
         return { ok: true, needsMfa: true, pendingUser: res.user };
       }
@@ -220,6 +231,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeMfa = async (otp: string, pendingUser: DemoUser) => {
     try {
       await verifyMfaOtp(otp);
+      if (
+        pendingUser.organizationId &&
+        isCoreOrgSuspended(pendingUser.organizationId)
+      ) {
+        return {
+          ok: false,
+          reason:
+            "تم تعليق اشتراك المنشأة من لوحة المنصة. راجع الفوترة أو تواصل مع الدعم.",
+        };
+      }
       establish(pendingUser);
       return {
         ok: true,

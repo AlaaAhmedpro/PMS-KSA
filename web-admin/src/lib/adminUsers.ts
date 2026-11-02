@@ -6,7 +6,7 @@ export const ADMIN_USERS: User[] = [
     id: "pa1",
     name: "نورة فهد الشمري",
     email: "platform@namaa.sa",
-    role: "platform_admin",
+    role: "super_admin",
     active: true,
   },
   {
@@ -20,7 +20,21 @@ export const ADMIN_USERS: User[] = [
     id: "pa3",
     name: "لمى سعد القحطاني",
     email: "sales@namaa.sa",
-    role: "platform_admin",
+    role: "support_agent",
+    active: true,
+  },
+  {
+    id: "pa4",
+    name: "فيصل محمد العتيبي",
+    email: "finance@namaa.sa",
+    role: "finance_admin",
+    active: true,
+  },
+  {
+    id: "pa5",
+    name: "ريم عبدالله السبيعي",
+    email: "viewer@namaa.sa",
+    role: "readonly_admin",
     active: true,
   },
 ];

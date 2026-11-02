@@ -52,7 +52,7 @@ export function KpiCard({
 }: {
   label: string;
   value: ReactNode;
-  icon: ReactNode;
+  icon?: ReactNode;
   tone?: Tone;
   hint?: ReactNode;
   pulse?: boolean;
@@ -83,15 +83,17 @@ export function KpiCard({
         >
           {label}
         </p>
-        <div
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110",
-            featured ? "h-11 w-11" : "h-9 w-9",
-            s.icon,
-          )}
-        >
-          {icon}
-        </div>
+        {icon ? (
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110",
+              featured ? "h-11 w-11" : "h-9 w-9",
+              s.icon,
+            )}
+          >
+            {icon}
+          </div>
+        ) : null}
       </div>
       <p
         className={cn(

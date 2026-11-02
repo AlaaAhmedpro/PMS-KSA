@@ -27,6 +27,7 @@ import { StructureMapPage } from "./pages/StructureMapPage";
 import { StrategicOverviewPage } from "./pages/StrategicOverviewPage";
 import { ObjectivesPage } from "./pages/ObjectivesPage";
 import { OrganizationPortfolioSettingsPage } from "./pages/OrganizationPortfolioSettingsPage";
+import { OrganizationBillingPage } from "./pages/OrganizationBillingPage";
 
 const RETURN_KEY = "pms_core_return_path";
 
@@ -251,6 +252,10 @@ export default function App() {
             <Route
               path="/settings/portfolio"
               element={<OrganizationPortfolioSettingsPage />}
+            />
+            <Route
+              path="/settings/billing"
+              element={<OrganizationBillingPage />}
             />
             <Route path="/reports" element={<Reports />} />
             <Route path="/archive" element={<Archive />} />

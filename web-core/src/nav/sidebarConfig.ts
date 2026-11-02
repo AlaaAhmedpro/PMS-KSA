@@ -15,6 +15,7 @@ import {
   Compass,
   Network,
   Settings2,
+  CreditCard,
 } from "lucide-react";
 import type { NavSectionDef } from "./types";
 
@@ -108,6 +109,13 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
         label: "حوكمة المحافظ",
         hint: "ملفات وسياسات ومسارات",
         icon: Settings2,
+      },
+      {
+        id: "billing-settings",
+        to: "/settings/billing",
+        label: "الاشتراك والفوترة",
+        hint: "باقة · فواتير · دفع",
+        icon: CreditCard,
       },
     ],
   },
