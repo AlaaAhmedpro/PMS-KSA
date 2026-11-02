@@ -807,8 +807,8 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       addMilestone: (m) => {
         const status = m.status ?? (m.completed ? "completed" : "planned");
         const row: Milestone = {
-          description: "",
           ...m,
+          description: m.description ?? "",
           status,
           completed: status === "completed",
           id: crypto.randomUUID(),
