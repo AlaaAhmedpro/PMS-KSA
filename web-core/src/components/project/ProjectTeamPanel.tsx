@@ -10,8 +10,10 @@ import { useAuth } from "../../store/AuthContext";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
 import type { Project } from "../../models/domain";
+import { useLocale } from "../../store/LocaleContext";
 
 export function ProjectTeamPanel({ project }: { project: Project }) {
+  const { t } = useLocale();
   const { addProjectMember, removeProjectMember } = useHierarchy();
   const { user, users } = useAuth();
   const can = useCan();
@@ -45,9 +47,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-steel-500">
-          مدير المشروع يُحدَّد عند إنشاء المشروع. الأعضاء يُضافون هنا.
-        </p>
+        <p className="text-xs text-steel-500">{t("projectTeam.intro")}</p>
         {canManage ? (
           <Button
             size="sm"
@@ -57,7 +57,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
               setOpen(true);
             }}
           >
-            إضافة عضو
+            {t("projectTeam.addMember")}
           </Button>
         ) : null}
       </div>
@@ -72,9 +72,9 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">الاسم</th>
-              <th className="px-4 py-3 text-start font-bold">البريد</th>
-              <th className="px-4 py-3 text-start font-bold">الدور في المشروع</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projectTeam.col.name")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projectTeam.col.email")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projectTeam.col.role")}</th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -87,7 +87,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا أعضاء في فريق المشروع.
+                  {t("projectTeam.empty")}
                 </td>
               </tr>
             ) : null}
@@ -105,7 +105,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <span className="inline-flex rounded border border-brand-200 bg-brand-500/10 px-1.5 py-0.5 text-[11px] font-bold text-brand-700 dark:border-brand-800 dark:text-brand-300">
-                    مدير المشروع
+                    {t("projectTeam.role.manager")}
                   </span>
                 </td>
                 {canManage ? (
@@ -132,7 +132,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <span className="inline-flex rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-800/60 dark:text-steel-300">
-                    عضو
+                    {t("projectTeam.role.member")}
                   </span>
                 </td>
                 {canManage ? (
@@ -141,14 +141,16 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
                       <button
                         type="button"
                         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-                        aria-label="إزالة العضو"
-                        title="إزالة"
+                        aria-label={t("projectTeam.removeAria")}
+                        title={t("projectTeam.removeTitle")}
                         onClick={async () => {
                           const ok = await confirm({
-                            title: "تأكيد الإزالة",
-                            message: `إزالة ${m.name} من فريق المشروع؟`,
+                            title: t("projectTeam.removeConfirmTitle"),
+                            message: t("projectTeam.removeConfirmMessage", {
+                              name: m.name,
+                            }),
                             danger: true,
-                            confirmLabel: "إزالة",
+                            confirmLabel: t("projectTeam.removeTitle"),
                           });
                           if (ok) removeProjectMember(project.id, m.id);
                         }}
@@ -167,37 +169,37 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="إضافة عضو للمشروع"
+        title={t("projectTeam.modalTitle")}
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={() => {
                 if (!pick) {
-                  setError("اختر عضواً.");
+                  setError(t("projectTeam.pickRequired"));
                   return;
                 }
                 addProjectMember(project.id, pick);
                 setOpen(false);
               }}
             >
-              إضافة
+              {t("projectTeam.add")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="العضو" required>
+          <Field label={t("projectTeam.field.member")} required>
             <SearchableSelect
               value={pick}
               onChange={(v) => {
                 setPick(v);
                 setError("");
               }}
-              placeholder="اختر من مستخدمي المنشأة"
+              placeholder={t("projectTeam.pickPlaceholder")}
               options={available.map((u) => ({
                 value: u.id,
                 label: `${u.name} · ${u.email}`,
@@ -206,7 +208,7 @@ export function ProjectTeamPanel({ project }: { project: Project }) {
           </Field>
           {available.length === 0 ? (
             <p className="text-xs text-steel-400">
-              لا مستخدمين متاحين للإضافة.
+              {t("projectTeam.noUsersAvailable")}
             </p>
           ) : null}
           {error ? <p className="text-sm text-red-600">{error}</p> : null}

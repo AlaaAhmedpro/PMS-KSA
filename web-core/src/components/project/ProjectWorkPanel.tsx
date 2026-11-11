@@ -21,10 +21,6 @@ import { useAuth } from "../../store/AuthContext";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
 import {
-  STAGE_STATUS_LABELS,
-  TASK_STATUS_LABELS,
-} from "../../lib/constants";
-import {
   categoryProgress,
   normalizeStageStatus,
   stageTaskProgress,
@@ -37,23 +33,9 @@ import type {
   TaskStatus,
   WorkEntityType,
 } from "../../models/domain";
+import { useLocale } from "../../store/LocaleContext";
+import { stageStatusLabel, taskStatusLabel } from "../../i18n/label";
 import { cn } from "../../lib/cn";
-
-const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: "todo", label: TASK_STATUS_LABELS.todo },
-  { value: "in_progress", label: TASK_STATUS_LABELS.in_progress },
-  { value: "blocked", label: TASK_STATUS_LABELS.blocked },
-  { value: "done", label: TASK_STATUS_LABELS.done },
-  { value: "cancelled", label: TASK_STATUS_LABELS.cancelled },
-];
-
-const STAGE_STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
-  { value: "planned", label: STAGE_STATUS_LABELS.planned },
-  { value: "active", label: STAGE_STATUS_LABELS.active },
-  { value: "completed", label: STAGE_STATUS_LABELS.completed },
-  { value: "on_hold", label: STAGE_STATUS_LABELS.on_hold },
-  { value: "cancelled", label: STAGE_STATUS_LABELS.cancelled },
-];
 
 type AddKind = "stage" | "category" | "task" | "subtask";
 type DetailTarget =
@@ -97,19 +79,17 @@ const TASK_BADGE: Record<TaskStatus, string> = {
     "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:text-red-300",
 };
 
-function TreeToggle({
-  open,
-  onClick,
-}: {
+function TreeToggle({ open, onClick, t }: {
   open: boolean;
   onClick: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-steel-400 transition-colors duration-150 hover:bg-steel-100 hover:text-steel-700 dark:hover:bg-steel-800"
-      aria-label={open ? "طي" : "توسيع"}
+      aria-label={open ? t("projectWork.k001") : t("projectWork.k002")}
     >
       {open ? (
         <ChevronDown className="h-4 w-4" />
@@ -121,6 +101,7 @@ function TreeToggle({
 }
 
 export function ProjectWorkPanel({ projectId }: { projectId: string }) {
+  const { t } = useLocale();
   const {
     milestones,
     projectCategories,
@@ -139,6 +120,21 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
   const can = useCan();
   const confirm = useConfirm();
   const canManage = can.manageRecords(user?.role);
+
+  const taskStatusOptions = useMemo(
+    () =>
+      (["todo", "in_progress", "blocked", "done", "cancelled"] as TaskStatus[]).map(
+        (value) => ({ value, label: taskStatusLabel(t, value) }),
+      ),
+    [t],
+  );
+  const stageStatusOptions = useMemo(
+    () =>
+      (["planned", "active", "completed", "on_hold", "cancelled"] as StageStatus[]).map(
+        (value) => ({ value, label: stageStatusLabel(t, value) }),
+      ),
+    [t],
+  );
 
   const stages = useMemo(
     () =>
@@ -204,7 +200,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
 
   const saveAdd = () => {
     if (!draftName.trim()) {
-      setError("الاسم مطلوب.");
+      setError(t("projectWork.k003"));
       return;
     }
     if (addKind === "stage") {
@@ -263,7 +259,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
       });
       setExpandedTasks((prev) => new Set(prev).add(addParentTaskId));
     } else {
-      setError("تعذّر الحفظ. تأكد من المستوى المحدد.");
+      setError(t("projectWork.k004"));
       return;
     }
     setAddOpen(false);
@@ -317,16 +313,16 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 space-y-0.5">
           <p className="text-xs font-semibold text-steel-600 dark:text-steel-300">
-            السهم للتوسيع · الاسم للتفاصيل · الأزرار للتعديل
+            {t("work.hintExpand")}
           </p>
           <p className="text-[11px] text-steel-400">
-            مرحلة ← فئة ← مهمة ← فرعية. التقدّم يُحسب تلقائياً من المستوى الأدنى.
+            {t("work.hintHierarchy")}
           </p>
         </div>
         {canManage ? (
           <Button size="sm" onClick={() => openAdd("stage")}>
             <Plus className="h-3.5 w-3.5" />
-            إضافة مرحلة
+            {t("work.addStage")}
           </Button>
         ) : null}
       </div>
@@ -334,7 +330,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
       <Card className="overflow-hidden p-0">
         {stages.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-steel-500">
-            لا مراحل على هذا المشروع بعد.
+            {t("work.emptyStages")}
           </p>
         ) : (
           <ul className="divide-y divide-steel-100 dark:divide-steel-800">
@@ -346,12 +342,16 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
               return (
                 <li key={stage.id}>
                   <TreeRow
+                    t={t}
                     depth={0}
-                    kindLabel="مرحلة"
+                    kindLabel={t("projectWork.k005")}
                     title={stage.name}
-                    meta={`استحقاق ${stage.dueDate} · ${cats.length} فئة`}
+                    meta={t("work.stageMeta", {
+                      date: stage.dueDate,
+                      count: cats.length,
+                    })}
                     progress={pct}
-                    statusLabel={STAGE_STATUS_LABELS[st]}
+                    statusLabel={stageStatusLabel(t, st)}
                     statusClass={STAGE_BADGE[st]}
                     open={open}
                     onToggle={() => toggle(setExpandedStages, stage.id)}
@@ -380,7 +380,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                           }
                         : undefined
                     }
-                    addLabel={canManage ? "إضافة فئة" : undefined}
+                    addLabel={canManage ? t("projectWork.k006") : undefined}
                     onAdd={
                       canManage
                         ? () => openAdd("category", { stageId: stage.id })
@@ -390,10 +390,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                       canManage
                         ? async () => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف المرحلة وفئاتها؟",
+                              title: t("projectWork.k007"),
+                              message: t("projectWork.k008"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("projectWork.k009"),
                             });
                             if (!ok) return;
                             removeMilestone(stage.id);
@@ -405,12 +405,11 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                   {open ? (
                     <ul className="border-s-2 border-brand-200/70 bg-steel-50/50 dark:border-brand-900/50 dark:bg-steel-900/25">
                       {cats.length === 0 ? (
-                        <li className="px-4 py-2.5 ps-14 text-[11px] text-steel-400">
-                          لا فئات داخل هذه المرحلة. استخدم «إضافة فئة».
-                        </li>
+                        <li className="px-4 py-2.5 ps-14 text-[11px] text-steel-400">{t("projectWork.k001")}</li>
                       ) : null}
                       {cats.map((cat) => (
                         <CategoryBranch
+                          t={t}
                           key={cat.id}
                           cat={cat}
                           open={expandedCategories.has(cat.id)}
@@ -450,10 +449,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                           }
                           onRemoveCategory={async () => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف الفئة؟ تبقى المهام بلا فئة.",
+                              title: t("projectWork.k007"),
+                              message: t("projectWork.k010"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("projectWork.k009"),
                             });
                             if (!ok) return;
                             removeProjectCategory(cat.id);
@@ -461,10 +460,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                           }}
                           onRemoveTask={async (task) => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف المهمة ومهامها الفرعية؟",
+                              title: t("projectWork.k007"),
+                              message: t("projectWork.k011"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("projectWork.k009"),
                             });
                             if (!ok) return;
                             removeTask(task.id);
@@ -472,10 +471,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                           }}
                           onRemoveSubtask={async (id) => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف المهمة الفرعية؟",
+                              title: t("projectWork.k007"),
+                              message: t("projectWork.k012"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("projectWork.k009"),
                             });
                             if (ok) removeTask(id);
                           }}
@@ -495,30 +494,30 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
         onClose={() => setAddOpen(false)}
         title={
           addKind === "stage"
-            ? "إضافة مرحلة"
+            ? t("projectWork.k013")
             : addKind === "category"
-              ? "إضافة فئة"
+              ? t("projectWork.k006")
               : addKind === "task"
-                ? "إضافة مهمة"
-                : "إضافة مهمة فرعية"
+                ? t("projectWork.k014")
+                : t("projectWork.k015")
         }
         footer={
           <>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
-              إلغاء
+              {t("work.cancel")}
             </Button>
-            <Button onClick={saveAdd}>حفظ</Button>
+            <Button onClick={saveAdd}>{t("projectWork.k037")}</Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="الاسم" required>
+          <Field label={t("projectWork.k016")} required>
             <Input
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
             />
           </Field>
-          <Field label="الوصف">
+          <Field label={t("projectWork.k017")}>
             <Input
               value={draftDesc}
               onChange={(e) => setDraftDesc(e.target.value)}
@@ -527,7 +526,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
           {addKind === "stage" ||
           addKind === "task" ||
           addKind === "subtask" ? (
-            <Field label="الاستحقاق">
+            <Field label={t("projectWork.k018")}>
               <Input
                 type="date"
                 value={draftDue}
@@ -544,29 +543,27 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
         onClose={() => setStatusTarget(null)}
         title={
           statusTarget
-            ? `تغيير الحالة · ${statusTarget.title}`
-            : "تغيير الحالة"
+            ? t("work.changeStatusTitle", { title: statusTarget.title })
+            : t("projectWork.k019")
         }
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setStatusTarget(null)}>
-              إلغاء
+              {t("work.cancel")}
             </Button>
             <Button onClick={saveStatus} disabled={!statusDraft}>
-              تطبيق
+              {t("work.apply")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-steel-600 dark:text-steel-300">
-            اختر الحالة
-          </p>
+          <p className="text-xs font-semibold text-steel-600 dark:text-steel-300">{t("projectWork.k005")}</p>
           <ul className="space-y-1.5">
             {(statusTarget?.kind === "stage"
-              ? STAGE_STATUS_OPTIONS
-              : TASK_STATUS_OPTIONS
+              ? stageStatusOptions
+              : taskStatusOptions
             ).map((opt) => {
               const selected = statusDraft === opt.value;
               return (
@@ -583,9 +580,7 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
                   >
                     {opt.label}
                     {selected ? (
-                      <span className="text-[11px] font-bold text-brand-600">
-                        محدّد
-                      </span>
+                      <span className="text-[11px] font-bold text-brand-600">{t("projectWork.k006")}</span>
                     ) : null}
                   </button>
                 </li>
@@ -593,13 +588,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
             })}
           </ul>
           {statusTarget?.kind === "task" ? (
-            <p className="text-[11px] text-steel-400">
-              منجز = 100٪ · للتنفيذ/ملغى = 0٪. إن وُجدت فرعيات يُحسب تقدّم
-              المهمة من متوسطها.
-            </p>
+            <p className="text-[11px] text-steel-400">{t("projectWork.k007")}</p>
           ) : (
             <p className="text-[11px] text-steel-400">
-              نسبة تقدّم المرحلة تُحسب من مهامها تلقائياً.
+              {t("work.progressHintStage")}
             </p>
           )}
         </div>
@@ -619,28 +611,29 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
         onClose={() => setDetail(null)}
         title={
           detailStage
-            ? `مرحلة · ${detailStage.name}`
+            ? t("work.detailStage", { name: detailStage.name })
             : detailCategory
-              ? `فئة · ${detailCategory.name}`
+              ? t("work.detailCategory", { name: detailCategory.name })
               : detailTask
-                ? `مهمة · ${detailTask.title}`
-                : "التفاصيل"
+                ? t("work.detailTask", { name: detailTask.title })
+                : t("projectWork.k020")
         }
         size="lg"
         footer={
           <Button variant="outline" onClick={() => setDetail(null)}>
-            إغلاق
+            {t("work.close")}
           </Button>
         }
       >
         {detailStage ? (
           <div className="space-y-3">
             <p className="text-sm text-steel-600 dark:text-steel-300">
-              {detailStage.description?.trim() || "لا وصف للمرحلة."}
+              {detailStage.description?.trim() || t("projectWork.k021")}
             </p>
             <p className="text-xs text-steel-500">
-              الحالة:{" "}
-              {STAGE_STATUS_LABELS[normalizeStageStatus(detailStage)]} · التقدّم:{" "}
+              {t("work.statusLabel")}{" "}
+              {stageStatusLabel(t, normalizeStageStatus(detailStage))} ·{" "}
+              {t("work.progressLabel")}{" "}
               {stageTaskProgress(detailStage, projectCategories, tasks)}%
             </p>
             <WorkAttachmentsBlock
@@ -653,10 +646,11 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
         {detailCategory ? (
           <div className="space-y-3">
             <p className="text-sm text-steel-600 dark:text-steel-300">
-              {detailCategory.description?.trim() || "لا وصف للفئة."}
+              {detailCategory.description?.trim() || t("projectWork.k022")}
             </p>
             <p className="text-xs text-steel-500">
-              التقدّم: {categoryProgress(detailCategory.id, tasks)}%
+              {t("work.progressLabel")}{" "}
+              {categoryProgress(detailCategory.id, tasks)}%
             </p>
             <WorkAttachmentsBlock
               projectId={projectId}
@@ -668,10 +662,10 @@ export function ProjectWorkPanel({ projectId }: { projectId: string }) {
         {detailTask ? (
           <div className="space-y-3">
             <p className="text-sm text-steel-600 dark:text-steel-300">
-              {detailTask.description?.trim() || "لا وصف."}
+              {detailTask.description?.trim() || t("projectWork.k023")}
             </p>
             <p className="text-xs text-steel-500">
-              {TASK_STATUS_LABELS[detailTask.status]} · {detailTask.progress}%
+              {taskStatusLabel(t, detailTask.status)} · {detailTask.progress}%
             </p>
             <WorkAttachmentsBlock
               projectId={projectId}
@@ -713,14 +707,20 @@ function TextAction({
   );
 }
 
-function MoreMenu({ onDelete }: { onDelete: () => void }) {
+function MoreMenu({
+  t,
+  onDelete,
+}: {
+  t: (k: string, vars?: Record<string, string | number>) => string;
+  onDelete: () => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
       <button
         type="button"
-        title="المزيد"
-        aria-label="المزيد"
+        title={t("projectWork.k024")}
+        aria-label={t("projectWork.k024")}
         aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation();
@@ -735,7 +735,7 @@ function MoreMenu({ onDelete }: { onDelete: () => void }) {
           <button
             type="button"
             className="fixed inset-0 z-10 cursor-default"
-            aria-label="إغلاق القائمة"
+            aria-label={t("projectWork.k025")}
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);
@@ -750,9 +750,7 @@ function MoreMenu({ onDelete }: { onDelete: () => void }) {
                 setOpen(false);
                 onDelete();
               }}
-            >
-              حذف
-            </button>
+            >{t("projectWork.k009")}</button>
           </div>
         </>
       ) : null}
@@ -777,7 +775,7 @@ function MiniProgress({ value }: { value: number }) {
   );
 }
 
-function TreeRow({
+function TreeRow({ t, 
   depth,
   kindLabel,
   title,
@@ -813,6 +811,7 @@ function TreeRow({
   addLabel?: string;
   onAdd?: () => void;
   onDelete?: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const pad = 12 + depth * 18;
   const isStage = depth === 0;
@@ -827,7 +826,7 @@ function TreeRow({
       style={{ paddingInlineStart: pad }}
     >
       {hasChildren && onToggle ? (
-        <TreeToggle open={!!open} onClick={onToggle} />
+        <TreeToggle open={!!open} onClick={onToggle} t={t} />
       ) : (
         <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
       )}
@@ -862,7 +861,7 @@ function TreeRow({
                 onChangeStatus &&
                   "cursor-pointer transition-opacity duration-150 hover:opacity-80",
               )}
-              title={onChangeStatus ? "تغيير الحالة" : undefined}
+              title={onChangeStatus ? t("projectWork.k019") : undefined}
             >
               {statusLabel}
             </button>
@@ -871,7 +870,7 @@ function TreeRow({
             type="button"
             className="min-w-0 truncate text-start text-sm font-semibold text-steel-800 hover:text-brand-700 dark:text-steel-100"
             onClick={onOpenDetail}
-            title="فتح التفاصيل"
+            title={t("projectWork.k026")}
           >
             {title}
           </button>
@@ -885,23 +884,23 @@ function TreeRow({
       <div className="flex flex-wrap items-center justify-end gap-1.5">
         {onComments ? (
           <TextAction
-            label={`تعليقات (${comments ?? 0})`}
+            label={t("work.commentsCount", { count: comments ?? 0 })}
             onClick={onComments}
           />
         ) : null}
         {onChangeStatus ? (
-          <TextAction label="الحالة" onClick={onChangeStatus} />
+          <TextAction label={t("projectWork.k027")} onClick={onChangeStatus} />
         ) : null}
         {onAdd && addLabel ? (
           <TextAction label={addLabel} onClick={onAdd} />
         ) : null}
-        {onDelete ? <MoreMenu onDelete={onDelete} /> : null}
+        {onDelete ? <MoreMenu t={t} onDelete={onDelete} /> : null}
       </div>
     </div>
   );
 }
 
-function CategoryBranch({
+function CategoryBranch({ t, 
   cat,
   open,
   onToggle,
@@ -939,15 +938,17 @@ function CategoryBranch({
   onRemoveCategory: () => void;
   onRemoveTask: (task: TaskItem) => void;
   onRemoveSubtask: (id: string) => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const pct = categoryProgress(cat.id, tasks);
   return (
     <li>
       <TreeRow
+                    t={t}
         depth={1}
-        kindLabel="فئة"
+        kindLabel={t("projectWork.k028")}
         title={cat.name}
-        meta={`${tasks.length} مهمة`}
+        meta={t("work.tasksCount", { count: tasks.length })}
         progress={pct}
         open={open}
         onToggle={onToggle}
@@ -961,7 +962,7 @@ function CategoryBranch({
             title: cat.name,
           })
         }
-        addLabel={canManage ? "إضافة مهمة" : undefined}
+        addLabel={canManage ? t("projectWork.k014") : undefined}
         onAdd={canManage ? onAddTask : undefined}
         onDelete={canManage ? onRemoveCategory : undefined}
       />
@@ -971,9 +972,7 @@ function CategoryBranch({
             <li
               className="px-4 py-2 text-[11px] text-steel-400"
               style={{ paddingInlineStart: 56 }}
-            >
-              لا مهام في هذه الفئة. استخدم «إضافة مهمة».
-            </li>
+            >{t("projectWork.k010")}</li>
           ) : null}
           {tasks.map((task) => {
             const kids = childTasks(task.id);
@@ -983,12 +982,16 @@ function CategoryBranch({
             return (
               <li key={task.id}>
                 <TreeRow
+                    t={t}
                   depth={2}
-                  kindLabel="مهمة"
+                  kindLabel={t("projectWork.k029")}
                   title={task.title}
-                  meta={`${assignee} · ${kids.length} فرعية`}
+                  meta={t("work.taskMeta", {
+                    assignee,
+                    count: kids.length,
+                  })}
                   progress={task.progress}
-                  statusLabel={TASK_STATUS_LABELS[task.status]}
+                  statusLabel={taskStatusLabel(t, task.status)}
                   statusClass={TASK_BADGE[task.status]}
                   open={taskOpen}
                   onToggle={() => onToggleTask(task.id)}
@@ -1007,7 +1010,7 @@ function CategoryBranch({
                   onChangeStatus={
                     canManage ? () => onChangeTaskStatus(task) : undefined
                   }
-                  addLabel={canManage ? "إضافة فرعية" : undefined}
+                  addLabel={canManage ? t("projectWork.k030") : undefined}
                   onAdd={canManage ? () => onAddSubtask(task.id) : undefined}
                   onDelete={canManage ? () => onRemoveTask(task) : undefined}
                 />
@@ -1017,19 +1020,18 @@ function CategoryBranch({
                       <li
                         className="px-4 py-2 text-[11px] text-steel-400"
                         style={{ paddingInlineStart: 72 }}
-                      >
-                        لا مهام فرعية. استخدم «إضافة فرعية».
-                      </li>
+                      >{t("projectWork.k011")}</li>
                     ) : null}
                     {kids.map((st) => (
                       <li key={st.id}>
                         <TreeRow
+                    t={t}
                           depth={3}
-                          kindLabel="فرعية"
+                          kindLabel={t("projectWork.k031")}
                           title={st.title}
-                          meta={`استحقاق ${st.dueDate}`}
+                          meta={t("work.dueMeta", { date: st.dueDate })}
                           progress={st.progress}
-                          statusLabel={TASK_STATUS_LABELS[st.status]}
+                          statusLabel={taskStatusLabel(t, st.status)}
                           statusClass={TASK_BADGE[st.status]}
                           onOpenDetail={() =>
                             onOpenDetail({ type: "task", id: st.id })

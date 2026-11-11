@@ -58,6 +58,7 @@ export function useSidebarNav() {
   const role = user?.role;
   const {
     modules,
+    clientType,
     clientMeta,
     canAccessPortfolio,
     canAccessProgram,
@@ -181,6 +182,7 @@ export function useSidebarNav() {
     expanded,
     toggleSection,
     isActive,
+    clientType,
     clientMeta,
   };
 }

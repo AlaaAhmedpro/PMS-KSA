@@ -9,6 +9,7 @@ import {
 import { fileSize } from "../../lib/format";
 import type { Attachment } from "../../lib/types";
 import { Modal } from "./Modal";
+import { useLocale } from "../../store/LocaleContext";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -35,6 +36,7 @@ export function FileUpload({
   onChange: (next: Attachment[]) => void;
   compact?: boolean;
 }) {
+  const { t } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const attachmentsRef = useRef(attachments);
   const [dragging, setDragging] = useState(false);
@@ -119,13 +121,11 @@ export function FileUpload({
         <UploadCloud className={cn("text-brand-500", compact ? "h-6 w-6" : "h-8 w-8")} />
         <p className="text-sm font-semibold text-steel-700 dark:text-steel-200">
           {compact
-            ? "رفع PDF أو صورة للإجراء"
-            : "اسحب وأفلت PDF أو صورة هنا، أو اضغط للاختيار"}
+            ? t("ui.fileUpload.compactHint")
+            : t("ui.fileUpload.dropHint")}
         </p>
         {!compact && (
-          <p className="text-xs text-steel-400">
-            يدعم PDF والصور — يتم فهرسة النص تلقائياً للبحث في الأرشيف
-          </p>
+          <p className="text-xs text-steel-400">{t("ui.fileUpload.indexHelp")}</p>
         )}
         <input
           ref={inputRef}
@@ -167,8 +167,8 @@ export function FileUpload({
                 </p>
                 <p className="text-xs text-steel-400">
                   {fileSize(a.size)}
-                  {indexing.has(a.id) && " · جاري فهرسة النص..."}
-                  {!indexing.has(a.id) && a.searchText && " · مفهرس للبحث"}
+                  {indexing.has(a.id) && ` · ${t("ui.fileUpload.indexing")}`}
+                  {!indexing.has(a.id) && a.searchText && ` · ${t("ui.fileUpload.indexed")}`}
                 </p>
               </div>
               {indexing.has(a.id) ? (
@@ -179,7 +179,7 @@ export function FileUpload({
                     type="button"
                     onClick={() => setPreview(a)}
                     className="rounded-lg p-2 text-steel-400 hover:bg-steel-100 hover:text-brand-600 dark:hover:bg-steel-800"
-                    title="استعراض"
+                    title={t("ui.fileUpload.view")}
                   >
                     <Eye className="h-4 w-4" />
                   </button>
@@ -189,7 +189,7 @@ export function FileUpload({
                 type="button"
                 onClick={() => onChange(attachments.filter((x) => x.id !== a.id))}
                 className="rounded-lg p-2 text-steel-400 hover:bg-red-500/10 hover:text-red-500"
-                title="حذف"
+                title={t("common.delete")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -220,7 +220,7 @@ export function FileUpload({
           )
         ) : (
           <p className="py-8 text-center text-sm text-steel-400">
-            لا يمكن استعراض هذا الملف (بيانات توضيحية).
+            {t("ui.fileUpload.cannotPreview")}
           </p>
         )}
       </Modal>

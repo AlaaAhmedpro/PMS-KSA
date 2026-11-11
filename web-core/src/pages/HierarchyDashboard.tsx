@@ -10,8 +10,8 @@ import {
 } from "../components/charts/Charts";
 import { useHierarchy } from "../store/HierarchyStore";
 import { useAuth } from "../store/AuthContext";
+import { useLocale } from "../store/LocaleContext";
 import { filterProjectsForUser, isTaskOverdue } from "../services/projectService";
-import { PROJECT_STATUS_LABELS } from "../lib/constants";
 import { formatNumber, formatShortDate } from "../lib/format";
 import type { Project } from "../models/domain";
 
@@ -25,14 +25,21 @@ type AttentionRow = {
 };
 
 function shortName(name: string, max = 18): string {
-  const t = name.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max - 1)}…`;
+  const text = name.trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1)}…`;
 }
 
 export function HierarchyDashboard() {
+  const { t } = useLocale();
   const { projects, tasks, organization } = useHierarchy();
   const { user } = useAuth();
+
+  const projectStatusLabel = (status: string) => {
+    const key = `status.project.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
 
   const scopedProjects = useMemo(
     () =>
@@ -50,7 +57,7 @@ export function HierarchyDashboard() {
   );
 
   const scopedTasks = useMemo(
-    () => tasks.filter((t) => scopedIds.has(t.projectId)),
+    () => tasks.filter((task) => scopedIds.has(task.projectId)),
     [tasks, scopedIds],
   );
 
@@ -63,7 +70,7 @@ export function HierarchyDashboard() {
   const active = scopedProjects.filter((p) => p.status === "active").length;
   const completed = scopedProjects.filter((p) => p.status === "completed").length;
   const overdueTaskList = useMemo(
-    () => scopedTasks.filter((t) => isTaskOverdue(t)),
+    () => scopedTasks.filter((task) => isTaskOverdue(task)),
     [scopedTasks],
   );
   const overdueTasks = overdueTaskList.length;
@@ -85,13 +92,13 @@ export function HierarchyDashboard() {
   const statusChartData = useMemo(() => {
     const counts = new Map<string, number>();
     for (const p of scopedProjects) {
-      const label = PROJECT_STATUS_LABELS[p.status] ?? p.status;
+      const label = projectStatusLabel(p.status);
       counts.set(label, (counts.get(label) || 0) + 1);
     }
     return [...counts.entries()]
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [scopedProjects]);
+  }, [scopedProjects, t]);
 
   const budgetChartData = useMemo(
     () =>
@@ -101,15 +108,15 @@ export function HierarchyDashboard() {
         .slice(0, 6)
         .map((p) => ({
           name: shortName(p.name),
-          ميزانية: p.budgetSar || 0,
-          منصرف: p.spentSar || 0,
+          budget: p.budgetSar || 0,
+          spent: p.spentSar || 0,
         })),
     [scopedProjects],
   );
 
   const attentionRows = useMemo(() => {
     const rows: AttentionRow[] = [];
-    const overdueProjectIds = new Set(overdueTaskList.map((t) => t.projectId));
+    const overdueProjectIds = new Set(overdueTaskList.map((task) => task.projectId));
 
     const attentionProjects = scopedProjects.filter(
       (p: Project) =>
@@ -123,82 +130,85 @@ export function HierarchyDashboard() {
     for (const p of attentionProjects) {
       const reason =
         p.status === "on_hold"
-          ? PROJECT_STATUS_LABELS.on_hold
+          ? projectStatusLabel("on_hold")
           : p.priority === "critical"
-            ? "أولوية حرجة"
-            : `تقدم ${p.progress}% مع مهام متأخرة`;
+            ? t("dash.attention.criticalPriority")
+            : t("dash.attention.lowProgress", { pct: p.progress });
       rows.push({
         id: `project-${p.id}`,
         kind: "project",
         name: p.name,
         detail: reason,
-        meta: `${PROJECT_STATUS_LABELS[p.status] ?? p.status} · ${p.progress}%`,
+        meta: `${projectStatusLabel(p.status)} · ${p.progress}%`,
         href: `/projects/${p.id}`,
       });
     }
 
-    for (const t of overdueTaskList) {
+    for (const task of overdueTaskList) {
       rows.push({
-        id: `task-${t.id}`,
+        id: `task-${task.id}`,
         kind: "task",
-        name: t.title,
-        detail: projectNameById.get(t.projectId) ?? "—",
-        meta: `استحقاق ${formatShortDate(t.dueDate)}`,
+        name: task.title,
+        detail: projectNameById.get(task.projectId) ?? "—",
+        meta: t("dash.attention.due", { date: formatShortDate(task.dueDate) }),
         href: `/tasks`,
       });
     }
 
     const rank = (r: AttentionRow) => (r.kind === "task" ? 0 : 1);
     return rows.sort((a, b) => rank(a) - rank(b)).slice(0, 10);
-  }, [scopedProjects, overdueTaskList, projectNameById]);
+  }, [scopedProjects, overdueTaskList, projectNameById, t]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="لوحة الإدارة"
-        subtitle={`${organization?.name ?? ""} — نظرة سريعة على المشاريع والمهام والميزانية`}
+        title={t("dash.title")}
+        subtitle={t("dash.subtitle", { org: organization?.name ?? "" })}
         icon={<LayoutDashboard className="h-6 w-6" />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           featured
-          label="المشاريع في النطاق"
+          label={t("dash.kpi.projects")}
           value={formatNumber(scopedProjects.length)}
           tone="steel"
-          hint={`${active} نشط · ${completed} مكتمل`}
+          hint={t("dash.kpi.projectsHint", { active, completed })}
         />
         <KpiCard
-          label="متوسط التقدم"
+          label={t("dash.kpi.avgProgress")}
           value={`${avgProgress}%`}
           tone="brand"
-          hint="عبر مشاريع النطاق"
+          hint={t("dash.kpi.avgProgressHint")}
         />
         <KpiCard
-          label="مهام متأخرة"
+          label={t("dash.kpi.overdueTasks")}
           value={formatNumber(overdueTasks)}
           tone="red"
-          hint={`من ${formatNumber(scopedTasks.length)} مهمة`}
+          hint={t("dash.kpi.overdueTasksHint", { total: formatNumber(scopedTasks.length) })}
           pulse={overdueTasks > 0}
         />
         <KpiCard
-          label="صرف الميزانية"
+          label={t("dash.kpi.budgetBurn")}
           value={`${budgetTotals.burnPct}%`}
           tone="sky"
           hint={
             budgetTotals.budget > 0
-              ? `${formatNumber(budgetTotals.spent)} من ${formatNumber(budgetTotals.budget)} ر.س`
-              : "لا ميزانيات مسجّلة"
+              ? t("dash.kpi.budgetBurnHint", {
+                  spent: formatNumber(budgetTotals.spent),
+                  budget: formatNumber(budgetTotals.budget),
+                })
+              : t("dash.kpi.noBudgets")
           }
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-4">
-          <CardHeader title="توزيع حالات المشاريع" subtitle="حسب الحالة الحالية" />
+          <CardHeader title={t("dash.chart.statusTitle")} subtitle={t("dash.chart.statusSub")} />
           {statusChartData.length === 0 ? (
             <p className="mt-8 text-center text-sm text-steel-400">
-              لا توجد مشاريع لعرض التوزيع.
+              {t("dash.chart.statusEmpty")}
             </p>
           ) : (
             <div className="mt-2">
@@ -209,12 +219,12 @@ export function HierarchyDashboard() {
 
         <Card className="p-4">
           <CardHeader
-            title="الميزانية والمنصرف"
-            subtitle="أعلى مشاريع من حيث الميزانية"
+            title={t("dash.chart.budgetTitle")}
+            subtitle={t("dash.chart.budgetSub")}
           />
           {budgetChartData.length === 0 ? (
             <p className="mt-8 text-center text-sm text-steel-400">
-              لا توجد ميزانيات مشاريع للعرض.
+              {t("dash.chart.budgetEmpty")}
             </p>
           ) : (
             <div className="mt-2">
@@ -226,14 +236,14 @@ export function HierarchyDashboard() {
 
       <Card className="p-4">
         <CardHeader
-          title="يحتاج انتباهاً"
-          subtitle="مهام متأخرة ومشاريع حرجة أو موقوفة"
+          title={t("dash.attention.title")}
+          subtitle={t("dash.attention.sub")}
           action={
             <Link
               to="/tasks"
               className="text-sm font-bold text-brand-600 hover:underline"
             >
-              المهام
+              {t("dash.attention.tasksLink")}
             </Link>
           }
         />
@@ -241,11 +251,11 @@ export function HierarchyDashboard() {
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b border-steel-200 text-start dark:border-steel-700">
-                <th className="px-2 py-2 font-bold">النوع</th>
-                <th className="px-2 py-2 font-bold">الاسم</th>
-                <th className="px-2 py-2 font-bold">التفاصيل</th>
-                <th className="px-2 py-2 font-bold">الحالة / الاستحقاق</th>
-                <th className="px-2 py-2 font-bold">إجراء</th>
+                <th className="px-2 py-2 font-bold">{t("dash.attention.colType")}</th>
+                <th className="px-2 py-2 font-bold">{t("dash.attention.colName")}</th>
+                <th className="px-2 py-2 font-bold">{t("dash.attention.colDetail")}</th>
+                <th className="px-2 py-2 font-bold">{t("dash.attention.colMeta")}</th>
+                <th className="px-2 py-2 font-bold">{t("dash.attention.colAction")}</th>
               </tr>
             </thead>
             <tbody>
@@ -255,7 +265,7 @@ export function HierarchyDashboard() {
                     colSpan={5}
                     className="px-2 py-6 text-center text-steel-400"
                   >
-                    لا توجد عناصر تحتاج انتباهاً حالياً.
+                    {t("dash.attention.empty")}
                   </td>
                 </tr>
               ) : (
@@ -265,7 +275,7 @@ export function HierarchyDashboard() {
                     className="border-b border-steel-100 dark:border-steel-800"
                   >
                     <td className="px-2 py-2 text-steel-500">
-                      {row.kind === "task" ? "مهمة" : "مشروع"}
+                      {row.kind === "task" ? t("kind.task") : t("kind.project")}
                     </td>
                     <td className="px-2 py-2 font-semibold text-steel-800 dark:text-steel-100">
                       {row.name}
@@ -279,7 +289,7 @@ export function HierarchyDashboard() {
                         to={row.href}
                         className="font-semibold text-brand-700 hover:underline"
                       >
-                        عرض
+                        {t("dash.attention.open")}
                       </Link>
                     </td>
                   </tr>

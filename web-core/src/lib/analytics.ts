@@ -3,7 +3,7 @@ import type { Branch, CategoryItem, Department, Entity } from "./types";
 import { effectiveStatus, isOverdue } from "./status";
 import type { RecordItem } from "./types";
 
-export type PerfChartRow = { name: string; منجز: number; متأخر: number };
+export type PerfChartRow = { name: string; done: number; overdue: number };
 
 export function perfByBranch(
   records: RecordItem[],
@@ -15,11 +15,10 @@ export function perfByBranch(
       (r) => effectiveStatus(r) === "done" || effectiveStatus(r) === "closed",
     ).length;
     const overdue = inBranch.filter(isOverdue).length;
-    return { name: b.name, "منجز": done, "متأخر": overdue };
+    return { name: b.name, done, overdue };
   });
 }
 
-/** المنجز مقابل المتأخر لكل إدارة داخل مقر مصنع محدد */
 export function perfByDepartmentInBranch(
   records: RecordItem[],
   branchId: string,
@@ -33,7 +32,7 @@ export function perfByDepartmentInBranch(
         effectiveStatus(r) === "done" || effectiveStatus(r) === "closed",
     ).length;
     const overdue = inDept.filter(isOverdue).length;
-    return { name: d.name, "منجز": done, "متأخر": overdue };
+    return { name: d.name, done, overdue };
   });
 }
 
@@ -59,22 +58,21 @@ export function byDepartment(
   })).sort((a, b) => b.value - a.value);
 }
 
-const WEEK_LABELS = [
-  "الأسبوع الأول",
-  "الأسبوع الثاني",
-  "الأسبوع الثالث",
-  "الأسبوع الرابع",
-  "الأسبوع الخامس",
-];
+const WEEK_LABEL_KEYS = [
+  "analytics.week1",
+  "analytics.week2",
+  "analytics.week3",
+  "analytics.week4",
+] as const;
 
 /** flow of incoming letters split into the weeks of a specific month */
 export function flowByWeekOfMonth(
   records: RecordItem[],
   year: number,
   month: number,
+  weekLabels: string[] = ["Week 1", "Week 2", "Week 3", "Week 4"],
 ) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // split the month into ~4 weeks (1-7, 8-14, 15-21, 22-end)
   const ranges: { start: number; end: number }[] = [
     { start: 1, end: 7 },
     { start: 8, end: 14 },
@@ -91,7 +89,7 @@ export function flowByWeekOfMonth(
         a.getDate() <= rng.end
       );
     }).length;
-    return { name: WEEK_LABELS[i], value: count };
+    return { name: weekLabels[i] ?? WEEK_LABEL_KEYS[i], value: count };
   });
 }
 
@@ -102,33 +100,34 @@ export type MonthOption = {
   month: number;
 };
 
-const monthLabelFmt = new Intl.DateTimeFormat("ar-EG", {
-  month: "long",
-  year: "numeric",
-});
-
-function toMonthOption(d: Date): MonthOption {
+function toMonthOption(d: Date, locale: string): MonthOption {
+  const fmt = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ar-SA", {
+    month: "long",
+    year: "numeric",
+  });
   return {
     value: `${d.getFullYear()}-${d.getMonth()}`,
-    label: monthLabelFmt.format(d),
+    label: fmt.format(d),
     year: d.getFullYear(),
     month: d.getMonth(),
   };
 }
 
 /** list of the last `n` months as {value: "YYYY-M", label} for a selector */
-export function recentMonths(n = 6): MonthOption[] {
+export function recentMonths(n = 6, locale = "ar"): MonthOption[] {
   const months: MonthOption[] = [];
   const now = new Date();
   for (let i = 0; i < n; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(toMonthOption(d));
+    months.push(toMonthOption(d, locale));
   }
   return months;
 }
 
-/** كل الأشهر من أقدم وارد مسجّل حتى الشهر الحالي */
-export function allMonthsFromRecords(records: RecordItem[]): MonthOption[] {
+export function allMonthsFromRecords(
+  records: RecordItem[],
+  locale = "ar",
+): MonthOption[] {
   const now = new Date();
   const end = new Date(now.getFullYear(), now.getMonth(), 1);
   let start = new Date(end);
@@ -145,7 +144,7 @@ export function allMonthsFromRecords(records: RecordItem[]): MonthOption[] {
   const months: MonthOption[] = [];
   const cur = new Date(start);
   while (cur <= end) {
-    months.push(toMonthOption(cur));
+    months.push(toMonthOption(cur, locale));
     cur.setMonth(cur.getMonth() + 1);
   }
   return months;

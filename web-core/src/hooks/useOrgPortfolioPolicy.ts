@@ -1,11 +1,8 @@
 import { useMemo } from "react";
-import {
-  normalizePortfolioPolicy,
-  PROFILE_TEMPLATE_LABELS,
-  WORKFLOW_MODE_LABELS,
-} from "../lib/orgPortfolioPolicy";
+import { normalizePortfolioPolicy } from "../lib/orgPortfolioPolicy";
 import type { OrgPortfolioPolicy } from "../models/domain";
 import { useAuth } from "../store/AuthContext";
+import { useLocale } from "../store/LocaleContext";
 
 /** Active organization portfolio governance policy (normalized with profile defaults). */
 export function useOrgPortfolioPolicy(): {
@@ -14,6 +11,7 @@ export function useOrgPortfolioPolicy(): {
   workflowLabel: string;
 } {
   const { organization } = useAuth();
+  const { t } = useLocale();
   const policy = useMemo(
     () =>
       normalizePortfolioPolicy(
@@ -25,7 +23,7 @@ export function useOrgPortfolioPolicy(): {
 
   return {
     policy,
-    profileLabel: PROFILE_TEMPLATE_LABELS[policy.profileTemplate],
-    workflowLabel: WORKFLOW_MODE_LABELS[policy.workflowMode],
+    profileLabel: t(`portfolioSettings.profileTemplate.${policy.profileTemplate}`),
+    workflowLabel: t(`portfolioSettings.workflowMode.${policy.workflowMode}`),
   };
 }

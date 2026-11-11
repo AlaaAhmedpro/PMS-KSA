@@ -9,20 +9,14 @@ import { useHierarchy } from "../../store/HierarchyStore";
 import { useAuth } from "../../store/AuthContext";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
-import { PROJECT_MATERIAL_STATUS_LABELS } from "../../lib/constants";
+import { useLocale } from "../../store/LocaleContext";
+import { materialStatusLabel } from "../../i18n/label";
 import type {
   Project,
   ProjectMaterial,
   ProjectMaterialStatus,
 } from "../../models/domain";
 import { cn } from "../../lib/cn";
-
-function formatSar(amount: number): string {
-  return `${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ر.س`;
-}
 
 const STATUS_OPTIONS: ProjectMaterialStatus[] = [
   "requested",
@@ -46,6 +40,7 @@ const STATUS_BADGE: Record<ProjectMaterialStatus, string> = {
 };
 
 export function ProjectMaterialsPanel({ project }: { project: Project }) {
+  const { t } = useLocale();
   const {
     projectMaterials,
     workAttachments,
@@ -58,6 +53,14 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
   const can = useCan();
   const confirm = useConfirm();
   const canManage = can.manageRecords(user?.role);
+
+  const formatSar = (amount: number) =>
+    `${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${t("common.currencySar")}`;
+
+  const defaultUnit = t("projectMaterials.defaultUnit");
 
   const rows = useMemo(
     () =>
@@ -87,7 +90,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
   );
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
-  const [unit, setUnit] = useState("قطعة");
+  const [unit, setUnit] = useState(defaultUnit);
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -99,7 +102,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
     setEditing(null);
     setName("");
     setSku("");
-    setUnit("قطعة");
+    setUnit(defaultUnit);
     setQuantity("");
     setUnitCost("");
     setSupplier("");
@@ -125,24 +128,25 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
 
   const save = () => {
     if (!name.trim()) {
-      setError("اسم الصنف مطلوب.");
+      setError(t("projectMaterials.error.nameRequired"));
       return;
     }
     const qty = Number(quantity);
     const cost = Number(unitCost);
     if (!Number.isFinite(qty) || qty < 0) {
-      setError("الكمية غير صحيحة.");
+      setError(t("projectMaterials.error.qtyInvalid"));
       return;
     }
     if (!Number.isFinite(cost) || cost < 0) {
-      setError("تكلفة الوحدة غير صحيحة.");
+      setError(t("projectMaterials.error.costInvalid"));
       return;
     }
+    const unitVal = unit.trim() || defaultUnit;
     if (editing) {
       updateProjectMaterial(editing.id, {
         name: name.trim(),
         sku: sku.trim(),
-        unit: unit.trim() || "قطعة",
+        unit: unitVal,
         quantity: qty,
         unitCostSar: cost,
         supplier: supplier.trim(),
@@ -154,7 +158,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
         projectId: project.id,
         name: name.trim(),
         sku: sku.trim(),
-        unit: unit.trim() || "قطعة",
+        unit: unitVal,
         quantity: qty,
         unitCostSar: cost,
         supplier: supplier.trim(),
@@ -165,8 +169,12 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
       addProjectActivity({
         projectId: project.id,
         kind: "material",
-        title: `إضافة صنف: ${name.trim()}`,
-        detail: `${qty} ${unit.trim() || "قطعة"} · ${PROJECT_MATERIAL_STATUS_LABELS[status]}`,
+        title: t("projectMaterials.activityAdded", { name: name.trim() }),
+        detail: t("projectMaterials.activityDetail", {
+          qty: String(qty),
+          unit: unitVal,
+          status: materialStatusLabel(t, status),
+        }),
         actorUserId: user.id,
       });
     }
@@ -177,17 +185,14 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-xs text-steel-500">
-            أصناف ومواد المشروع: الكمية، المورد، الحالة، المرفقات، والقيمة
-            التقديرية.
-          </p>
+          <p className="text-xs text-steel-500">{t("projectMaterials.intro")}</p>
           <p className="mt-0.5 text-[11px] font-bold tabular-nums text-steel-600">
-            إجمالي تقديري: {formatSar(totalValue)}
+            {t("projectMaterials.totalEstimate")}: {formatSar(totalValue)}
           </p>
         </div>
         {canManage ? (
           <Button size="sm" onClick={openCreate}>
-            إضافة صنف
+            {t("projectMaterials.add")}
           </Button>
         ) : null}
       </div>
@@ -206,13 +211,27 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">الصنف</th>
-              <th className="px-4 py-3 text-start font-bold">الكمية</th>
-              <th className="px-4 py-3 text-start font-bold">تكلفة الوحدة</th>
-              <th className="px-4 py-3 text-start font-bold">القيمة</th>
-              <th className="px-4 py-3 text-start font-bold">المورد</th>
-              <th className="px-4 py-3 text-start font-bold">الحالة</th>
-              <th className="px-4 py-3 text-start font-bold">مرفقات</th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.item")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.qty")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.unitCost")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.value")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.supplier")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("common.status")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectMaterials.col.attachments")}
+              </th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -225,7 +244,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
                   colSpan={canManage ? 8 : 7}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا أصناف مسجّلة على هذا المشروع.
+                  {t("projectMaterials.empty")}
                 </td>
               </tr>
             ) : (
@@ -270,7 +289,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
                           STATUS_BADGE[m.status],
                         )}
                       >
-                        {PROJECT_MATERIAL_STATUS_LABELS[m.status]}
+                        {materialStatusLabel(t, m.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -278,7 +297,7 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
                         type="button"
                         className="inline-flex items-center gap-1 rounded border border-steel-200 bg-white px-2 py-1 text-[11px] font-bold text-steel-600 transition-colors hover:border-brand-200 hover:bg-brand-500/5 hover:text-brand-700 dark:border-steel-700 dark:bg-steel-900"
                         onClick={() => setAttachmentsFor(m)}
-                        title="مرفقات الصنف"
+                        title={t("projectMaterials.attachmentsTitle")}
                       >
                         <Paperclip className="h-3.5 w-3.5" />
                         <span className="tabular-nums">{attCount}</span>
@@ -290,8 +309,8 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600"
-                            aria-label="تعديل"
-                            title="تعديل"
+                            aria-label={t("common.edit")}
+                            title={t("common.edit")}
                             onClick={() => openEdit(m)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -299,15 +318,14 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                            aria-label="حذف"
-                            title="حذف"
+                            aria-label={t("common.delete")}
+                            title={t("common.delete")}
                             onClick={async () => {
                               const ok = await confirm({
-                                title: "تأكيد الحذف",
-                                message:
-                                  "حذف هذا الصنف ومرفقاته المرتبطة؟",
+                                title: t("common.confirmDeleteTitle"),
+                                message: t("projectMaterials.deleteMessage"),
                                 danger: true,
-                                confirmLabel: "حذف",
+                                confirmLabel: t("common.delete"),
                               });
                               if (ok) removeProjectMaterial(m.id);
                             }}
@@ -328,46 +346,53 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? "تعديل صنف" : "إضافة صنف"}
+        title={
+          editing ? t("projectMaterials.editTitle") : t("projectMaterials.addTitle")
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
-            <Button onClick={save}>حفظ</Button>
+            <Button onClick={save}>{t("common.save")}</Button>
           </>
         }
       >
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="اسم الصنف" required>
+            <Field label={t("projectMaterials.field.name")} required>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="الرمز">
+            <Field label={t("projectMaterials.field.sku")}>
               <Input value={sku} onChange={(e) => setSku(e.target.value)} />
             </Field>
-            <Field label="الوحدة">
+            <Field label={t("projectMaterials.field.unit")}>
               <Input
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                placeholder="طن · م³ · قطعة"
+                placeholder={t("projectMaterials.unitPlaceholder")}
               />
             </Field>
-            <Field label="الكمية" required>
+            <Field label={t("projectMaterials.field.qty")} required>
               <Input
                 type="number"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </Field>
-            <Field label="تكلفة الوحدة (ر.س)" required>
+            <Field
+              label={t("projectMaterials.field.unitCost", {
+                currency: t("common.currencySar"),
+              })}
+              required
+            >
               <Input
                 type="number"
                 value={unitCost}
                 onChange={(e) => setUnitCost(e.target.value)}
               />
             </Field>
-            <Field label="الحالة">
+            <Field label={t("common.status")}>
               <NativeSelect
                 value={status}
                 onChange={(e) =>
@@ -376,19 +401,19 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {PROJECT_MATERIAL_STATUS_LABELS[s]}
+                    {materialStatusLabel(t, s)}
                   </option>
                 ))}
               </NativeSelect>
             </Field>
           </div>
-          <Field label="المورد">
+          <Field label={t("projectMaterials.field.supplier")}>
             <Input
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
             />
           </Field>
-          <Field label="ملاحظة">
+          <Field label={t("projectMaterials.field.note")}>
             <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -400,12 +425,14 @@ export function ProjectMaterialsPanel({ project }: { project: Project }) {
         onClose={() => setAttachmentsFor(null)}
         title={
           attachmentsFor
-            ? `مرفقات الصنف — ${attachmentsFor.name}`
-            : "مرفقات الصنف"
+            ? t("projectMaterials.attachmentsModalTitle", {
+                name: attachmentsFor.name,
+              })
+            : t("projectMaterials.attachmentsTitle")
         }
         footer={
           <Button variant="outline" onClick={() => setAttachmentsFor(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >

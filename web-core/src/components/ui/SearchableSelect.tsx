@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 export interface SelectOption {
   value: string;
@@ -24,13 +25,16 @@ export function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = "اختر...",
-  searchPlaceholder = "بحث...",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
   disabled,
   className,
   truncateLabel = true,
   "aria-label": ariaLabel,
 }: Props) {
+  const { t } = useLocale();
+  const placeholder = placeholderProp ?? t("common.select");
+  const searchPlaceholder = searchPlaceholderProp ?? t("common.search");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -112,7 +116,7 @@ export function SearchableSelect({
             ))}
             {filtered.length === 0 && (
               <p className="px-3 py-3 text-center text-xs text-steel-400">
-                لا توجد نتائج
+                {t("common.searchNoResults")}
               </p>
             )}
           </div>

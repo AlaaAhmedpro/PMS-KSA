@@ -1,9 +1,10 @@
 import {
-  PORTFOLIO_STATUS_LABELS,
   portfolioStatusBadgeClass,
   type PortfolioStatus,
 } from "../../lib/portfolioDomain";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
+import { labelOf } from "../../i18n/label";
 
 export function PortfolioStatusBadge({
   status,
@@ -12,8 +13,9 @@ export function PortfolioStatusBadge({
   status?: string | null;
   className?: string;
 }) {
+  const { t } = useLocale();
   const key = (status || "draft") as PortfolioStatus;
-  const label = PORTFOLIO_STATUS_LABELS[key] ?? status ?? "—";
+  const label = labelOf(t, "portfolio.status", key);
   return (
     <span
       className={cn(

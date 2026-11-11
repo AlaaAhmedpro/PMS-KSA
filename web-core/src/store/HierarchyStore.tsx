@@ -79,7 +79,9 @@ import {
   applyWorkflowAction,
   type PortfolioWorkflowAction,
 } from "../services/portfolioWorkflow";
+import { localizeDeep } from "../i18n/localizeContent";
 import { useAuth } from "./AuthContext";
+import { useLocale } from "./LocaleContext";
 
 export type AddRelationshipInput = {
   sourceType: StrategicEntityType;
@@ -220,6 +222,7 @@ const Ctx = createContext<HierarchyCtx | null>(null);
 export function HierarchyProvider({ children }: { children: ReactNode }) {
   applyHierarchyMigration();
   const { organization: activeOrg, session } = useAuth();
+  const { locale } = useLocale();
   const orgId =
     session?.organizationId ?? activeOrg?.id ?? SEED_ORG.id;
 
@@ -429,8 +432,32 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const value = useMemo<HierarchyCtx>(
+  const localized = useMemo(
     () => ({
+      organization: localizeDeep(organization, locale),
+      objectives: localizeDeep(objectives, locale),
+      portfolios: localizeDeep(portfolios, locale),
+      initiatives: localizeDeep(initiatives, locale),
+      programs: localizeDeep(programs, locale),
+      projects: localizeDeep(projects, locale),
+      milestones: localizeDeep(milestones, locale),
+      projectCategories: localizeDeep(projectCategories, locale),
+      tasks: localizeDeep(tasks, locale),
+      workComments: localizeDeep(workComments, locale),
+      workAttachments: localizeDeep(workAttachments, locale),
+      projectExpenses: localizeDeep(projectExpenses, locale),
+      projectActivities: localizeDeep(projectActivities, locale),
+      projectMaterials: localizeDeep(projectMaterials, locale),
+      vendors: localizeDeep(vendors, locale),
+      invites: localizeDeep(invites, locale),
+      relationships: localizeDeep(relationships, locale),
+      relationshipHistory: localizeDeep(relationshipHistory, locale),
+      portfolioRisks: localizeDeep(portfolioRisks, locale),
+      portfolioBenefits: localizeDeep(portfolioBenefits, locale),
+      portfolioAudit: localizeDeep(portfolioAudit, locale),
+    }),
+    [
+      locale,
       organization,
       objectives,
       portfolios,
@@ -452,6 +479,32 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       portfolioRisks,
       portfolioBenefits,
       portfolioAudit,
+    ],
+  );
+
+  const value = useMemo<HierarchyCtx>(
+    () => ({
+      organization: localized.organization,
+      objectives: localized.objectives,
+      portfolios: localized.portfolios,
+      initiatives: localized.initiatives,
+      programs: localized.programs,
+      projects: localized.projects,
+      milestones: localized.milestones,
+      projectCategories: localized.projectCategories,
+      tasks: localized.tasks,
+      workComments: localized.workComments,
+      workAttachments: localized.workAttachments,
+      projectExpenses: localized.projectExpenses,
+      projectActivities: localized.projectActivities,
+      projectMaterials: localized.projectMaterials,
+      vendors: localized.vendors,
+      invites: localized.invites,
+      relationships: localized.relationships,
+      relationshipHistory: localized.relationshipHistory,
+      portfolioRisks: localized.portfolioRisks,
+      portfolioBenefits: localized.portfolioBenefits,
+      portfolioAudit: localized.portfolioAudit,
       addVendor: (v) => {
         const row: Vendor = {
           ...v,
@@ -1215,27 +1268,7 @@ export function HierarchyProvider({ children }: { children: ReactNode }) {
       },
     }),
     [
-      organization,
-      objectives,
-      portfolios,
-      initiatives,
-      programs,
-      projects,
-      milestones,
-      projectCategories,
-      tasks,
-      workComments,
-      workAttachments,
-      projectExpenses,
-      projectActivities,
-      projectMaterials,
-      vendors,
-      invites,
-      relationships,
-      relationshipHistory,
-      portfolioRisks,
-      portfolioBenefits,
-      portfolioAudit,
+      localized,
       invitesAll,
       relationshipsAll,
       projectsAll,

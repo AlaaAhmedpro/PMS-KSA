@@ -1190,8 +1190,10 @@ function PlanCard({
     <div className="mt-2 rounded-md border border-slate-200 p-3 text-xs">
       <p className="font-extrabold text-sm">{p.name}</p>
       <p className="mt-1 text-slate-500">
-        {formatSar(p.priceMonthly)} / شهر ·{" "}
-        {formatSar(p.priceAnnual)} / سنة
+        {formatSar(p.priceMonthly)} / شهر
+        {p.priceAnnual != null
+          ? ` · ${formatSar(p.priceAnnual)} / سنة`
+          : ""}
       </p>
       <p className="mt-2 text-slate-600">
         حدود: {p.limits.maxUsers} مستخدم · {p.limits.maxProjects} مشروع ·{" "}

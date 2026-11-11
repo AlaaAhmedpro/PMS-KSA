@@ -1,67 +1,89 @@
-const dateFmt = new Intl.DateTimeFormat("ar-EG", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
+import type { Locale } from "../i18n/messages";
 
-const shortDateFmt = new Intl.DateTimeFormat("ar-EG", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+let activeLocale: Locale = "ar";
 
-const dateTimeFmt = new Intl.DateTimeFormat("ar-EG", {
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+export function setFormatLocale(locale: Locale): void {
+  activeLocale = locale;
+}
 
-const notificationDateTimeFmt = new Intl.DateTimeFormat("ar-EG", {
-  weekday: "short",
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+export function getFormatLocale(): Locale {
+  return activeLocale;
+}
+
+function dateLocaleTag(): string {
+  return activeLocale === "en" ? "en-GB" : "ar-SA";
+}
+
+function dateOpts(
+  base: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormatOptions {
+  return { ...base, numberingSystem: "latn" };
+}
+
+function numFmt(): Intl.NumberFormat {
+  // Western digits everywhere (design rule).
+  return new Intl.NumberFormat("en-US", { numberingSystem: "latn" });
+}
 
 export function formatDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return dateFmt.format(d);
+  return new Intl.DateTimeFormat(
+    dateLocaleTag(),
+    dateOpts({ year: "numeric", month: "long", day: "numeric" }),
+  ).format(d);
 }
 
 export function formatShortDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return shortDateFmt.format(d);
+  return new Intl.DateTimeFormat(
+    dateLocaleTag(),
+    dateOpts({ year: "numeric", month: "2-digit", day: "2-digit" }),
+  ).format(d);
 }
 
 export function formatDateTime(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return dateTimeFmt.format(d);
+  return new Intl.DateTimeFormat(
+    dateLocaleTag(),
+    dateOpts({
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  ).format(d);
 }
 
-/** تاريخ ووقت كامل للإشعارات */
+/** Full date-time for notifications */
 export function formatNotificationDateTime(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return notificationDateTimeFmt.format(d);
+  return new Intl.DateTimeFormat(
+    dateLocaleTag(),
+    dateOpts({
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  ).format(d);
 }
 
-const numFmt = new Intl.NumberFormat("ar-EG");
 export function formatNumber(n: number): string {
-  return numFmt.format(n);
+  return numFmt().format(n);
 }
 
 export function formatPercent(n: number): string {
-  return `${numFmt.format(Math.round(n))}%`;
+  return `${numFmt().format(Math.round(n))}%`;
 }
 
 export function todayISO(): string {
@@ -83,15 +105,25 @@ export function daysUntil(iso?: string): number {
   return Math.round((d.getTime() - today.getTime()) / 86400000);
 }
 
-/** "-5 أيام" / "خلال 3 أيام" / "اليوم" */
+/** Relative deadline label; locale-aware. */
 export function relativeDeadline(iso?: string): string {
   const n = daysUntil(iso);
+  if (activeLocale === "en") {
+    if (n === 0) return "Today";
+    if (n < 0) return `${numFmt().format(n)} days`;
+    return `In ${numFmt().format(n)} days`;
+  }
   if (n === 0) return "اليوم";
-  if (n < 0) return `${numFmt.format(n)} أيام`;
-  return `خلال ${numFmt.format(n)} أيام`;
+  if (n < 0) return `${numFmt().format(n)} أيام`;
+  return `خلال ${numFmt().format(n)} أيام`;
 }
 
 export function fileSize(bytes: number): string {
+  if (activeLocale === "en") {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   if (bytes < 1024) return `${bytes} بايت`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} ك.ب`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} م.ب`;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 export interface ComboOption {
   id: string;
@@ -22,10 +23,13 @@ export function Combobox({
   value,
   onChange,
   onCreate,
-  placeholder = "اختر...",
-  searchPlaceholder = "بحث...",
+  placeholder: placeholderProp,
+  searchPlaceholder: searchPlaceholderProp,
   allowCreate = false,
 }: Props) {
+  const { t } = useLocale();
+  const placeholder = placeholderProp ?? t("common.select");
+  const searchPlaceholder = searchPlaceholderProp ?? t("common.search");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -107,12 +111,12 @@ export function Combobox({
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-500/10 dark:text-brand-400"
               >
                 <Plus className="h-4 w-4" />
-                إضافة "{query.trim()}"
+                {t("ui.combobox.add", { name: query.trim() })}
               </button>
             )}
             {filtered.length === 0 && !showCreate && (
               <p className="px-3 py-3 text-center text-xs text-steel-400">
-                لا توجد نتائج
+                {t("common.searchNoResults")}
               </p>
             )}
           </div>

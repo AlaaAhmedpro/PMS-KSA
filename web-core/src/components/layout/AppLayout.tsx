@@ -3,19 +3,20 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { useLocale } from "../../store/LocaleContext";
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { dir } = useLocale();
+  const drawerFrom = dir === "rtl" ? "100%" : "-100%";
 
   return (
     <div className="flex h-screen overflow-hidden bg-steel-50 dark:bg-steel-950">
-      {/* Desktop sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
       </div>
 
-      {/* Mobile sidebar */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -27,11 +28,11 @@ export function AppLayout() {
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              initial={{ x: "100%" }}
+              initial={{ x: drawerFrom }}
               animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              exit={{ x: drawerFrom }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 z-50 lg:hidden"
+              className="fixed inset-y-0 start-0 z-50 lg:hidden"
             >
               <Sidebar onNavigate={() => setMobileOpen(false)} />
             </motion.div>

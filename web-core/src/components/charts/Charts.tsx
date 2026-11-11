@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { useTheme } from "../../store/ThemeContext";
+import { useLocale } from "../../store/LocaleContext";
 import { formatNumber } from "../../lib/format";
 
 const PIE_COLORS = ["#7cb342", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6"];
@@ -46,9 +47,10 @@ const PERF_CHART_HEIGHT = 288;
 export function BranchPerformanceChart({
   data,
 }: {
-  data: { name: string; منجز: number; متأخر: number }[];
+  data: { name: string; done: number; overdue: number }[];
 }) {
   const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { t } = useLocale();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollMinWidth = Math.max(data.length * PERF_BAR_WIDTH, 1);
 
@@ -61,8 +63,8 @@ export function BranchPerformanceChart({
   return (
     <div className="perf-chart">
       <div className="perf-chart__legend" aria-hidden={false}>
-        <PerfLegendItem color="#7cb342" label="منجز" />
-        <PerfLegendItem color="#ef4444" label="متأخر" />
+        <PerfLegendItem color="#7cb342" label={t("chart.done")} />
+        <PerfLegendItem color="#ef4444" label={t("chart.overdue")} />
       </div>
 
       <div
@@ -114,15 +116,15 @@ export function BranchPerformanceChart({
                 {...tooltipStyle(tooltipBg, tooltipBorder)}
               />
               <Bar
-                dataKey="منجز"
-                name="منجز"
+                dataKey="done"
+                name={t("chart.done")}
                 fill="#7cb342"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
               />
               <Bar
-                dataKey="متأخر"
-                name="متأخر"
+                dataKey="overdue"
+                name={t("chart.overdue")}
                 fill="#ef4444"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
@@ -182,6 +184,7 @@ export function FlowLineChart({
   data: { name: string; value: number }[];
 }) {
   const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { t } = useLocale();
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -198,7 +201,7 @@ export function FlowLineChart({
         <Line
           type="monotone"
           dataKey="value"
-          name="المسجّل"
+          name={t("chart.registered")}
           stroke="#7cb342"
           strokeWidth={3}
           dot={{ r: 4, fill: "#7cb342" }}
@@ -261,6 +264,7 @@ export function HorizontalBarChart({
   color?: string;
 }) {
   const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { t } = useLocale();
   return (
     <ResponsiveContainer width="100%" height={Math.max(200, data.length * 44)}>
       <BarChart
@@ -279,19 +283,21 @@ export function HorizontalBarChart({
           axisLine={false}
         />
         <Tooltip cursor={{ fill: "rgba(124,179,66,0.08)" }} {...tooltipStyle(tooltipBg, tooltipBorder)} />
-        <Bar dataKey="value" name="العدد" fill={color} radius={[0, 6, 6, 0]} maxBarSize={26} />
+        <Bar dataKey="value" name={t("common.count")} fill={color} radius={[0, 6, 6, 0]} maxBarSize={26} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-/** مقارنة بسيطة: الميزانية مقابل المنصرف لمشاريع مختارة */
+/** Budget vs spent for selected projects */
 export function BudgetCompareChart({
   data,
 }: {
-  data: { name: string; ميزانية: number; منصرف: number }[];
+  data: { name: string; budget: number; spent: number }[];
 }) {
   const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { t } = useLocale();
+  const currency = t("common.currencySar");
   return (
     <ResponsiveContainer width="100%" height={Math.max(220, data.length * 48)}>
       <BarChart
@@ -321,20 +327,20 @@ export function BudgetCompareChart({
           cursor={{ fill: "rgba(14,165,233,0.06)" }}
           {...tooltipStyle(tooltipBg, tooltipBorder)}
           formatter={(value) =>
-            `${formatNumber(typeof value === "number" ? value : Number(value) || 0)} ر.س`
+            `${formatNumber(typeof value === "number" ? value : Number(value) || 0)} ${currency}`
           }
         />
         <Legend wrapperStyle={{ fontFamily: "Cairo", fontSize: 12 }} />
         <Bar
-          dataKey="ميزانية"
-          name="ميزانية"
+          dataKey="budget"
+          name={t("common.budget")}
           fill="#0ea5e9"
           radius={[0, 4, 4, 0]}
           maxBarSize={14}
         />
         <Bar
-          dataKey="منصرف"
-          name="منصرف"
+          dataKey="spent"
+          name={t("common.spent")}
           fill="#7cb342"
           radius={[0, 4, 4, 0]}
           maxBarSize={14}

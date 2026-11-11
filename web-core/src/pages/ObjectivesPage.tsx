@@ -10,9 +10,11 @@ import { useHierarchy } from "../store/HierarchyStore";
 import { useAuth } from "../store/AuthContext";
 import { useCan } from "../store/RbacContext";
 import { useConfirm } from "../store/ConfirmContext";
+import { useLocale } from "../store/LocaleContext";
 import type { StrategicObjective } from "../models/domain";
 
 export function ObjectivesPage() {
+  const { t } = useLocale();
   const {
     objectives,
     initiatives,
@@ -85,7 +87,7 @@ export function ObjectivesPage() {
   const save = () => {
     const year = Number(targetYear);
     if (!title.trim() || !Number.isFinite(year) || year < 2000 || year > 2100) {
-      setError("العنوان وسنة مستهدفة صحيحة مطلوبان.");
+      setError(t("objectives.error.required"));
       return;
     }
     const payload = {
@@ -108,13 +110,13 @@ export function ObjectivesPage() {
     const linked = initiatives.filter((i) => i.objectiveIds.includes(o.id));
     const msg =
       linked.length > 0
-        ? `حذف الهدف «${o.title}»؟ سيُزال من المبادرات المرتبطة دون حذفها.`
-        : `حذف الهدف «${o.title}»؟`;
+        ? t("objectives.delete.withInitiatives", { title: o.title })
+        : t("objectives.delete.plain", { title: o.title });
     const ok = await confirm({
-      title: "تأكيد الحذف",
+      title: t("common.confirmDeleteTitle"),
       message: msg,
       danger: true,
-      confirmLabel: "حذف",
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     removeObjective(o.id);
@@ -125,18 +127,20 @@ export function ObjectivesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="الأهداف الاستراتيجية"
-        subtitle="أعلى الطبقة الاستراتيجية — المبادرات تدعم تحقيقها."
+        title={t("objectives.title")}
+        subtitle={t("objectives.subtitle")}
         actions={
-          canManage ? <Button onClick={openCreate}>إضافة هدف</Button> : null
+          canManage ? (
+            <Button onClick={openCreate}>{t("objectives.add")}</Button>
+          ) : null
         }
       />
 
       <Input
-        placeholder="بحث بالعنوان أو الوصف أو السنة"
+        placeholder={t("objectives.searchPlaceholder")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        aria-label="بحث في الأهداف"
+        aria-label={t("objectives.searchAria")}
       />
 
       <Card className="overflow-hidden p-0">
@@ -150,10 +154,10 @@ export function ObjectivesPage() {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">الهدف</th>
-              <th className="px-4 py-3 text-start font-bold">الوصف</th>
-              <th className="px-4 py-3 text-start font-bold">السنة</th>
-              <th className="px-4 py-3 text-start font-bold">المبادرات</th>
+              <th className="px-4 py-3 text-start font-bold">{t("objectives.col.goal")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("objectives.col.description")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("objectives.col.year")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("objectives.col.initiatives")}</th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -166,7 +170,7 @@ export function ObjectivesPage() {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا توجد أهداف مسجّلة.
+                  {t("objectives.empty")}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
@@ -175,7 +179,7 @@ export function ObjectivesPage() {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا نتائج مطابقة للبحث.
+                  {t("common.searchNoResults")}
                 </td>
               </tr>
             ) : (
@@ -223,7 +227,7 @@ export function ObjectivesPage() {
                           onClick={() => setInitiativesFor(o)}
                           className="inline-flex items-center rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-bold text-steel-700 hover:border-brand-300 hover:bg-brand-500/5 hover:text-brand-700 dark:border-steel-700 dark:bg-steel-800/60 dark:text-steel-200"
                         >
-                          {linked.length} مبادرة
+                          {t("objectives.initiativeCount", { n: linked.length })}
                         </button>
                       )}
                     </td>
@@ -234,8 +238,8 @@ export function ObjectivesPage() {
                             type="button"
                             onClick={() => openEdit(o)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600"
-                            title="تعديل"
-                            aria-label="تعديل"
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -243,8 +247,8 @@ export function ObjectivesPage() {
                             type="button"
                             onClick={() => onDelete(o)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
-                            title="حذف"
-                            aria-label="حذف"
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -262,28 +266,28 @@ export function ObjectivesPage() {
       <Modal
         open={open}
         onClose={closeModal}
-        title={editingId ? "تعديل هدف" : "إضافة هدف"}
-        subtitle={editingId ? undefined : "إضافة هدف استراتيجي للمنشأة"}
+        title={editingId ? t("objectives.modal.edit") : t("objectives.modal.add")}
+        subtitle={editingId ? undefined : t("objectives.modal.addSub")}
         footer={
           <>
             <Button variant="outline" onClick={closeModal}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
-            <Button onClick={save}>حفظ</Button>
+            <Button onClick={save}>{t("common.save")}</Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="عنوان الهدف" required>
+          <Field label={t("objectives.field.title")} required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
-          <Field label="الوصف" hint="جملة واحدة تكفي.">
+          <Field label={t("objectives.field.description")} hint={t("common.fieldHintOneSentence")}>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
-          <Field label="السنة المستهدفة" required>
+          <Field label={t("objectives.field.targetYear")} required>
             <Input
               type="number"
               value={targetYear}
@@ -299,15 +303,19 @@ export function ObjectivesPage() {
       <Modal
         open={!!descView}
         onClose={() => setDescView(null)}
-        title={descView ? `الوصف · ${descView.title}` : "الوصف"}
+        title={
+          descView
+            ? t("objectives.descModal.title", { title: descView.title })
+            : t("objectives.descModal.titleFallback")
+        }
         size="sm"
         footer={
           <Button variant="outline" onClick={() => setDescView(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
-        <Field label="وصف الهدف">
+        <Field label={t("objectives.descModal.field")}>
           <Textarea value={descView?.text ?? ""} readOnly rows={4} />
         </Field>
       </Modal>
@@ -317,17 +325,17 @@ export function ObjectivesPage() {
         onClose={() => setInitiativesFor(null)}
         title={
           initiativesFor
-            ? `مبادرات الهدف · ${initiativesFor.title}`
-            : "المبادرات المرتبطة"
+            ? t("objectives.initiativesModal.title", { title: initiativesFor.title })
+            : t("objectives.initiativesModal.titleFallback")
         }
         footer={
           <Button variant="outline" onClick={() => setInitiativesFor(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
         {linkedInitiatives.length === 0 ? (
-          <p className="text-sm text-steel-500">لا مبادرات مرتبطة بهذا الهدف.</p>
+          <p className="text-sm text-steel-500">{t("objectives.initiativesModal.empty")}</p>
         ) : (
           <ul className="space-y-2">
             {linkedInitiatives.map((ini) => (

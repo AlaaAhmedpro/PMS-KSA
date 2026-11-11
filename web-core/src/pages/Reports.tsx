@@ -14,68 +14,75 @@ import {
   type ReportTable,
 } from "../lib/reports";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
 
 export function Reports() {
+  const { t } = useLocale();
   const { records, branches, departments, entities } = useData();
   const kpis = useMemo(() => computeKpis(records), [records]);
   const [activeReport, setActiveReport] = useState<ReportTable | null>(null);
 
   const openReport = (id: ReportId) => {
     setActiveReport(
-      buildReport(id, records, { branches, departments, entities }),
+      buildReport(id, records, { branches, departments, entities }, t),
     );
   };
 
   return (
     <div>
       <PageHeader
-        title="التقارير"
-        subtitle="تقارير الموقف الإجمالي والتقارير المتخصصة القابلة للطباعة والتصدير"
+        title={t("reports.title")}
+        subtitle={t("reports.subtitle")}
         icon={<FileBarChart className="h-6 w-6" />}
         actions={
           <Button onClick={() => window.print()} className="no-print">
             <Printer className="h-4 w-4" />
-            طباعة
+            {t("common.print")}
           </Button>
         }
       />
 
       <Card className="mb-4">
-        <CardHeader title="تقرير الموقف الإجمالي" subtitle="ملخص شامل" />
+        <CardHeader
+          title={t("reports.overall.title")}
+          subtitle={t("reports.overall.subtitle")}
+        />
         <div className="grid grid-cols-2 gap-4 p-5 pt-0 md:grid-cols-4">
-          <ReportStat label="إجمالي السجلات" value={formatNumber(kpis.total)} />
-          <ReportStat label="المنجزة" value={formatNumber(kpis.done)} tone="brand" />
-          <ReportStat label="قيد التنفيذ" value={formatNumber(kpis.active)} tone="amber" />
-          <ReportStat label="المتأخرة" value={formatNumber(kpis.overdue)} tone="red" />
-          <ReportStat label="المفتوحة" value={formatNumber(kpis.open)} />
-          <ReportStat label="المغلقة" value={formatNumber(kpis.closed)} />
-          <ReportStat label="نسبة الإنجاز" value={formatPercent(kpis.completionRate)} tone="brand" />
-          <ReportStat label="نسبة الالتزام" value={formatPercent(kpis.commitmentRate)} tone="sky" />
+          <ReportStat label={t("reports.stat.total")} value={formatNumber(kpis.total)} />
+          <ReportStat label={t("reports.stat.done")} value={formatNumber(kpis.done)} tone="brand" />
+          <ReportStat label={t("reports.stat.active")} value={formatNumber(kpis.active)} tone="amber" />
+          <ReportStat label={t("reports.stat.overdue")} value={formatNumber(kpis.overdue)} tone="red" />
+          <ReportStat label={t("reports.stat.open")} value={formatNumber(kpis.open)} />
+          <ReportStat label={t("reports.stat.closed")} value={formatNumber(kpis.closed)} />
+          <ReportStat label={t("reports.stat.completionRate")} value={formatPercent(kpis.completionRate)} tone="brand" />
+          <ReportStat label={t("reports.stat.commitmentRate")} value={formatPercent(kpis.commitmentRate)} tone="sky" />
         </div>
       </Card>
 
       <Card>
         <CardHeader
-          title="تقارير متخصصة"
-          subtitle="اضغط على أي تقرير لعرض تفاصيله وطباعته أو تصديره Excel"
+          title={t("reports.specialized.title")}
+          subtitle={t("reports.specialized.subtitle")}
         />
         <div className="grid grid-cols-1 gap-3 p-5 pt-0 md:grid-cols-3">
           {REPORT_DEFS.map((def) => (
             <button
               key={def.id}
               onClick={() => openReport(def.id)}
-              className="group flex items-start gap-3 rounded-xl border border-steel-200 p-4 text-right transition-colors hover:border-brand-500/40 hover:bg-brand-500/5 dark:border-steel-700"
+              className="group flex items-start gap-3 rounded-xl border border-steel-200 p-4 text-start transition-colors hover:border-brand-500/40 hover:bg-brand-500/5 dark:border-steel-700"
             >
               <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">
                 <FileBarChart className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-steel-700 dark:text-steel-200">
-                  {def.label}
+                  {t(`reports.def.${def.id}.label`)}
                 </p>
-                <p className="mt-0.5 text-xs text-steel-400">{def.description}</p>
+                <p className="mt-0.5 text-xs text-steel-400">
+                  {t(`reports.def.${def.id}.description`)}
+                </p>
               </div>
-              <ChevronLeft className="mt-1 h-4 w-4 shrink-0 text-steel-300 transition-transform group-hover:-translate-x-0.5 group-hover:text-brand-500" />
+              <ChevronLeft className="mt-1 h-4 w-4 shrink-0 text-steel-300 transition-transform rtl:rotate-180 group-hover:translate-x-0.5 group-hover:text-brand-500 rtl:group-hover:-translate-x-0.5" />
             </button>
           ))}
         </div>

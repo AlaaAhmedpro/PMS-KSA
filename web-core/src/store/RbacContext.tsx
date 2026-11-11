@@ -8,7 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { DEFAULT_MATRIX, ROLES } from "../lib/constants";
+import { localizeDeep } from "../i18n/localizeContent";
 import type { AnyRoleId, PermissionKey, Role } from "../lib/types";
+import { useLocale } from "./LocaleContext";
 
 const LS_ROLES = "pms_core_roles_v1";
 const LS_MATRIX = "pms_core_matrix_v1";
@@ -64,6 +66,7 @@ interface RbacCtx {
 const Ctx = createContext<RbacCtx | null>(null);
 
 export function RbacProvider({ children }: { children: ReactNode }) {
+  const { locale } = useLocale();
   const [roles, setRoles] = useState<Role[]>(() => load(LS_ROLES, ROLES));
   const [matrix, setMatrix] = useState<Matrix>(() =>
     migrateMatrix(load(LS_MATRIX, DEFAULT_MATRIX)),
@@ -191,9 +194,14 @@ export function RbacProvider({ children }: { children: ReactNode }) {
     setMatrix(DEFAULT_MATRIX);
   }, []);
 
+  const displayRoles = useMemo(
+    () => localizeDeep(roles, locale),
+    [roles, locale],
+  );
+
   const value = useMemo<RbacCtx>(
     () => ({
-      roles,
+      roles: displayRoles,
       matrix,
       hasPermission,
       togglePermission,
@@ -206,7 +214,7 @@ export function RbacProvider({ children }: { children: ReactNode }) {
       resetRbac,
     }),
     [
-      roles,
+      displayRoles,
       matrix,
       hasPermission,
       togglePermission,

@@ -396,8 +396,10 @@ export function effectiveLimits(
   };
 }
 
-export function formatSar(amount: number): string {
-  return `${amount.toLocaleString("en-US", {
+export function formatSar(amount: number | null | undefined): string {
+  const n =
+    typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+  return `${n.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} ر.س`;

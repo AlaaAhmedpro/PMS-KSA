@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { formatNumber } from "../../lib/format";
+import { useLocale } from "../../store/LocaleContext";
 
 export function Pagination({
   page,
@@ -19,9 +20,12 @@ export function Pagination({
   rangeEnd: number;
   className?: string;
 }) {
+  const { dir, t } = useLocale();
   if (total === 0) return null;
 
   const pages = buildPageList(page, totalPages);
+  const PrevIcon = dir === "rtl" ? ChevronRight : ChevronLeft;
+  const NextIcon = dir === "rtl" ? ChevronLeft : ChevronRight;
 
   return (
     <div
@@ -31,24 +35,21 @@ export function Pagination({
       )}
     >
       <p className="text-xs font-medium text-steel-500 dark:text-steel-400">
-        عرض{" "}
-        <span className="font-bold text-steel-700 dark:text-steel-200">
-          {formatNumber(rangeStart)}–{formatNumber(rangeEnd)}
-        </span>{" "}
-        من{" "}
-        <span className="font-bold text-steel-700 dark:text-steel-200">
-          {formatNumber(total)}
-        </span>
+        {t("common.showingRange", {
+          start: formatNumber(rangeStart),
+          end: formatNumber(rangeEnd),
+          total: formatNumber(total),
+        })}
       </p>
 
       <div className="flex items-center gap-1">
         <PageBtn
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          aria-label="الصفحة السابقة"
+          aria-label={t("common.prevPage")}
         >
-          <ChevronRight className="h-4 w-4" />
-          <span className="hidden sm:inline">السابق</span>
+          <PrevIcon className="h-4 w-4" />
+          <span className="hidden sm:inline">{t("common.prev")}</span>
         </PageBtn>
 
         {pages.map((p, i) =>
@@ -79,10 +80,10 @@ export function Pagination({
         <PageBtn
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          aria-label="الصفحة التالية"
+          aria-label={t("common.nextPage")}
         >
-          <span className="hidden sm:inline">التالي</span>
-          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">{t("common.next")}</span>
+          <NextIcon className="h-4 w-4" />
         </PageBtn>
       </div>
     </div>

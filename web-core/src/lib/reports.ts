@@ -1,5 +1,4 @@
-﻿import { STATUS_META } from "./constants";
-import type { Branch, Department, Entity } from "./types";
+﻿import type { Branch, Department, Entity } from "./types";
 import { effectiveStatus, isOpen, isOverdue, overdueDays } from "./status";
 import { allMonthsFromRecords } from "./analytics";
 import { formatNumber, formatPercent, formatShortDate } from "./format";
@@ -12,6 +11,11 @@ export type ReportId =
   | "monthly"
   | "open-tasks"
   | "commitment";
+
+export type ReportTranslate = (
+  key: string,
+  vars?: Record<string, string | number>,
+) => string;
 
 export interface ReportSummaryItem {
   label: string;
@@ -31,39 +35,14 @@ export interface ReportTable {
   rows: (string | number)[][];
 }
 
-export const REPORT_DEFS: { id: ReportId; label: string; description: string }[] =
-  [
-    {
-      id: "overdue",
-      label: "تقرير المشاريع والمهام المتأخرة",
-      description: "كل القيود المتأخرة عن موعدها مرتبة بالأكثر تأخيراً",
-    },
-    {
-      id: "branch-performance",
-      label: "تقرير أداء الفروع",
-      description: "الإنجاز والتأخير ونسبة الإنجاز لكل فرع",
-    },
-    {
-      id: "by-entity",
-      label: "تقرير السجلات حسب الجهة",
-      description: "عدد المشاريع والمهام المرتبطة بكل جهة",
-    },
-    {
-      id: "monthly",
-      label: "تقرير الإنجاز الشهري",
-      description: "المسجّل والمنجز ونسبة الإنجاز لكل الشهور",
-    },
-    {
-      id: "open-tasks",
-      label: "تقرير المهام المفتوحة",
-      description: "المهام التي لم تُغلق بعد",
-    },
-    {
-      id: "commitment",
-      label: "تقرير الالتزام بالمواعيد",
-      description: "نسبة المنجز في الموعد المحدد لكل فرع",
-    },
-  ];
+export const REPORT_DEFS: { id: ReportId }[] = [
+  { id: "overdue" },
+  { id: "branch-performance" },
+  { id: "by-entity" },
+  { id: "monthly" },
+  { id: "open-tasks" },
+  { id: "commitment" },
+];
 
 export interface ReportLookups {
   branches: Branch[];
@@ -84,8 +63,8 @@ const branchName = (id: string, branches: Branch[]) =>
   branches.find((b) => b.id === id)?.name ?? "—";
 const deptName = (id: string, departments: Department[]) =>
   departments.find((d) => d.id === id)?.name ?? "—";
-const kindLabel = (r: RecordItem) =>
-  r.kind === "task" ? "مهمة" : "مشروع";
+const kindLabel = (r: RecordItem, t: ReportTranslate) =>
+  r.kind === "task" ? t("record.kind.task") : t("record.kind.project");
 
 function isCompleted(r: RecordItem): boolean {
   const s = effectiveStatus(r);
@@ -100,7 +79,11 @@ function isOnTime(r: RecordItem): boolean {
   );
 }
 
-function buildOverdue(records: RecordItem[], lk: ReportLookups): ReportTable {
+function buildOverdue(
+  records: RecordItem[],
+  lk: ReportLookups,
+  t: ReportTranslate,
+): ReportTable {
   const rows = records
     .filter(isOverdue)
     .sort((a, b) => overdueDays(a) - overdueDays(b));
@@ -108,29 +91,41 @@ function buildOverdue(records: RecordItem[], lk: ReportLookups): ReportTable {
   const worst = rows.length ? Math.abs(overdueDays(rows[0])) : 0;
   return {
     id: "overdue",
-    title: "تقرير السجلات المتأخرة",
-    subtitle: "القيود المتأخرة عن موعدها المحدد",
+    title: t("reports.build.overdue.title"),
+    subtitle: t("reports.build.overdue.subtitle"),
     generatedAt: new Date().toISOString(),
     summary: [
-      { label: "إجمالي المتأخرة", value: formatNumber(rows.length), tone: "red" },
-      { label: "أقصى تأخير (أيام)", value: formatNumber(worst), tone: "red" },
-      { label: "مقار متأثرة", value: formatNumber(branchesHit), tone: "amber" },
+      {
+        label: t("reports.summary.overdue.total"),
+        value: formatNumber(rows.length),
+        tone: "red",
+      },
+      {
+        label: t("reports.summary.overdue.maxDays"),
+        value: formatNumber(worst),
+        tone: "red",
+      },
+      {
+        label: t("reports.summary.overdue.branches"),
+        value: formatNumber(branchesHit),
+        tone: "amber",
+      },
     ],
     columns: [
-      "رقم القيد",
-      "النوع",
-      "الجهة",
-      "الموضوع",
-      "الفرع / المنطقة",
-      "الأدارات / الفروع",
-      "المسؤول",
-      "الموعد",
-      "أيام التأخير",
+      t("reports.columns.regNumber"),
+      t("reports.columns.kind"),
+      t("reports.columns.entity"),
+      t("reports.columns.subject"),
+      t("reports.columns.branch"),
+      t("reports.columns.department"),
+      t("reports.columns.assignee"),
+      t("reports.columns.deadline"),
+      t("reports.columns.overdueDays"),
     ],
     numericColumns: [8],
     rows: rows.map((r) => [
       r.regNumber,
-      kindLabel(r),
+      kindLabel(r, t),
       entityName(r.entityId, lk.entities ?? []),
       r.subject,
       branchName(r.branchId, lk.branches),
@@ -142,7 +137,11 @@ function buildOverdue(records: RecordItem[], lk: ReportLookups): ReportTable {
   };
 }
 
-function buildBranchPerformance(records: RecordItem[], lk: ReportLookups): ReportTable {
+function buildBranchPerformance(
+  records: RecordItem[],
+  lk: ReportLookups,
+  t: ReportTranslate,
+): ReportTable {
   const data = lk.branches.map((b) => {
     const inBranch = records.filter((r) => r.branchId === b.id);
     const done = inBranch.filter(isCompleted).length;
@@ -161,24 +160,27 @@ function buildBranchPerformance(records: RecordItem[], lk: ReportLookups): Repor
   const best = [...data].sort((a, b) => b.rate - a.rate)[0];
   return {
     id: "branch-performance",
-    title: "تقرير أداء الفروع والمناطق",
-    subtitle: "مقارنة الإنجاز والتأخير بين مقار المصانع",
+    title: t("reports.build.branch-performance.title"),
+    subtitle: t("reports.build.branch-performance.subtitle"),
     generatedAt: new Date().toISOString(),
     summary: [
-      { label: "عدد المقار", value: formatNumber(data.length) },
       {
-        label: "أعلى مقر إنجازاً",
+        label: t("reports.summary.branchPerformance.branchCount"),
+        value: formatNumber(data.length),
+      },
+      {
+        label: t("reports.summary.branchPerformance.topBranch"),
         value: best ? `${best.name} (${formatPercent(best.rate)})` : "—",
         tone: "brand",
       },
     ],
     columns: [
-      "الفرع / المنطقة",
-      "الإجمالي",
-      "منجز",
-      "متأخر",
-      "مفتوح",
-      "نسبة الإنجاز",
+      t("reports.columns.branch"),
+      t("reports.columns.total"),
+      t("reports.columns.done"),
+      t("reports.columns.overdue"),
+      t("reports.columns.open"),
+      t("reports.columns.completionRate"),
     ],
     numericColumns: [1, 2, 3, 4, 5],
     rows: data.map((d) => [
@@ -192,37 +194,49 @@ function buildBranchPerformance(records: RecordItem[], lk: ReportLookups): Repor
   };
 }
 
-function buildByEntity(records: RecordItem[], lk: ReportLookups): ReportTable {
+function buildByEntity(
+  records: RecordItem[],
+  lk: ReportLookups,
+  t: ReportTranslate,
+): ReportTable {
   const counts = new Map<string, number>();
   for (const r of records)
     counts.set(r.entityId, (counts.get(r.entityId) || 0) + 1);
   const ents = lk.entities ?? [];
-  const data = ents.map((e) => ({
-    name: e.name,
-    value: counts.get(e.id) || 0,
-  }))
+  const data = ents
+    .map((e) => ({
+      name: e.name,
+      value: counts.get(e.id) || 0,
+    }))
     .filter((x) => x.value > 0)
     .sort((a, b) => b.value - a.value);
   return {
     id: "by-entity",
-    title: "تقرير السجلات حسب الجهة",
-    subtitle: "توزيع المشاريع والمهام على الجهات",
+    title: t("reports.build.by-entity.title"),
+    subtitle: t("reports.build.by-entity.subtitle"),
     generatedAt: new Date().toISOString(),
     summary: [
-      { label: "عدد الجهات", value: formatNumber(data.length) },
       {
-        label: "أكثر جهة ارتباطاً",
+        label: t("reports.summary.byEntity.entityCount"),
+        value: formatNumber(data.length),
+      },
+      {
+        label: t("reports.summary.byEntity.topEntity"),
         value: data[0] ? `${data[0].name} (${formatNumber(data[0].value)})` : "—",
         tone: "brand",
       },
     ],
-    columns: ["#", "الجهة", "عدد السجلات"],
+    columns: [
+      t("reports.columns.index"),
+      t("reports.columns.entity"),
+      t("reports.columns.recordCount"),
+    ],
     numericColumns: [0, 2],
     rows: data.map((d, i) => [i + 1, d.name, formatNumber(d.value)]),
   };
 }
 
-function buildMonthly(records: RecordItem[]): ReportTable {
+function buildMonthly(records: RecordItem[], t: ReportTranslate): ReportTable {
   const months = allMonthsFromRecords(records);
   const data = months.map((m) => {
     const arrived = records.filter((r) => {
@@ -235,21 +249,28 @@ function buildMonthly(records: RecordItem[]): ReportTable {
   });
   return {
     id: "monthly",
-    title: "تقرير الإنجاز الشهري",
-    subtitle: `المسجّل والمنجز لكل الشهور (${formatNumber(months.length)} شهر)`,
+    title: t("reports.build.monthly.title"),
+    subtitle: t("reports.build.monthly.subtitle", {
+      n: formatNumber(months.length),
+    }),
     generatedAt: new Date().toISOString(),
     summary: [
       {
-        label: "إجمالي السجلات",
+        label: t("reports.summary.monthly.totalRecords"),
         value: formatNumber(data.reduce((s, d) => s + d.arrived, 0)),
       },
       {
-        label: "إجمالي المنجز",
+        label: t("reports.summary.monthly.totalDone"),
         value: formatNumber(data.reduce((s, d) => s + d.done, 0)),
         tone: "brand",
       },
     ],
-    columns: ["الشهر", "المسجّل", "المنجز", "نسبة الإنجاز"],
+    columns: [
+      t("reports.columns.month"),
+      t("reports.columns.registered"),
+      t("reports.columns.done"),
+      t("reports.columns.completionRate"),
+    ],
     numericColumns: [1, 2, 3],
     rows: data.map((d) => [
       d.label,
@@ -260,44 +281,63 @@ function buildMonthly(records: RecordItem[]): ReportTable {
   };
 }
 
-function buildOpenAssignments(records: RecordItem[], lk: ReportLookups): ReportTable {
+function buildOpenAssignments(
+  records: RecordItem[],
+  lk: ReportLookups,
+  t: ReportTranslate,
+): ReportTable {
   const rows = records
     .filter((r) => r.kind === "task" && isOpen(r))
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
   const overdueCount = rows.filter(isOverdue).length;
   return {
     id: "open-tasks",
-    title: "تقرير المهام المفتوحة",
-    subtitle: "المهام التي لم تُغلق بعد",
+    title: t("reports.build.open-tasks.title"),
+    subtitle: t("reports.build.open-tasks.subtitle"),
     generatedAt: new Date().toISOString(),
     summary: [
-      { label: "إجمالي المفتوحة", value: formatNumber(rows.length), tone: "amber" },
-      { label: "متأخر منها", value: formatNumber(overdueCount), tone: "red" },
+      {
+        label: t("reports.summary.openTasks.totalOpen"),
+        value: formatNumber(rows.length),
+        tone: "amber",
+      },
+      {
+        label: t("reports.summary.openTasks.overdueAmong"),
+        value: formatNumber(overdueCount),
+        tone: "red",
+      },
     ],
     columns: [
-      "رقم القيد",
-      "الجهة",
-      "الموضوع",
-      "الفرع / المنطقة",
-      "الأدارات / الفروع",
-      "المسؤول",
-      "الموعد",
-      "الحالة",
+      t("reports.columns.regNumber"),
+      t("reports.columns.entity"),
+      t("reports.columns.subject"),
+      t("reports.columns.branch"),
+      t("reports.columns.department"),
+      t("reports.columns.assignee"),
+      t("reports.columns.deadline"),
+      t("reports.columns.status"),
     ],
-    rows: rows.map((r) => [
-      r.regNumber,
-      entityName(r.entityId, lk.entities ?? []),
-      r.subject,
-      branchName(r.branchId, lk.branches),
-      deptName(r.departmentId, lk.departments),
-      r.assignee || "—",
-      formatShortDate(r.deadline),
-      STATUS_META[effectiveStatus(r)].label,
-    ]),
+    rows: rows.map((r) => {
+      const status = effectiveStatus(r);
+      return [
+        r.regNumber,
+        entityName(r.entityId, lk.entities ?? []),
+        r.subject,
+        branchName(r.branchId, lk.branches),
+        deptName(r.departmentId, lk.departments),
+        r.assignee || "—",
+        formatShortDate(r.deadline),
+        t(`status.record.${status}`),
+      ];
+    }),
   };
 }
 
-function buildCommitment(records: RecordItem[], lk: ReportLookups): ReportTable {
+function buildCommitment(
+  records: RecordItem[],
+  lk: ReportLookups,
+  t: ReportTranslate,
+): ReportTable {
   const data = lk.branches.map((b) => {
     const inBranch = records.filter((r) => r.branchId === b.id);
     const completed = inBranch.filter(isCompleted).length;
@@ -310,18 +350,27 @@ function buildCommitment(records: RecordItem[], lk: ReportLookups): ReportTable 
   const overall = totalCompleted ? (totalOnTime / totalCompleted) * 100 : 0;
   return {
     id: "commitment",
-    title: "تقرير الالتزام بالمواعيد",
-    subtitle: "نسبة المنجز في الموعد لكل فرع / منطقة",
+    title: t("reports.build.commitment.title"),
+    subtitle: t("reports.build.commitment.subtitle"),
     generatedAt: new Date().toISOString(),
     summary: [
       {
-        label: "نسبة الالتزام العامة",
+        label: t("reports.summary.commitment.overallRate"),
         value: formatPercent(overall),
         tone: "sky",
       },
-      { label: "منجز في الموعد", value: formatNumber(totalOnTime), tone: "brand" },
+      {
+        label: t("reports.summary.commitment.onTimeCount"),
+        value: formatNumber(totalOnTime),
+        tone: "brand",
+      },
     ],
-    columns: ["الفرع / المنطقة", "إجمالي المنجز", "في الموعد", "نسبة الالتزام"],
+    columns: [
+      t("reports.columns.branch"),
+      t("reports.columns.completedTotal"),
+      t("reports.columns.onTime"),
+      t("reports.columns.commitmentRate"),
+    ],
     numericColumns: [1, 2, 3],
     rows: data.map((d) => [
       d.name,
@@ -335,32 +384,42 @@ function buildCommitment(records: RecordItem[], lk: ReportLookups): ReportTable 
 export function buildReport(
   id: ReportId,
   records: RecordItem[],
-  lookups?: Partial<ReportLookups>,
+  lookups: Partial<ReportLookups> | undefined,
+  t: ReportTranslate,
 ): ReportTable {
   const lk: ReportLookups = { ...defaultLookups(), ...lookups };
   switch (id) {
     case "overdue":
-      return buildOverdue(records, lk);
+      return buildOverdue(records, lk, t);
     case "branch-performance":
-      return buildBranchPerformance(records, lk);
+      return buildBranchPerformance(records, lk, t);
     case "by-entity":
-      return buildByEntity(records, lk);
+      return buildByEntity(records, lk, t);
     case "monthly":
-      return buildMonthly(records);
+      return buildMonthly(records, t);
     case "open-tasks":
-      return buildOpenAssignments(records, lk);
+      return buildOpenAssignments(records, lk, t);
     case "commitment":
-      return buildCommitment(records, lk);
+      return buildCommitment(records, lk, t);
   }
 }
 
 /** Build a CSV string (with UTF-8 BOM) and trigger a download. */
-export function exportReportToCsv(report: ReportTable) {
+export function exportReportToCsv(
+  report: ReportTable,
+  t: ReportTranslate,
+) {
   const escape = (cell: string | number) =>
     `"${String(cell).replace(/"/g, '""')}"`;
   const lines: string[] = [];
   lines.push(escape(report.title));
-  lines.push(escape(`تاريخ الإصدار: ${formatShortDate(report.generatedAt)}`));
+  lines.push(
+    escape(
+      t("reports.csv.issueDate", {
+        date: formatShortDate(report.generatedAt),
+      }),
+    ),
+  );
   lines.push("");
   lines.push(report.summary.map((s) => escape(`${s.label}: ${s.value}`)).join(","));
   lines.push("");

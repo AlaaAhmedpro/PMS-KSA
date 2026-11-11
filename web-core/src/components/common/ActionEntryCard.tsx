@@ -1,6 +1,7 @@
 import { Eye, FileText } from "lucide-react";
 import { formatNotificationDateTime, fileSize } from "../../lib/format";
 import type { ActionEntry, Attachment } from "../../lib/types";
+import { useLocale } from "../../store/LocaleContext";
 
 export function ActionEntryCard({
   action,
@@ -9,6 +10,7 @@ export function ActionEntryCard({
   action: ActionEntry;
   onPreview: (a: Attachment) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="rounded-2xl border border-steel-200 bg-steel-50/50 p-4 dark:border-steel-700 dark:bg-steel-800/40">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -33,7 +35,10 @@ export function ActionEntryCard({
       {action.attachments.length > 0 && (
         <div className="mt-4 rounded-xl border border-steel-200 bg-white p-3 dark:border-steel-700 dark:bg-steel-900">
           <p className="mb-2 text-xs font-bold text-steel-500 dark:text-steel-400">
-            مرفقات رفعها ({action.actorTitle} — {action.actorName})
+            {t("action.attachmentsBy", {
+              title: action.actorTitle,
+              name: action.actorName,
+            })}
           </p>
           <div className="space-y-2">
             {action.attachments.map((a) => (
@@ -53,7 +58,7 @@ export function ActionEntryCard({
                     type="button"
                     onClick={() => onPreview(a)}
                     className="rounded-lg p-1.5 text-steel-400 hover:bg-brand-500/10 hover:text-brand-600"
-                    title="استعراض"
+                    title={t("action.preview")}
                   >
                     <Eye className="h-4 w-4" />
                   </button>

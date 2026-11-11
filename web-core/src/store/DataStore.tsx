@@ -22,6 +22,8 @@ import type {
   Entity,
   RecordItem,
 } from "../lib/types";
+import { localizeDeep } from "../i18n/localizeContent";
+import { useLocale } from "./LocaleContext";
 
 const LS_RECORDS = "pms_core_records_v1";
 const LS_ENTITIES = "pms_core_entities_v1";
@@ -99,6 +101,7 @@ const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   applyDemoDataMigration();
+  const { locale } = useLocale();
 
   const [records, setRecords] = useState<RecordItem[]>(() =>
     load(LS_RECORDS, SEED_RECORDS).map(enrichRecordAttachmentSearch),
@@ -153,8 +156,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getRecord = useCallback(
-    (id: string) => records.find((r) => r.id === id),
-    [records],
+    (id: string) => {
+      const row = records.find((r) => r.id === id);
+      return row ? localizeDeep(row, locale) : undefined;
+    },
+    [records, locale],
   );
 
   const addEntity = useCallback(
@@ -314,13 +320,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setCategories(SEED_CATEGORIES);
   }, []);
 
+  const displayRecords = useMemo(
+    () => localizeDeep(records, locale),
+    [records, locale],
+  );
+  const displayEntities = useMemo(
+    () => localizeDeep(entities, locale),
+    [entities, locale],
+  );
+  const displayBranches = useMemo(
+    () => localizeDeep(branches, locale),
+    [branches, locale],
+  );
+  const displayDepartments = useMemo(
+    () => localizeDeep(departments, locale),
+    [departments, locale],
+  );
+  const displayCategories = useMemo(
+    () => localizeDeep(categories, locale),
+    [categories, locale],
+  );
+
   const value = useMemo<DataContextValue>(
     () => ({
-      records,
-      entities,
-      branches,
-      departments,
-      categories,
+      records: displayRecords,
+      entities: displayEntities,
+      branches: displayBranches,
+      departments: displayDepartments,
+      categories: displayCategories,
       addRecord,
       updateRecord,
       removeRecord,
@@ -340,11 +367,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       resetDemo,
     }),
     [
-      records,
-      entities,
-      branches,
-      departments,
-      categories,
+      displayRecords,
+      displayEntities,
+      displayBranches,
+      displayDepartments,
+      displayCategories,
       addRecord,
       updateRecord,
       removeRecord,

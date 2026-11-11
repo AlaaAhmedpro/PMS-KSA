@@ -27,18 +27,20 @@ import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
 import { useAuth } from "../store/AuthContext";
 import { useHierarchy } from "../store/HierarchyStore";
 import { useConfirm } from "../store/ConfirmContext";
-import { PROJECT_STATUS_LABELS, ROLES } from "../lib/constants";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
+import { projectStatusLabel, roleDisplayName } from "../lib/i18nDisplay";
+import type { TFn } from "../lib/i18nDisplay";
 import type { Vendor, VendorStatus } from "../models/domain";
 import type { User } from "../lib/types";
 
-const CITY_OPTIONS = [
-  "الرياض",
-  "جدة",
-  "الدمام",
-  "المدينة المنورة",
-  "أبها",
-];
+const CITY_KEYS = [
+  "city.riyadh",
+  "city.jeddah",
+  "city.dammam",
+  "city.madinah",
+  "city.abha",
+] as const;
 
 const COL = {
   vendor: { width: "22%" },
@@ -74,10 +76,6 @@ const iconBtn =
 const iconBtnEdit = `${iconBtn} hover:bg-brand-500/10 hover:text-brand-600`;
 const iconBtnDelete = `${iconBtn} hover:bg-red-500/10 hover:text-red-500`;
 
-function roleLabel(role: string): string {
-  return ROLES.find((r) => String(r.id) === role)?.name ?? role;
-}
-
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 10) {
@@ -90,10 +88,12 @@ function StatusToggle({
   active,
   disabled,
   onToggle,
+  t,
 }: {
   active: boolean;
   disabled?: boolean;
   onToggle: () => void;
+  t: TFn;
 }) {
   return (
     <button
@@ -102,7 +102,7 @@ function StatusToggle({
       aria-checked={active}
       disabled={disabled}
       onClick={onToggle}
-      title={active ? "تعطيل المورد" : "تفعيل المورد"}
+      title={active ? t("vendors.toggle.disable") : t("vendors.toggle.enable")}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
         active
@@ -124,6 +124,7 @@ function StatusToggle({
 type PeekKind = "projects" | "staff";
 
 export function VendorsPage() {
+  const { t } = useLocale();
   const confirm = useConfirm();
   const {
     user,
@@ -153,7 +154,7 @@ export function VendorsPage() {
   const [mailPreview, setMailPreview] = useState("");
   const [name, setName] = useState("");
   const [commercialRegister, setCommercialRegister] = useState("");
-  const [city, setCity] = useState("الرياض");
+  const [city, setCity] = useState(() => t("city.riyadh"));
   const [contactUserId, setContactUserId] = useState("");
   const [website, setWebsite] = useState("");
   const [projectPick, setProjectPick] = useState("");
@@ -265,7 +266,7 @@ export function VendorsPage() {
   if (!isOrgAdmin && user?.role !== "vendor_admin") {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">ليس لديك صلاحية عرض الموردين.</p>
+        <p className="text-sm text-steel-500">{t("vendors.noAccess")}</p>
       </Card>
     );
   }
@@ -274,7 +275,7 @@ export function VendorsPage() {
     setEditingId(null);
     setName("");
     setCommercialRegister("");
-    setCity("الرياض");
+    setCity(t("city.riyadh"));
     setContactUserId("");
     setWebsite("");
     setError("");
@@ -305,15 +306,15 @@ export function VendorsPage() {
     const cr = commercialRegister.trim();
     const site = website.trim();
     if (!trimmedName) {
-      setError("اسم المورد مطلوب.");
+      setError(t("vendors.error.nameRequired"));
       return;
     }
     if (!/^\d{10}$/.test(cr)) {
-      setError("السجل التجاري يجب أن يكون 10 أرقام.");
+      setError(t("vendors.error.cr"));
       return;
     }
     if (site && !/^https?:\/\//i.test(site)) {
-      setError("رابط الموقع يجب أن يبدأ بـ http:// أو https://");
+      setError(t("vendors.error.website"));
       return;
     }
 
@@ -330,17 +331,17 @@ export function VendorsPage() {
     }
 
     if (!selectedContact) {
-      setError("اختر جهة الاتصال من موظفي المنشأة.");
+      setError(t("vendors.error.pickContact"));
       return;
     }
     if (!selectedContact.phone || !/^05\d{8}$/.test(selectedContact.phone)) {
-      setError("جهة الاتصال لا تملك جوالاً صالحاً بصيغة 05XXXXXXXX.");
+      setError(t("vendors.error.contactPhone"));
       return;
     }
 
     const orgId = organization?.id;
     if (!orgId) {
-      setError("تعذّر تحديد المنشأة الحالية.");
+      setError(t("vendors.error.org"));
       return;
     }
 
@@ -363,7 +364,7 @@ export function VendorsPage() {
       vendorName: trimmedName,
     });
     if (!res.ok) {
-      setError(res.reason || "تم إنشاء المورد وتعذّر تفعيل حساب مسؤول المورد.");
+      setError(res.reason || t("vendors.error.grantAdmin"));
       return;
     }
 
@@ -374,10 +375,10 @@ export function VendorsPage() {
 
   const handleDelete = async (v: Vendor) => {
     const ok = await confirm({
-      title: "حذف المورد",
-      message: `هل تريد حذف المورد «${v.name}»؟ لن يمكن التراجع عن هذا الإجراء.`,
-      confirmLabel: "حذف",
-      cancelLabel: "إلغاء",
+      title: t("vendors.delete.title"),
+      message: t("vendors.delete.message", { name: v.name }),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
     if (!ok) return;
@@ -412,10 +413,12 @@ export function VendorsPage() {
     if (!peekVendor || !isOrgAdmin) return;
     const project = projects.find((p) => p.id === projectId);
     const ok = await confirm({
-      title: "فك ربط المشروع",
-      message: `هل تريد فك ربط المشروع «${project?.name ?? projectId}» عن هذا المورد؟`,
-      confirmLabel: "فك الربط",
-      cancelLabel: "إلغاء",
+      title: t("vendors.unlink.title"),
+      message: t("vendors.unlink.message", {
+        name: project?.name ?? projectId,
+      }),
+      confirmLabel: t("common.unlink"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
     if (!ok) return;
@@ -431,14 +434,14 @@ export function VendorsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="الموردون"
-        subtitle="إدارة شركات الموردين وربطها بمشاريع المنشأة"
+        title={t("vendors.title")}
+        subtitle={t("vendors.subtitle")}
         icon={<Building2 className="h-6 w-6" />}
         actions={
           isOrgAdmin ? (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
-              إضافة مورد
+              {t("vendors.add")}
             </Button>
           ) : undefined
         }
@@ -451,7 +454,7 @@ export function VendorsPage() {
             className="ps-9"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="بحث بالاسم أو المدينة أو السجل…"
+            placeholder={t("vendors.searchPlaceholder")}
           />
         </div>
         <SearchableSelect
@@ -459,9 +462,9 @@ export function VendorsPage() {
           value={statusFilter}
           onChange={(v) => setStatusFilter(v as "all" | VendorStatus)}
           options={[
-            { value: "all", label: "كل الحالات" },
-            { value: "active", label: "نشط" },
-            { value: "inactive", label: "غير نشط" },
+            { value: "all", label: t("common.allStatuses") },
+            { value: "active", label: t("common.enabled") },
+            { value: "inactive", label: t("common.inactive") },
           ]}
         />
       </Card>
@@ -481,13 +484,13 @@ export function VendorsPage() {
             </colgroup>
             <thead>
               <tr className="border-b border-steel-200 bg-steel-50/90 dark:border-steel-700 dark:bg-steel-800/60">
-                <th className={head}>المورد</th>
-                <th className={head}>المدينة</th>
-                <th className={head}>الحالة</th>
-                <th className={head}>المشاريع</th>
-                <th className={head}>الموظفون</th>
-                <th className={head}>جهة الاتصال</th>
-                <th className={head}>البريد</th>
+                <th className={head}>{t("vendors.col.vendor")}</th>
+                <th className={head}>{t("vendors.col.city")}</th>
+                <th className={head}>{t("vendors.col.status")}</th>
+                <th className={head}>{t("vendors.col.projects")}</th>
+                <th className={head}>{t("vendors.col.staff")}</th>
+                <th className={head}>{t("vendors.col.contact")}</th>
+                <th className={head}>{t("vendors.col.email")}</th>
                 <th className={head}> </th>
               </tr>
             </thead>
@@ -498,7 +501,7 @@ export function VendorsPage() {
                     colSpan={8}
                     className="px-4 py-12 text-center text-sm text-steel-500"
                   >
-                    لا موردين مطابقين. أضف مورداً لربط المشاريع والموظفين.
+                    {t("vendors.empty")}
                   </td>
                 </tr>
               ) : (
@@ -536,9 +539,12 @@ export function VendorsPage() {
                                   v.status === "active" ? "inactive" : "active",
                               })
                             }
+                            t={t}
                           />
                           <span className="text-[11px] font-bold text-steel-500">
-                            {v.status === "active" ? "نشط" : "غير نشط"}
+                            {v.status === "active"
+                              ? t("common.enabled")
+                              : t("common.inactive")}
                           </span>
                         </div>
                       </td>
@@ -550,7 +556,9 @@ export function VendorsPage() {
                         >
                           <span className="tabular-nums">{projectCount}</span>
                           <span>
-                            {projectCount === 1 ? "مشروع" : "مشاريع"}
+                            {projectCount === 1
+                              ? t("common.project")
+                              : t("common.projects")}
                           </span>
                         </button>
                       </td>
@@ -562,7 +570,9 @@ export function VendorsPage() {
                         >
                           <span className="tabular-nums">{staffCount}</span>
                           <span>
-                            {staffCount === 1 ? "موظف" : "موظفون"}
+                            {staffCount === 1
+                              ? t("common.staff")
+                              : t("common.staffPlural")}
                           </span>
                         </button>
                       </td>
@@ -587,8 +597,8 @@ export function VendorsPage() {
                               type="button"
                               onClick={() => openEdit(v)}
                               className={iconBtnEdit}
-                              title="تعديل"
-                              aria-label="تعديل"
+                              title={t("common.edit")}
+                              aria-label={t("common.edit")}
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
@@ -596,8 +606,8 @@ export function VendorsPage() {
                               type="button"
                               onClick={() => void handleDelete(v)}
                               className={iconBtnDelete}
-                              title="حذف"
-                              aria-label="حذف"
+                              title={t("common.delete")}
+                              aria-label={t("common.delete")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -629,11 +639,11 @@ export function VendorsPage() {
           setFormOpen(false);
           resetForm();
         }}
-        title={editingId ? "تعديل مورد" : "إضافة مورد"}
+        title={
+          editingId ? t("vendors.modal.edit") : t("vendors.modal.add")
+        }
         subtitle={
-          editingId
-            ? name || undefined
-            : "تسجيل مورد وربطه بجهة اتصال من موظفي المنشأة"
+          editingId ? name || undefined : t("vendors.modal.addSubtitle")
         }
         size="lg"
         footer={
@@ -645,17 +655,17 @@ export function VendorsPage() {
                 resetForm();
               }}
             >
-              إلغاء
+              {t("common.cancel")}
             </Button>
-            <Button onClick={submit}>حفظ</Button>
+            <Button onClick={submit}>{t("common.save")}</Button>
           </>
         }
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label="اسم المورد" required>
+          <Field label={t("vendors.field.name")} required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="السجل التجاري" required>
+          <Field label={t("vendors.field.cr")} required>
             <Input
               value={commercialRegister}
               onChange={(e) => setCommercialRegister(e.target.value)}
@@ -664,14 +674,17 @@ export function VendorsPage() {
               maxLength={10}
             />
           </Field>
-          <Field label="المدينة" required>
+          <Field label={t("vendors.field.city")} required>
             <SearchableSelect
               value={city}
               onChange={setCity}
-              options={CITY_OPTIONS.map((c) => ({ value: c, label: c }))}
+              options={CITY_KEYS.map((key) => ({
+                value: t(key),
+                label: t(key),
+              }))}
             />
           </Field>
-          <Field label="موقع المورد (اختياري)">
+          <Field label={t("vendors.field.websiteOptional")}>
             <Input
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
@@ -681,10 +694,10 @@ export function VendorsPage() {
           </Field>
           {editingId ? (
             <>
-              <Field label="جهة الاتصال">
+              <Field label={t("vendors.field.contact")}>
                 <Input value={editingVendor?.contactName || ""} readOnly disabled />
               </Field>
-              <Field label="البريد">
+              <Field label={t("common.email")}>
                 <Input
                   value={editingVendor?.contactEmail || ""}
                   readOnly
@@ -692,7 +705,7 @@ export function VendorsPage() {
                   dir="ltr"
                 />
               </Field>
-              <Field label="الجوال">
+              <Field label={t("common.phone")}>
                 <Input
                   value={editingVendor?.contactPhone || ""}
                   readOnly
@@ -703,12 +716,12 @@ export function VendorsPage() {
             </>
           ) : (
             <>
-              <Field label="جهة الاتصال" required>
+              <Field label={t("vendors.field.contactRequired")} required>
                 <SearchableSelect
                   value={contactUserId}
                   onChange={setContactUserId}
-                  searchPlaceholder="بحث بالاسم أو البريد…"
-                  placeholder="اختر موظفاً من المنشأة"
+                  searchPlaceholder={t("vendors.contactSearch")}
+                  placeholder={t("vendors.contactPlaceholder")}
                   truncateLabel={false}
                   options={contactCandidates.map((u) => ({
                     value: u.id,
@@ -716,22 +729,22 @@ export function VendorsPage() {
                   }))}
                 />
               </Field>
-              <Field label="البريد">
+              <Field label={t("common.email")}>
                 <Input
                   value={selectedContact?.email || ""}
                   readOnly
                   disabled
                   dir="ltr"
-                  placeholder="يُعبَّأ تلقائياً عند الاختيار"
+                  placeholder={t("vendors.autoFill")}
                 />
               </Field>
-              <Field label="الجوال">
+              <Field label={t("common.phone")}>
                 <Input
                   value={selectedContact?.phone || ""}
                   readOnly
                   disabled
                   dir="ltr"
-                  placeholder="يُعبَّأ تلقائياً عند الاختيار"
+                  placeholder={t("vendors.autoFill")}
                 />
               </Field>
             </>
@@ -739,9 +752,8 @@ export function VendorsPage() {
         </div>
         {!editingId ? (
           <p className="mt-3 text-xs text-steel-500">
-            سيتم تعيين جهة الاتصال كمسؤول مورد، وإنشاء كلمة مرور مؤقتة وإرسالها
-            بالبريد مع رابط تسجيل الدخول وتعيين كلمة مرور جديدة
-            {website.trim() ? " ورابط موقع المورد" : ""}.
+            {t("vendors.onboardingNote")}
+            {website.trim() ? t("vendors.onboardingWebsite") : ""}.
           </p>
         ) : null}
         {error ? (
@@ -761,7 +773,9 @@ export function VendorsPage() {
           setProjectPick("");
         }}
         title={
-          peek?.kind === "projects" ? "مشاريع المورد" : "موظفو المورد"
+          peek?.kind === "projects"
+            ? t("vendors.peek.projects")
+            : t("vendors.peek.staff")
         }
         subtitle={peekVendor?.name}
         size="lg"
@@ -773,7 +787,7 @@ export function VendorsPage() {
               setProjectPick("");
             }}
           >
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
@@ -781,12 +795,12 @@ export function VendorsPage() {
           <div className="space-y-4">
             {isOrgAdmin ? (
               <ModalToolbar>
-                <Field label="إضافة مشروع مرتبط" className="min-w-0 flex-1">
+                <Field label={t("vendors.peek.addProject")} className="min-w-0 flex-1">
                   <SearchableSelect
                     value={projectPick}
                     onChange={setProjectPick}
                     options={[
-                      { value: "", label: "اختر مشروعاً من مشاريع المنشأة" },
+                      { value: "", label: t("vendors.peek.pickProject") },
                       ...availableProjects.map((p) => ({
                         value: p.id,
                         label: `${p.name} (${p.code})`,
@@ -800,21 +814,21 @@ export function VendorsPage() {
                   className="shrink-0"
                 >
                   <Plus className="h-4 w-4" />
-                  ربط
+                  {t("common.link")}
                 </Button>
               </ModalToolbar>
             ) : null}
 
             {peekProjects.length === 0 ? (
-              <ModalEmpty>لا مشاريع مربوطة بهذا المورد.</ModalEmpty>
+              <ModalEmpty>{t("vendors.peek.noProjects")}</ModalEmpty>
             ) : (
               <ModalPanel>
                 <table className="vendors-table w-full min-w-[560px] text-sm">
                   <thead>
                     <tr className="border-b border-steel-200 bg-steel-50/90 dark:border-steel-700 dark:bg-steel-800/60">
-                      <th className={head}>المشروع</th>
-                      <th className={cn(head, "w-[18%]")}>الرمز</th>
-                      <th className={cn(head, "w-[16%]")}>الحالة</th>
+                      <th className={head}>{t("vendors.peek.col.project")}</th>
+                      <th className={cn(head, "w-[18%]")}>{t("common.code")}</th>
+                      <th className={cn(head, "w-[16%]")}>{t("common.status")}</th>
                       {isOrgAdmin ? (
                         <th className={cn(head, "w-[10%]")}> </th>
                       ) : null}
@@ -848,7 +862,7 @@ export function VendorsPage() {
                                 PROJECT_STATUS_BADGE.draft,
                             )}
                           >
-                            {PROJECT_STATUS_LABELS[p.status] ?? p.status}
+                            {projectStatusLabel(t, p.status)}
                           </span>
                         </td>
                         {isOrgAdmin ? (
@@ -857,8 +871,8 @@ export function VendorsPage() {
                               type="button"
                               onClick={() => void unlinkProject(p.id)}
                               className={iconBtnDelete}
-                              title="فك الربط"
-                              aria-label="فك الربط"
+                              title={t("common.unlinkTitle")}
+                              aria-label={t("common.unlinkTitle")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -875,15 +889,15 @@ export function VendorsPage() {
 
         {peek?.kind === "staff" ? (
           peekStaff.length === 0 ? (
-            <ModalEmpty>لا موظفون مسجّلون لهذا المورد.</ModalEmpty>
+            <ModalEmpty>{t("vendors.peek.noStaff")}</ModalEmpty>
           ) : (
             <ModalPanel>
               <table className="vendors-table w-full min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-b border-steel-200 bg-steel-50/90 dark:border-steel-700 dark:bg-steel-800/60">
-                    <th className={head}>المستخدم</th>
-                    <th className={head}>البريد</th>
-                    <th className={cn(head, "w-[28%]")}>الدور</th>
+                    <th className={head}>{t("common.user")}</th>
+                    <th className={head}>{t("common.email")}</th>
+                    <th className={cn(head, "w-[28%]")}>{t("common.role")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -902,7 +916,10 @@ export function VendorsPage() {
                       </td>
                       <td className={cell}>
                         <span className="inline-flex rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
-                          {roleLabel(String(u.role))}
+                          {roleDisplayName(t, {
+                            id: String(u.role),
+                            name: String(u.role),
+                          })}
                         </span>
                       </td>
                     </tr>
@@ -917,12 +934,12 @@ export function VendorsPage() {
       <Modal
         open={Boolean(contactCard)}
         onClose={() => setContactCard(null)}
-        title="بطاقة جهة الاتصال"
+        title={t("vendors.contactCard.title")}
         subtitle={contactCard?.name}
         size="sm"
         footer={
           <Button variant="outline" onClick={() => setContactCard(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
@@ -937,9 +954,10 @@ export function VendorsPage() {
                   {contactCard.contactName}
                 </p>
                 <span className="inline-flex rounded border border-steel-200 bg-white px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-900 dark:text-steel-300">
-                  {roleLabel(
-                    String(contactLinkedUser?.role ?? "vendor_admin"),
-                  )}
+                  {roleDisplayName(t, {
+                    id: String(contactLinkedUser?.role ?? "vendor_admin"),
+                    name: String(contactLinkedUser?.role ?? "vendor_admin"),
+                  })}
                 </span>
               </div>
             </div>

@@ -20,7 +20,7 @@ export function PageHeader({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { dir } = useLocale();
+  const { dir, t } = useLocale();
   const isHome = location.pathname === "/";
   const backVisible = showBack ?? !isHome;
 
@@ -42,15 +42,15 @@ export function PageHeader({
             size="sm"
             onClick={goBack}
             className="shrink-0"
-            aria-label="رجوع"
-            title="رجوع للصفحة السابقة"
+            aria-label={t("common.back")}
+            title={t("common.backTitle")}
           >
             {dir === "rtl" ? (
               <ArrowRight className="h-4 w-4" />
             ) : (
               <ArrowLeft className="h-4 w-4" />
             )}
-            رجوع
+            {t("common.back")}
           </Button>
         ) : null}
         {icon && (

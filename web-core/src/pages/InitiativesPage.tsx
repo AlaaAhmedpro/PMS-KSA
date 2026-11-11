@@ -11,10 +11,12 @@ import { useHierarchy } from "../store/HierarchyStore";
 import { useAuth } from "../store/AuthContext";
 import { useCan } from "../store/RbacContext";
 import { useConfirm } from "../store/ConfirmContext";
+import { useLocale } from "../store/LocaleContext";
 import { programsForInitiative, projectsForProgram } from "../lib/hierarchyLinks";
 import type { Initiative } from "../models/domain";
 
 export function InitiativesPage() {
+  const { t } = useLocale();
   const {
     initiatives,
     objectives,
@@ -121,7 +123,7 @@ export function InitiativesPage() {
 
   const save = () => {
     if (!name.trim() || !objectiveId || !ownerUserId || !portfolioId) {
-      setError("الاسم والهدف والمسؤول والمحفظة مطلوبون.");
+      setError(t("initiatives.error.required"));
       return;
     }
     const payload = {
@@ -152,13 +154,13 @@ export function InitiativesPage() {
     const childPrograms = programsForInitiative(programs, ini.id);
     const msg =
       childPrograms.length > 0
-        ? `حذف المبادرة «${ini.name}»؟ البرامج التابعة لن تُحذف، لكن يُزال ارتباطها.`
-        : `حذف المبادرة «${ini.name}»؟`;
+        ? t("initiatives.delete.withPrograms", { name: ini.name })
+        : t("initiatives.delete.plain", { name: ini.name });
     const ok = await confirm({
-      title: "تأكيد الحذف",
+      title: t("common.confirmDeleteTitle"),
       message: msg,
       danger: true,
-      confirmLabel: "حذف",
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     removeInitiative(ini.id);
@@ -169,18 +171,20 @@ export function InitiativesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="المبادرات"
-        subtitle="المحفظة ← المبادرة ← البرنامج. كل مبادرة تخدم هدفاً استراتيجياً."
+        title={t("initiatives.title")}
+        subtitle={t("initiatives.subtitle")}
         actions={
-          canManage ? <Button onClick={openCreate}>إضافة مبادرة</Button> : null
+          canManage ? (
+            <Button onClick={openCreate}>{t("initiatives.add")}</Button>
+          ) : null
         }
       />
 
       <Input
-        placeholder="بحث بالاسم أو الهدف أو المحفظة أو البرنامج أو المسؤول"
+        placeholder={t("initiatives.searchPlaceholder")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        aria-label="بحث في المبادرات"
+        aria-label={t("initiatives.searchAria")}
       />
 
       <Card className="overflow-hidden p-0">
@@ -195,11 +199,11 @@ export function InitiativesPage() {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">المبادرة</th>
-              <th className="px-4 py-3 text-start font-bold">الهدف</th>
-              <th className="px-4 py-3 text-start font-bold">المحفظة</th>
-              <th className="px-4 py-3 text-start font-bold">البرامج</th>
-              <th className="px-4 py-3 text-start font-bold">المسؤول</th>
+              <th className="px-4 py-3 text-start font-bold">{t("initiatives.col.initiative")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("initiatives.col.objective")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("initiatives.col.portfolio")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("initiatives.col.programs")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("initiatives.col.owner")}</th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -212,7 +216,7 @@ export function InitiativesPage() {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا توجد مبادرات. أضف مبادرة واربطها بمحفظة وهدف.
+                  {t("initiatives.empty")}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
@@ -221,7 +225,7 @@ export function InitiativesPage() {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا نتائج مطابقة للبحث.
+                  {t("common.searchNoResults")}
                 </td>
               </tr>
             ) : (
@@ -292,7 +296,7 @@ export function InitiativesPage() {
                           onClick={() => setProgramsFor(ini)}
                           className="inline-flex items-center rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-bold text-steel-700 hover:border-brand-300 hover:bg-brand-500/5 hover:text-brand-700 dark:border-steel-700 dark:bg-steel-800/60 dark:text-steel-200"
                         >
-                          {childPrograms.length} برنامج
+                          {t("initiatives.programCount", { n: childPrograms.length })}
                         </button>
                       )}
                     </td>
@@ -308,8 +312,8 @@ export function InitiativesPage() {
                             type="button"
                             onClick={() => openEdit(ini)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600"
-                            title="تعديل"
-                            aria-label="تعديل"
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -317,8 +321,8 @@ export function InitiativesPage() {
                             type="button"
                             onClick={() => onDelete(ini)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
-                            title="حذف"
-                            aria-label="حذف"
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -339,21 +343,21 @@ export function InitiativesPage() {
         title={
           editingId
             ? canManage
-              ? "تعديل مبادرة"
-              : "تفاصيل المبادرة"
-            : "إضافة مبادرة"
+              ? t("initiatives.modal.edit")
+              : t("initiatives.modal.details")
+            : t("initiatives.modal.add")
         }
         footer={
           <>
             <Button variant="outline" onClick={closeModal}>
-              {canManage ? "إلغاء" : "إغلاق"}
+              {canManage ? t("common.cancel") : t("common.close")}
             </Button>
-            {canManage ? <Button onClick={save}>حفظ</Button> : null}
+            {canManage ? <Button onClick={save}>{t("common.save")}</Button> : null}
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="اسم المبادرة" required>
+          <Field label={t("initiatives.field.name")} required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -361,7 +365,10 @@ export function InitiativesPage() {
               disabled={!canManage}
             />
           </Field>
-          <Field label="ماذا تحقق" hint={canManage ? "جملة واحدة تكفي." : undefined}>
+          <Field
+            label={t("initiatives.field.description")}
+            hint={canManage ? t("common.fieldHintOneSentence") : undefined}
+          >
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -369,29 +376,29 @@ export function InitiativesPage() {
               disabled={!canManage}
             />
           </Field>
-          <Field label="المحفظة" required>
+          <Field label={t("initiatives.field.portfolio")} required>
             <SearchableSelect
               value={portfolioId}
               onChange={setPortfolioId}
-              placeholder="اختر المحفظة"
+              placeholder={t("initiatives.field.choosePortfolio")}
               disabled={!canManage}
               options={portfolios.map((p) => ({ value: p.id, label: p.name }))}
             />
           </Field>
-          <Field label="الهدف الاستراتيجي" required>
+          <Field label={t("initiatives.field.objective")} required>
             <SearchableSelect
               value={objectiveId}
               onChange={setObjectiveId}
-              placeholder="اختر الهدف"
+              placeholder={t("initiatives.field.chooseObjective")}
               disabled={!canManage}
               options={objectives.map((o) => ({ value: o.id, label: o.title }))}
             />
           </Field>
-          <Field label="المسؤول" required>
+          <Field label={t("initiatives.field.owner")} required>
             <SearchableSelect
               value={ownerUserId}
               onChange={setOwnerUserId}
-              placeholder="اختر المسؤول"
+              placeholder={t("common.chooseOwner")}
               disabled={!canManage}
               options={users.map((u) => ({ value: u.id, label: u.name }))}
             />
@@ -404,16 +411,18 @@ export function InitiativesPage() {
         open={!!goalView}
         onClose={() => setGoalView(null)}
         title={
-          goalView ? `الهدف · ${goalView.initiativeName}` : "الهدف الاستراتيجي"
+          goalView
+            ? t("initiatives.goalModal.title", { name: goalView.initiativeName })
+            : t("initiatives.goalModal.titleFallback")
         }
         size="sm"
         footer={
           <Button variant="outline" onClick={() => setGoalView(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
-        <Field label="الهدف الاستراتيجي">
+        <Field label={t("initiatives.goalModal.field")}>
           <Textarea value={goalView?.text ?? ""} readOnly rows={4} />
         </Field>
       </Modal>
@@ -423,17 +432,17 @@ export function InitiativesPage() {
         onClose={() => setProgramsFor(null)}
         title={
           programsFor
-            ? `برامج المبادرة · ${programsFor.name}`
-            : "برامج المبادرة"
+            ? t("initiatives.programsModal.title", { name: programsFor.name })
+            : t("initiatives.programsModal.titleFallback")
         }
         footer={
           <Button variant="outline" onClick={() => setProgramsFor(null)}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >
         {programsModalList.length === 0 ? (
-          <p className="text-sm text-steel-500">لا برامج تابعة لهذه المبادرة.</p>
+          <p className="text-sm text-steel-500">{t("initiatives.programsModal.empty")}</p>
         ) : (
           <ul className="space-y-2">
             {programsModalList.map((prg) => {
@@ -453,9 +462,9 @@ export function InitiativesPage() {
                     {prg.name}
                   </Link>
                   <p className="mt-1 text-[11px] text-steel-400">
-                    المدير: {manager}
+                    {t("common.managerLabel", { name: manager })}
                     <span className="mx-1.5 text-steel-300">·</span>
-                    المشاريع: {kids.length}
+                    {t("common.projectsCount", { n: kids.length })}
                   </p>
                 </li>
               );

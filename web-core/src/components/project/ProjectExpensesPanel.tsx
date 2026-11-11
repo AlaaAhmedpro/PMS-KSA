@@ -8,17 +8,12 @@ import { useHierarchy } from "../../store/HierarchyStore";
 import { useAuth } from "../../store/AuthContext";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
+import { useLocale } from "../../store/LocaleContext";
 import type { Project, ProjectExpense } from "../../models/domain";
 import { cn } from "../../lib/cn";
 
-function formatSar(amount: number): string {
-  return `${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ر.س`;
-}
-
 export function ProjectExpensesPanel({ project }: { project: Project }) {
+  const { t } = useLocale();
   const {
     projectExpenses,
     addProjectExpense,
@@ -29,6 +24,12 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
   const can = useCan();
   const confirm = useConfirm();
   const canManage = can.manageRecords(user?.role);
+
+  const formatSar = (amount: number) =>
+    `${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${t("common.currencySar")}`;
 
   const rows = useMemo(
     () =>
@@ -77,16 +78,16 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
 
   const save = () => {
     if (!title.trim()) {
-      setError("البند مطلوب.");
+      setError(t("projectExpenses.error.titleRequired"));
       return;
     }
     const amountSar = Number(amount);
     if (!Number.isFinite(amountSar) || amountSar < 0) {
-      setError("المبلغ غير صحيح.");
+      setError(t("projectExpenses.error.amountInvalid"));
       return;
     }
     if (!date) {
-      setError("التاريخ مطلوب.");
+      setError(t("projectExpenses.error.dateRequired"));
       return;
     }
     if (editing) {
@@ -115,19 +116,25 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-4">
         <Card className="p-3">
-          <p className="text-[11px] font-bold text-steel-400">الميزانية</p>
+          <p className="text-[11px] font-bold text-steel-400">
+            {t("common.budget")}
+          </p>
           <p className="mt-0.5 text-sm font-extrabold tabular-nums">
             {formatSar(project.budgetSar || 0)}
           </p>
         </Card>
         <Card className="p-3">
-          <p className="text-[11px] font-bold text-steel-400">المنصرف</p>
+          <p className="text-[11px] font-bold text-steel-400">
+            {t("common.spent")}
+          </p>
           <p className="mt-0.5 text-sm font-extrabold tabular-nums">
             {formatSar(project.spentSar || 0)}
           </p>
         </Card>
         <Card className="p-3">
-          <p className="text-[11px] font-bold text-steel-400">المتبقي</p>
+          <p className="text-[11px] font-bold text-steel-400">
+            {t("projectDetail.remaining")}
+          </p>
           <p
             className={cn(
               "mt-0.5 text-sm font-extrabold tabular-nums",
@@ -138,15 +145,19 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
           </p>
         </Card>
         <Card className="p-3">
-          <p className="text-[11px] font-bold text-steel-400">الاستهلاك</p>
-          <p className="mt-0.5 text-sm font-extrabold tabular-nums">{spendPct}%</p>
+          <p className="text-[11px] font-bold text-steel-400">
+            {t("projectExpenses.consumption")}
+          </p>
+          <p className="mt-0.5 text-sm font-extrabold tabular-nums">
+            {spendPct}%
+          </p>
         </Card>
       </div>
 
       <div className="flex justify-end">
         {canManage ? (
           <Button size="sm" onClick={openCreate}>
-            إضافة مصروف
+            {t("projectExpenses.add")}
           </Button>
         ) : null}
       </div>
@@ -163,11 +174,21 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">التاريخ</th>
-              <th className="px-4 py-3 text-start font-bold">البند</th>
-              <th className="px-4 py-3 text-start font-bold">التصنيف</th>
-              <th className="px-4 py-3 text-start font-bold">المبلغ</th>
-              <th className="px-4 py-3 text-start font-bold">بواسطة</th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectExpenses.col.date")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectExpenses.col.line")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectExpenses.col.category")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectExpenses.col.amount")}
+              </th>
+              <th className="px-4 py-3 text-start font-bold">
+                {t("projectExpenses.col.by")}
+              </th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -180,7 +201,7 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
                   colSpan={canManage ? 6 : 5}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا مصاريف مسجّلة على هذا المشروع.
+                  {t("projectExpenses.empty")}
                 </td>
               </tr>
             ) : (
@@ -224,8 +245,8 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600"
-                            aria-label="تعديل"
-                            title="تعديل"
+                            aria-label={t("common.edit")}
+                            title={t("common.edit")}
                             onClick={() => openEdit(e)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -233,14 +254,14 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
                           <button
                             type="button"
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-                            aria-label="حذف"
-                            title="حذف"
+                            aria-label={t("common.delete")}
+                            title={t("common.delete")}
                             onClick={async () => {
                               const ok = await confirm({
-                                title: "تأكيد الحذف",
-                                message: "حذف بند المصروف؟",
+                                title: t("common.confirmDeleteTitle"),
+                                message: t("projectExpenses.deleteMessage"),
                                 danger: true,
-                                confirmLabel: "حذف",
+                                confirmLabel: t("common.delete"),
                               });
                               if (ok) removeProjectExpense(e.id);
                             }}
@@ -261,29 +282,36 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? "تعديل مصروف" : "إضافة مصروف"}
+        title={
+          editing ? t("projectExpenses.editTitle") : t("projectExpenses.addTitle")
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
-            <Button onClick={save}>حفظ</Button>
+            <Button onClick={save}>{t("common.save")}</Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="البند" required>
+          <Field label={t("projectExpenses.field.line")} required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="المبلغ (ر.س)" required>
+            <Field
+              label={t("projectExpenses.field.amount", {
+                currency: t("common.currencySar"),
+              })}
+              required
+            >
               <Input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
             </Field>
-            <Field label="التاريخ" required>
+            <Field label={t("projectExpenses.field.date")} required>
               <Input
                 type="date"
                 value={date}
@@ -291,14 +319,14 @@ export function ProjectExpensesPanel({ project }: { project: Project }) {
               />
             </Field>
           </div>
-          <Field label="التصنيف">
+          <Field label={t("projectExpenses.field.category")}>
             <Input
               value={categoryLabel}
               onChange={(e) => setCategoryLabel(e.target.value)}
-              placeholder="مواد · معدات · استشارات"
+              placeholder={t("projectExpenses.categoryPlaceholder")}
             />
           </Field>
-          <Field label="ملاحظة">
+          <Field label={t("projectExpenses.field.note")}>
             <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}

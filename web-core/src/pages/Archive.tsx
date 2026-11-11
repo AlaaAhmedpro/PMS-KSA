@@ -17,8 +17,10 @@ import { formatShortDate } from "../lib/format";
 import { useArchiveAttachmentIndexing } from "../hooks/useArchiveAttachmentIndexing";
 import { usePagination, PAGE_SIZE_RECORDS } from "../hooks/usePagination";
 import { Pagination } from "../components/ui/Pagination";
+import { useLocale } from "../store/LocaleContext";
 
 export function Archive() {
+  const { t } = useLocale();
   const { records, branches, departments, entities, updateRecord } = useData();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -56,8 +58,8 @@ export function Archive() {
   return (
     <div>
       <PageHeader
-        title="الأرشيف الإلكتروني"
-        subtitle="المشاريع والمهام المغلقة والمؤرشفة"
+        title={t("archive.title")}
+        subtitle={t("archive.subtitle")}
         icon={<ArchiveIcon className="h-6 w-6" />}
         actions={
           <Button
@@ -66,7 +68,7 @@ export function Archive() {
             className="no-print w-full justify-center sm:w-auto"
           >
             <Printer className="h-4 w-4" />
-            طباعة
+            {t("common.print")}
           </Button>
         }
       />
@@ -78,30 +80,32 @@ export function Archive() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="بحث برقم القيد أو الموضوع أو الجهة أو نص داخل المرفقات (PDF/صورة)..."
+              placeholder={t("archive.searchPlaceholder")}
               className="pr-10"
             />
           </div>
           <p className="text-xs leading-relaxed text-steel-500 dark:text-steel-400">
-            يدعم البحث بالعربية والإنجليزية داخل ملفات PDF والصور المرفوعة.
+            {t("archive.searchHelp")}
           </p>
           <SearchableSelect
             value={kind}
             onChange={(v) => setKind(v as typeof kind)}
             className="w-full sm:w-48"
             options={[
-              { value: "all", label: "الكل" },
-              { value: "project", label: "مشاريع" },
-              { value: "task", label: "مهام" },
+              { value: "all", label: t("common.all") },
+              { value: "project", label: t("archive.filter.projects") },
+              { value: "task", label: t("archive.filter.tasks") },
             ]}
-            searchPlaceholder="بحث..."
           />
         </div>
       </Card>
 
       <Card className="overflow-hidden">
         {archived.length === 0 ? (
-          <EmptyState title="لا توجد سجلات مؤرشفة" subtitle="ستظهر هنا المشاريع والمهام المغلقة" />
+          <EmptyState
+            title={t("archive.empty.title")}
+            subtitle={t("archive.empty.subtitle")}
+          />
         ) : (
           <>
             <div className="mobile-data-list divide-y divide-steel-100 dark:divide-steel-800 md:hidden">
@@ -131,7 +135,9 @@ export function Archive() {
                             {r.regNumber}
                           </span>
                           <span className="rounded-full bg-steel-500/10 px-2 py-0.5 text-[10px] font-bold text-steel-500 dark:text-steel-400">
-                            {r.kind === "task" ? "مهمة" : "مشروع"}
+                            {r.kind === "task"
+                              ? t("record.kind.task")
+                              : t("record.kind.project")}
                           </span>
                         </div>
                         <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug text-steel-800 dark:text-steel-100">
@@ -139,7 +145,7 @@ export function Archive() {
                         </p>
                         {attachmentHit && (
                           <span className="mt-2 inline-flex rounded-full bg-brand-500/10 px-2.5 py-0.5 text-[10px] font-bold text-brand-700 dark:text-brand-300">
-                            تطابق في مرفق
+                            {t("archive.attachmentHit")}
                           </span>
                         )}
                       </div>
@@ -152,19 +158,27 @@ export function Archive() {
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-steel-500 dark:text-steel-400">
                       <div className="min-w-0">
-                        <span className="block text-[10px] font-bold text-steel-400">الجهة</span>
+                        <span className="block text-[10px] font-bold text-steel-400">
+                          {t("archive.mobile.entity")}
+                        </span>
                         <span className="line-clamp-1">{entity?.name}</span>
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-[10px] font-bold text-steel-400">الفرع / المنطقة</span>
+                        <span className="block text-[10px] font-bold text-steel-400">
+                          {t("archive.mobile.branch")}
+                        </span>
                         <span className="line-clamp-1">{branch?.name}</span>
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-[10px] font-bold text-steel-400">تاريخ الإغلاق</span>
+                        <span className="block text-[10px] font-bold text-steel-400">
+                          {t("archive.mobile.closedDate")}
+                        </span>
                         <span>{formatShortDate(r.executedDate || r.arrivalDate)}</span>
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-[10px] font-bold text-steel-400">الأدارة / الفرع</span>
+                        <span className="block text-[10px] font-bold text-steel-400">
+                          {t("archive.mobile.department")}
+                        </span>
                         <span className="line-clamp-1">{dept?.name}</span>
                       </div>
                     </div>
@@ -177,14 +191,14 @@ export function Archive() {
             <table className="w-full text-right text-sm">
               <thead>
                 <tr className="border-y border-steel-100 bg-steel-50 text-xs text-steel-500 dark:border-steel-800 dark:bg-steel-800/40">
-                  <th className="px-4 py-3 font-bold">رقم القيد</th>
-                  <th className="px-4 py-3 font-bold">النوع</th>
-                  <th className="px-4 py-3 font-bold">الجهة المرسلة</th>
-                  <th className="px-4 py-3 font-bold">الموضوع</th>
-                  <th className="px-4 py-3 font-bold">الفرع / المنطقة</th>
-                  <th className="px-4 py-3 font-bold">الأدارات / الفروع</th>
-                  <th className="px-4 py-3 font-bold">تاريخ الإغلاق</th>
-                  <th className="px-4 py-3 font-bold">المرفقات</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.regNumber")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.kind")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.entity")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.subject")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.branch")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.department")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.closedDate")}</th>
+                  <th className="px-4 py-3 font-bold">{t("archive.col.attachments")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,14 +222,16 @@ export function Archive() {
                         {r.regNumber}
                       </td>
                       <td className="px-4 py-3 text-steel-500">
-                        {r.kind === "task" ? "مهمة" : "مشروع"}
+                        {r.kind === "task"
+                          ? t("record.kind.task")
+                          : t("record.kind.project")}
                       </td>
                       <td className="px-4 py-3 text-steel-600 dark:text-steel-300">{entity?.name}</td>
                       <td className="max-w-[260px] px-4 py-3 text-steel-700 dark:text-steel-200">
                         <p className="truncate font-medium">{r.subject}</p>
                         {attachmentHit && (
                           <span className="mt-1 inline-flex rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-bold text-brand-700 dark:text-brand-300">
-                            تطابق في مرفق
+                            {t("archive.attachmentHit")}
                           </span>
                         )}
                       </td>

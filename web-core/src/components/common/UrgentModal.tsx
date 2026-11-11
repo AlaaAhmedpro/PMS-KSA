@@ -13,9 +13,7 @@ import {
   sendDemoUrgentEmail,
 } from "../../lib/notifications";
 import type { RecordItem } from "../../lib/types";
-
-const DEFAULT_MESSAGE =
-  "برجاء سرعة الانتهاء من السجل المشار إليه نظراً لتجاوزه الموعد المحدد.";
+import { useLocale } from "../../store/LocaleContext";
 
 export function UrgentModal({
   record,
@@ -28,6 +26,7 @@ export function UrgentModal({
   onClose: () => void;
   onSent?: () => void;
 }) {
+  const { t } = useLocale();
   const { users, user } = useAuth();
   const { updateRecord, entities } = useData();
   const { addNotification } = useNotifications();
@@ -37,20 +36,23 @@ export function UrgentModal({
     assignee: string;
     regNumber: string;
   } | null>(null);
-  const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [message, setMessage] = useState(() => t("urgent.defaultMessage"));
   const [email, setEmail] = useState("");
 
   const entity = entities.find((e) => e.id === record?.entityId);
-  const noun = record?.kind === "task" ? "مهمة" : "مشروع";
+  const noun =
+    record?.kind === "task"
+      ? t("record.kind.task")
+      : t("record.kind.project");
 
   useEffect(() => {
     if (!open || !record) return;
     setSent(false);
     setShowSuccessToast(false);
     setToastInfo(null);
-    setMessage(DEFAULT_MESSAGE);
+    setMessage(t("urgent.defaultMessage"));
     setEmail(assigneeEmail(users, record.assignee));
-  }, [open, record?.id, users]);
+  }, [open, record?.id, users, t]);
 
   const handleClose = () => {
     if (sent) return;
@@ -60,18 +62,24 @@ export function UrgentModal({
   const handleSend = () => {
     if (!record || !email.trim()) return;
 
-    const mailSubject = `استعجال — ${noun} ${record.regNumber}: ${record.subject}`;
+    const mailSubject = t("urgent.mailSubject", {
+      noun,
+      reg: record.regNumber,
+      subject: record.subject,
+    });
     const mailBody = [
-      `السيد/ ${record.assignee}،`,
+      t("urgent.mailGreeting", { name: record.assignee }),
       "",
       message.trim(),
       "",
       `— ${noun}: ${record.subject}`,
-      `رقم القيد: ${record.regNumber}`,
-      record.outNumber ? `رقم الصادر: ${record.outNumber}` : "",
-      entity?.name ? `الجهة: ${entity.name}` : "",
+      t("urgent.mailReg", { reg: record.regNumber }),
+      record.outNumber
+        ? t("urgent.mailOut", { out: record.outNumber })
+        : "",
+      entity?.name ? t("urgent.mailEntity", { name: entity.name }) : "",
       "",
-      user?.name ? `مرسل من: ${user.name}` : "",
+      user?.name ? t("urgent.mailFrom", { name: user.name }) : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -102,8 +110,11 @@ export function UrgentModal({
         {
           id: crypto.randomUUID(),
           at: new Date().toISOString(),
-          actor: user?.name || "مستخدم",
-          text: `إرسال استعجال إلى ${record.assignee} (${email.trim()})`,
+          actor: user?.name || t("urgent.logActor"),
+          text: t("urgent.logText", {
+            assignee: record.assignee,
+            email: email.trim(),
+          }),
         },
       ],
     }));
@@ -133,14 +144,14 @@ export function UrgentModal({
       title={
         <span className="flex items-center gap-2">
           <Mail className="h-5 w-5 text-red-500" />
-          إرسال استعجال فوري
+          {t("urgent.title")}
         </span>
       }
       footer={
         !sent && (
           <>
             <Button variant="ghost" onClick={handleClose}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button
               variant="danger"
@@ -148,7 +159,7 @@ export function UrgentModal({
               disabled={!email.trim() || !message.trim() || !record?.assignee}
             >
               <Send className="h-4 w-4" />
-              إرسال الاستعجال
+              {t("urgent.send")}
             </Button>
           </>
         )
@@ -161,13 +172,13 @@ export function UrgentModal({
           </div>
           <div>
             <p className="text-xl font-bold text-steel-800 dark:text-steel-100">
-              تم إرسال الاستعجال بنجاح
+              {t("urgent.success")}
             </p>
             <p className="mt-2 text-sm text-steel-500 dark:text-steel-400">
-              تم إخطار {record?.assignee} بإشعار داخل النظام
+              {t("urgent.notifyInApp", { name: record?.assignee ?? "" })}
             </p>
             <p className="mt-1 text-sm text-steel-500 dark:text-steel-400">
-              وإرسال بريد إلى{" "}
+              {t("urgent.emailSentTo")}{" "}
               <span className="font-semibold text-brand-600 dark:text-brand-400">
                 {email}
               </span>
@@ -178,20 +189,18 @@ export function UrgentModal({
         <div className="space-y-4">
           <div className="rounded-xl bg-steel-50 p-4 text-sm dark:bg-steel-800/60">
             <div className="grid grid-cols-2 gap-2">
-              <Info label="رقم القيد" value={record?.regNumber} />
-              <Info label="المسؤول" value={record?.assignee} />
-              <Info label="الجهة" value={entity?.name} />
-              <Info label="الموضوع" value={record?.subject} />
+              <Info label={t("urgent.regNumber")} value={record?.regNumber} />
+              <Info label={t("urgent.assignee")} value={record?.assignee} />
+              <Info label={t("urgent.entity")} value={entity?.name} />
+              <Info label={t("urgent.subject")} value={record?.subject} />
             </div>
           </div>
 
           <Field
-            label="بريد الموظف / المسؤول"
+            label={t("urgent.emailField")}
             required
             hint={
-              email
-                ? "يُملأ تلقائياً من بيانات المسؤول المحدد — يمكن تعديله قبل الإرسال"
-                : "لم يُعثر على بريد للمسؤول — أدخل البريد يدوياً"
+              email ? t("urgent.emailHintFound") : t("urgent.emailHintMissing")
             }
           >
             <Input
@@ -203,7 +212,7 @@ export function UrgentModal({
             />
           </Field>
 
-          <Field label="نص رسالة الاستعجال (وميل)">
+          <Field label={t("urgent.messageField")}>
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -211,8 +220,7 @@ export function UrgentModal({
           </Field>
 
           <p className="text-xs text-steel-400">
-            * في النسخة التجريبية يُحاكى إرسال البريد ويُسجَّل الإشعار لدى
-            الموظف المسؤول في جرس التنبيهات.
+            * {t("urgent.demoNote")}
           </p>
         </div>
       )}
@@ -231,7 +239,7 @@ export function UrgentModal({
           </div>
           <div className="min-w-0 text-right">
             <p className="font-bold text-steel-800 dark:text-steel-100">
-              تم إرسال الاستعجال بنجاح
+              {t("urgent.success")}
             </p>
             <p className="mt-0.5 truncate text-xs text-steel-500 dark:text-steel-400">
               {toastInfo?.assignee} — {toastInfo?.regNumber}
@@ -245,11 +253,12 @@ export function UrgentModal({
 }
 
 function Info({ label, value }: { label: string; value?: string }) {
+  const { t } = useLocale();
   return (
     <div>
       <p className="text-xs text-steel-400">{label}</p>
       <p className="font-semibold text-steel-700 dark:text-steel-200">
-        {value || "—"}
+        {value || t("common.emDash")}
       </p>
     </div>
   );

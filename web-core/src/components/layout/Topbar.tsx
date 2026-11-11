@@ -16,10 +16,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "../../store/ThemeContext";
 import { useAuth } from "../../store/AuthContext";
 import { useData } from "../../store/DataStore";
-import { useRbac } from "../../store/RbacContext";
 import { useNotifications } from "../../store/NotificationStore";
 import { useHierarchy } from "../../store/HierarchyStore";
 import { useConfirm } from "../../store/ConfirmContext";
+import { useLocale } from "../../store/LocaleContext";
+import { useRbac } from "../../store/RbacContext";
 import { buildAlerts } from "../../lib/alerts";
 import { formatNotificationDateTime } from "../../lib/format";
 import { cn } from "../../lib/cn";
@@ -30,11 +31,14 @@ import { resetAllDemoData } from "../../demo-mode/reset";
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { theme, toggle } = useTheme();
   const { user, logout, organization } = useAuth();
-  const { records, resetDemo } = useData();
-  const { roles, resetRbac } = useRbac();
-  const { forUser, markRead, unreadForUser, resetNotifications } = useNotifications();
+  const { resetDemo } = useData();
+  const { records } = useData();
+  const { resetRbac } = useRbac();
+  const { forUser, markRead, unreadForUser, resetNotifications } =
+    useNotifications();
   const { resetHierarchy } = useHierarchy();
   const confirm = useConfirm();
+  const { locale, setLocale, t } = useLocale();
   const navigate = useNavigate();
   const [openBell, setOpenBell] = useState(false);
   const [openUser, setOpenUser] = useState(false);
@@ -49,12 +53,14 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const unreadCount = unreadForUser(user?.id);
   const dangerCount = alerts.filter((a) => a.level === "danger").length;
   const hasBellActivity = unreadCount > 0 || alerts.length > 0;
+  const roleLabel = user?.role ? t(`role.${user.role}`) : "";
 
-  const openRecord = (kind: AppNotification["kind"] | "project" | "task", recordId: string) => {
+  const openRecord = (
+    kind: AppNotification["kind"] | "project" | "task",
+    recordId: string,
+  ) => {
     navigate(
-      kind === "task"
-        ? `/tasks/${recordId}`
-        : `/projects/${recordId}`,
+      kind === "task" ? `/tasks/${recordId}` : `/projects/${recordId}`,
     );
     setOpenBell(false);
   };
@@ -70,32 +76,68 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const roleName = roles.find((r) => r.id === user?.role)?.name;
-
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-steel-200 bg-white/80 px-4 backdrop-blur-xl dark:border-steel-800 dark:bg-steel-900/80 md:px-6">
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onMenu}
           className="rounded-lg p-2 text-steel-500 hover:bg-steel-100 dark:hover:bg-steel-800 lg:hidden"
+          aria-label={t("common.openMenu")}
         >
           <Menu className="h-5 w-5" />
         </button>
         <div className="hidden sm:block">
           <p className="text-sm font-bold text-steel-800 dark:text-steel-100">
-            منظومة إدارة وتنظيم المشاريع
+            {t("brand.systemName")}
           </p>
           <p className="text-[11px] text-steel-400">
-            بوابة إدارة المشاريع — {organization?.name ?? "Brains Valley"}
+            {t("brand.portalOrg", {
+              org: organization?.name ?? t("brand.company"),
+            })}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-1.5">
+        <div
+          className="flex rounded-xl border border-steel-200 p-0.5 text-[11px] font-bold dark:border-steel-700"
+          role="group"
+          aria-label={t("lang.switch")}
+        >
+          <button
+            type="button"
+            className={cn(
+              "rounded-lg px-2.5 py-1.5 transition-colors",
+              locale === "ar"
+                ? "bg-steel-900 text-white dark:bg-steel-100 dark:text-steel-900"
+                : "text-steel-500 hover:bg-steel-100 dark:hover:bg-steel-800",
+            )}
+            onClick={() => setLocale("ar")}
+          >
+            ع
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "rounded-lg px-2.5 py-1.5 transition-colors",
+              locale === "en"
+                ? "bg-steel-900 text-white dark:bg-steel-100 dark:text-steel-900"
+                : "text-steel-500 hover:bg-steel-100 dark:hover:bg-steel-800",
+            )}
+            onClick={() => setLocale("en")}
+          >
+            EN
+          </button>
+        </div>
+
         <button
+          type="button"
           onClick={toggle}
           className="rounded-xl p-2.5 text-steel-500 transition-colors hover:bg-steel-100 dark:text-steel-300 dark:hover:bg-steel-800"
-          title={theme === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}
+          title={
+            theme === "dark" ? t("common.themeLight") : t("common.themeDark")
+          }
         >
           {theme === "dark" ? (
             <Sun className="h-5 w-5" />
@@ -104,21 +146,22 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           )}
         </button>
 
-        {/* Notifications */}
         <div className="relative" ref={bellRef}>
           <button
+            type="button"
             onClick={() => setOpenBell((o) => !o)}
             className="relative rounded-xl p-2.5 text-steel-500 transition-colors hover:bg-steel-100 dark:text-steel-300 dark:hover:bg-steel-800"
+            aria-label={t("topbar.alerts")}
           >
             <Bell className="h-5 w-5" />
             {hasBellActivity && (
-              <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
+              <span className="absolute end-1.5 top-1.5 flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
               </span>
             )}
             {unreadCount > 0 && (
-              <span className="absolute -left-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -start-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -129,21 +172,21 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                className="absolute left-0 mt-2 w-80 overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-card dark:border-steel-700 dark:bg-steel-900"
+                className="absolute end-0 mt-2 w-80 overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-card dark:border-steel-700 dark:bg-steel-900"
               >
                 <div className="flex items-center justify-between border-b border-steel-100 px-4 py-3 dark:border-steel-800">
                   <p className="text-sm font-bold text-steel-800 dark:text-steel-100">
-                    التنبيهات
+                    {t("topbar.alerts")}
                   </p>
                   <div className="flex items-center gap-2">
                     {unreadCount > 0 && (
                       <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-xs font-bold text-brand-600 dark:text-brand-400">
-                        {unreadCount} جديد
+                        {t("topbar.newCount", { n: unreadCount })}
                       </span>
                     )}
                     {dangerCount > 0 && (
                       <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-500">
-                        {dangerCount} عاجل
+                        {t("topbar.urgentCount", { n: dangerCount })}
                       </span>
                     )}
                   </div>
@@ -151,19 +194,20 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 <div className="max-h-80 overflow-y-auto">
                   {userNotifications.length === 0 && alerts.length === 0 && (
                     <p className="px-4 py-8 text-center text-sm text-steel-400">
-                      لا توجد تنبيهات حالياً
+                      {t("topbar.noAlerts")}
                     </p>
                   )}
 
                   {userNotifications.slice(0, 15).map((n) => (
                     <button
                       key={n.id}
+                      type="button"
                       onClick={() => {
                         markRead(n.id);
                         openRecord(n.kind, n.recordId);
                       }}
                       className={cn(
-                        "flex w-full gap-3 border-b border-steel-50 px-4 py-3 text-right transition-colors last:border-0 hover:bg-steel-50 dark:border-steel-800/60 dark:hover:bg-steel-800/60",
+                        "flex w-full gap-3 border-b border-steel-50 px-4 py-3 text-start transition-colors last:border-0 hover:bg-steel-50 dark:border-steel-800/60 dark:hover:bg-steel-800/60",
                         !n.read && "bg-brand-500/5",
                       )}
                     >
@@ -200,15 +244,16 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
                   {userNotifications.length > 0 && alerts.length > 0 && (
                     <div className="border-b border-steel-100 px-4 py-2 text-[11px] font-bold text-steel-400 dark:border-steel-800">
-                      تنبيهات النظام
+                      {t("topbar.systemAlerts")}
                     </div>
                   )}
 
                   {alerts.slice(0, 12).map((a) => (
                     <button
                       key={a.id}
+                      type="button"
                       onClick={() => openRecord(a.kind, a.recordId)}
-                      className="flex w-full gap-3 border-b border-steel-50 px-4 py-3 text-right transition-colors last:border-0 hover:bg-steel-50 dark:border-steel-800/60 dark:hover:bg-steel-800/60"
+                      className="flex w-full gap-3 border-b border-steel-50 px-4 py-3 text-start transition-colors last:border-0 hover:bg-steel-50 dark:border-steel-800/60 dark:hover:bg-steel-800/60"
                     >
                       <div
                         className={cn(
@@ -240,20 +285,20 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* User menu */}
         <div className="relative" ref={userRef}>
           <button
+            type="button"
             onClick={() => setOpenUser((o) => !o)}
-            className="flex items-center gap-2 rounded-xl p-1.5 pl-3 transition-colors hover:bg-steel-100 dark:hover:bg-steel-800"
+            className="flex items-center gap-2 rounded-xl p-1.5 pe-3 transition-colors hover:bg-steel-100 dark:hover:bg-steel-800"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">
               {user?.name?.charAt(0)}
             </div>
-            <div className="hidden text-right leading-tight sm:block">
+            <div className="hidden text-start leading-tight sm:block">
               <p className="text-xs font-bold text-steel-800 dark:text-steel-100">
                 {user?.name}
               </p>
-              <p className="text-[10px] text-steel-400">{roleName}</p>
+              <p className="text-[10px] text-steel-400">{roleLabel}</p>
             </div>
           </button>
           <AnimatePresence>
@@ -262,7 +307,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                className="absolute left-0 mt-2 w-56 overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-card dark:border-steel-700 dark:bg-steel-900"
+                className="absolute end-0 mt-2 w-56 overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-card dark:border-steel-700 dark:bg-steel-900"
               >
                 <div className="border-b border-steel-100 px-4 py-3 dark:border-steel-800">
                   <p className="text-sm font-bold text-steel-800 dark:text-steel-100">
@@ -277,13 +322,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                 </div>
                 {isDemoMode() && (
                   <button
+                    type="button"
                     onClick={async () => {
                       const ok = await confirm({
-                        title: "إعادة ضبط البيانات",
-                        message:
-                          "إعادة ضبط كل بيانات العرض التجريبي؟ سيتم تسجيل الخروج.",
+                        title: t("topbar.resetDemoTitle"),
+                        message: t("topbar.resetDemoMessage"),
                         danger: true,
-                        confirmLabel: "إعادة الضبط",
+                        confirmLabel: t("topbar.resetDemoConfirm"),
                       });
                       if (!ok) return;
                       resetAllDemoData();
@@ -298,10 +343,11 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                     className="flex w-full items-center gap-2 border-b border-steel-100 px-4 py-3 text-sm font-semibold text-steel-600 transition-colors hover:bg-steel-50 dark:border-steel-800 dark:text-steel-300 dark:hover:bg-steel-800"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    إعادة ضبط Demo
+                    {t("topbar.resetDemo")}
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => {
                     logout();
                     navigate("/login");
@@ -309,7 +355,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                   className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/10"
                 >
                   <LogOut className="h-4 w-4" />
-                  تسجيل الخروج
+                  {t("common.logout")}
                 </button>
               </motion.div>
             )}

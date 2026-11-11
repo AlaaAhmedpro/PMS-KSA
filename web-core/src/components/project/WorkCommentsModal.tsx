@@ -7,6 +7,7 @@ import { useAuth } from "../../store/AuthContext";
 import { useHierarchy } from "../../store/HierarchyStore";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
+import { useLocale } from "../../store/LocaleContext";
 import type { WorkEntityType } from "../../models/domain";
 
 function formatDateTime(iso: string): string {
@@ -35,6 +36,7 @@ export function WorkCommentsModal({
   entityId: string;
   title: string;
 }) {
+  const { t } = useLocale();
   const {
     workComments,
     addWorkComment,
@@ -67,17 +69,17 @@ export function WorkCommentsModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={`التعليقات · ${title}`}
+      title={t("workComments.modalTitle", { title })}
       size="md"
       footer={
         <Button variant="outline" onClick={onClose}>
-          إغلاق
+          {t("common.close")}
         </Button>
       }
     >
       <div className="space-y-4">
         {rows.length === 0 ? (
-          <p className="text-sm text-steel-500">لا تعليقات بعد.</p>
+          <p className="text-sm text-steel-500">{t("workComments.empty")}</p>
         ) : (
           <ul className="space-y-3">
             {rows.map((c) => {
@@ -95,11 +97,15 @@ export function WorkCommentsModal({
                         {author}
                       </p>
                       <p className="mt-0.5 text-[11px] tabular-nums text-steel-400">
-                        أُضيف في {formatDateTime(c.createdAt)}
+                        {t("workComments.addedAt", {
+                          date: formatDateTime(c.createdAt),
+                        })}
                         {c.updatedAt ? (
                           <>
                             <span className="mx-1.5 text-steel-300">·</span>
-                            عُدّل {formatDateTime(c.updatedAt)}
+                            {t("workComments.editedAt", {
+                              date: formatDateTime(c.updatedAt),
+                            })}
                           </>
                         ) : null}
                       </p>
@@ -109,8 +115,8 @@ export function WorkCommentsModal({
                         <button
                           type="button"
                           className="inline-flex h-7 w-7 items-center justify-center rounded text-steel-400 hover:bg-brand-500/10 hover:text-brand-600"
-                          aria-label="تعديل التعليق"
-                          title="تعديل"
+                          aria-label={t("workComments.editAria")}
+                          title={t("common.edit")}
                           onClick={() => {
                             setEditingId(c.id);
                             setEditText(c.text);
@@ -121,14 +127,14 @@ export function WorkCommentsModal({
                         <button
                           type="button"
                           className="inline-flex h-7 w-7 items-center justify-center rounded text-steel-400 hover:bg-red-50 hover:text-red-600"
-                          aria-label="حذف التعليق"
-                          title="حذف"
+                          aria-label={t("workComments.deleteAria")}
+                          title={t("common.delete")}
                           onClick={async () => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف هذا التعليق؟",
+                              title: t("common.confirmDeleteTitle"),
+                              message: t("workComments.deleteMessage"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("common.delete"),
                             });
                             if (ok) removeWorkComment(c.id);
                           }}
@@ -155,7 +161,7 @@ export function WorkCommentsModal({
                             setEditText("");
                           }}
                         >
-                          حفظ التعديل
+                          {t("workComments.saveEdit")}
                         </Button>
                         <Button
                           size="sm"
@@ -165,7 +171,7 @@ export function WorkCommentsModal({
                             setEditText("");
                           }}
                         >
-                          إلغاء
+                          {t("common.cancel")}
                         </Button>
                       </div>
                     </div>
@@ -182,11 +188,11 @@ export function WorkCommentsModal({
 
         {canManage && user ? (
           <div className="space-y-2 border-t border-steel-100 pt-3 dark:border-steel-800">
-            <Field label="تعليق جديد">
+            <Field label={t("workComments.newComment")}>
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="اكتب تعليقاً مختصراً"
+                placeholder={t("workComments.placeholder")}
               />
             </Field>
             <Button
@@ -203,7 +209,7 @@ export function WorkCommentsModal({
                 setDraft("");
               }}
             >
-              إضافة تعليق
+              {t("workComments.addComment")}
             </Button>
           </div>
         ) : null}

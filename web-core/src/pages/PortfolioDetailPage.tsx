@@ -13,11 +13,6 @@ import { useAuth } from "../store/AuthContext";
 import { useData } from "../store/DataStore";
 import { useCan } from "../store/RbacContext";
 import {
-  GOVERNANCE_LABELS,
-  PORTFOLIO_HEALTH_LABELS,
-  PORTFOLIO_PRIORITY_LABELS,
-  PORTFOLIO_STATUS_LABELS,
-  PORTFOLIO_TYPE_LABELS,
   budgetVariance,
   normalizePortfolio,
   remainingBudget,
@@ -39,51 +34,33 @@ import {
   collectStrategicEntities,
   findEntityName,
 } from "../lib/strategicEntities";
-import {
-  entityLabelAr,
-  getRelationshipDef,
-} from "../lib/relationshipRules";
+import { getRelationshipDef } from "../lib/relationshipRules";
 import {
   initiativesForPortfolio,
   programsForInitiative,
   programsForPortfolio,
   projectsForPortfolio,
 } from "../lib/hierarchyLinks";
-import { PROJECT_STATUS_LABELS } from "../lib/constants";
 import { PortfolioStatusBadge } from "../components/portfolio/PortfolioStatusBadge";
 import { PortfolioLifecycleStepper } from "../components/portfolio/PortfolioLifecycleStepper";
+import { useLocale } from "../store/LocaleContext";
+import {
+  entityTypeLabel,
+  labelOf,
+  priorityLabel,
+  projectStatusLabel,
+} from "../i18n/label";
 import { cn } from "../lib/cn";
 
-const PROJECT_PRIORITY_LABELS: Record<string, string> = {
-  low: "منخفضة",
-  normal: "عادية",
-  high: "عالية",
-  critical: "حرجة",
-};
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
-const PROJECT_STATUS_BADGE: Record<string, string> = {
-  draft:
-    "border-steel-200 bg-steel-50 text-steel-600 dark:border-steel-700 dark:bg-steel-800/50 dark:text-steel-300",
-  planned:
-    "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300",
-  active:
-    "border-brand-200 bg-brand-500/10 text-brand-700 dark:border-brand-800 dark:text-brand-300",
-  on_hold:
-    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
-  completed:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
-  cancelled:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
-};
-
-function projectLinkLabel(link: "direct" | "via_program" | "both"): string {
-  if (link === "direct") return "مباشر";
-  if (link === "via_program") return "عبر برنامج";
-  return "مباشر وعبر برنامج";
+function projectLinkLabel(t: TFn, link: "direct" | "via_program" | "both"): string {
+  return t(`portfolioDetail.projectLink.${link}`);
 }
 
-function formatMoney(amount: number, currency?: string): string {
-  const unit = currency === "AED" ? "د.إ" : "ر.س";
+function formatMoney(t: TFn, amount: number, currency?: string): string {
+  const unit =
+    currency === "AED" ? t("common.currencyAed") : t("common.currencySar");
   return `${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -95,27 +72,14 @@ function pctOf(part: number, whole: number): number {
   return Math.round((part / whole) * 1000) / 10;
 }
 
-const RISK_SEVERITY_LABELS: Record<string, string> = {
-  low: "منخفضة",
-  medium: "متوسطة",
-  high: "عالية",
-  critical: "حرجة",
-};
+const RISK_STATUS_FLOW = ["open", "mitigating", "closed"] as const;
+type RiskStatusFlow = (typeof RISK_STATUS_FLOW)[number];
 
 const RISK_SEVERITY_BADGE: Record<string, string> = {
   low: "border-steel-200 bg-steel-50 text-steel-600",
   medium: "border-sky-200 bg-sky-50 text-sky-700",
   high: "border-amber-200 bg-amber-50 text-amber-800",
   critical: "border-red-200 bg-red-50 text-red-700",
-};
-
-const RISK_STATUS_FLOW = ["open", "mitigating", "closed"] as const;
-type RiskStatusFlow = (typeof RISK_STATUS_FLOW)[number];
-
-const RISK_STATUS_LABELS: Record<RiskStatusFlow, string> = {
-  open: "مفتوحة",
-  mitigating: "قيد المعالجة",
-  closed: "مغلقة",
 };
 
 const RISK_STATUS_BADGE: Record<RiskStatusFlow, string> = {
@@ -128,18 +92,26 @@ const BENEFIT_STATUS_FLOW = ["planned", "in_progress", "realized"] as const;
 type BenefitStatusFlow = (typeof BENEFIT_STATUS_FLOW)[number];
 type BenefitStatusAll = BenefitStatusFlow | "deferred";
 
-const BENEFIT_STATUS_LABELS: Record<BenefitStatusAll, string> = {
-  planned: "مخططة",
-  in_progress: "قيد التحقق",
-  realized: "محققة",
-  deferred: "مؤجلة",
-};
-
 const BENEFIT_STATUS_BADGE: Record<BenefitStatusAll, string> = {
   planned: "border-steel-200 bg-steel-50 text-steel-600",
   in_progress: "border-sky-200 bg-sky-50 text-sky-700",
   realized: "border-emerald-200 bg-emerald-50 text-emerald-700",
   deferred: "border-amber-200 bg-amber-50 text-amber-800",
+};
+
+const PROJECT_STATUS_BADGE: Record<string, string> = {
+  draft:
+    "border-steel-200 bg-steel-50 text-steel-600 dark:border-steel-700 dark:bg-steel-800/50 dark:text-steel-300",
+  planned:
+    "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300",
+  active:
+    "border-brand-200 bg-brand-500/10 text-brand-700 dark:border-brand-800 dark:text-brand-300",
+  on_hold:
+    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-steel-950/40 dark:text-amber-200",
+  completed:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
+  cancelled:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
 };
 
 function TinyBadge({
@@ -240,7 +212,7 @@ type TimelineRow = {
   text: string;
 };
 
-function riskTimeline(
+function riskTimeline(t: TFn, 
   items: Array<{
     title: string;
     status: string;
@@ -266,17 +238,22 @@ function riskTimeline(
           },
         ];
     for (const e of events) {
-      const from =
-        RISK_STATUS_LABELS[e.from as RiskStatusFlow] ?? e.from ?? "";
-      const to = RISK_STATUS_LABELS[e.to as RiskStatusFlow] ?? e.to ?? "";
+      const from = e.from
+        ? labelOf(t, "portfolio.risk.status", e.from)
+        : "";
+      const to = e.to ? labelOf(t, "portfolio.risk.status", e.to) : "";
       rows.push({
         id: e.id,
         at: e.at,
         actorUserId: e.actorUserId,
         text:
           e.kind === "created"
-            ? `أُضيفت المخاطرة «${item.title}»`
-            : `تغيّرت حالة «${item.title}» من ${from} إلى ${to}`,
+            ? t("portfolioDetail.k018", { title: item.title })
+            : t("portfolioDetail.k019", {
+                title: item.title,
+                from,
+                to,
+              }),
       });
     }
   }
@@ -284,6 +261,7 @@ function riskTimeline(
 }
 
 function benefitTimeline(
+  t: TFn,
   items: Array<{
     title: string;
     status: string;
@@ -307,17 +285,22 @@ function benefitTimeline(
           },
         ];
     for (const e of events) {
-      const from =
-        BENEFIT_STATUS_LABELS[e.from as BenefitStatusAll] ?? e.from ?? "";
-      const to = BENEFIT_STATUS_LABELS[e.to as BenefitStatusAll] ?? e.to ?? "";
+      const from = e.from
+        ? labelOf(t, "portfolio.benefit.status", e.from)
+        : "";
+      const to = e.to ? labelOf(t, "portfolio.benefit.status", e.to) : "";
       rows.push({
         id: e.id,
         at: e.at,
         actorUserId: e.actorUserId,
         text:
           e.kind === "created"
-            ? `أُضيفت المنفعة «${item.title}»`
-            : `تغيّرت حالة «${item.title}» من ${from} إلى ${to}`,
+            ? t("portfolioDetail.k020", { title: item.title })
+            : t("portfolioDetail.k019", {
+                title: item.title,
+                from,
+                to,
+              }),
       });
     }
   }
@@ -325,14 +308,16 @@ function benefitTimeline(
 }
 
 function ChangeTimeline({
+  t,
   rows,
   actorName,
 }: {
+  t: TFn;
   rows: TimelineRow[];
   actorName: (id?: string) => string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-steel-400">لا تغييرات مسجّلة.</p>;
+    return <p className="text-sm text-steel-400">{t("portfolioDetail.timeline.empty")}</p>;
   }
   return (
     <ol className="relative space-y-3 border-s border-steel-200 ps-4 dark:border-steel-700">
@@ -357,36 +342,20 @@ function ChangeTimeline({
   );
 }
 
-const TABS = [
-  { id: "overview", label: "نظرة عامة" },
-  { id: "strategy", label: "الاستراتيجية" },
-  { id: "structure", label: "الهيكل والعلاقات" },
-  { id: "programs", label: "البرامج والمبادرات" },
-  { id: "projects", label: "المشاريع" },
-  { id: "financials", label: "المالية" },
-  { id: "risks", label: "المخاطر والمنافع" },
-  { id: "governance", label: "الحوكمة والاعتماد" },
-  { id: "history", label: "السجل" },
-] as const;
 
-type TabId = (typeof TABS)[number]["id"];
-
-const ACTION_LABELS: Record<PortfolioWorkflowAction, string> = {
-  submit: "إرسال للمراجعة",
-  start_review: "بدء المراجعة",
-  return: "إعادة للتعديل",
-  recommend_approve: "التوصية بالاعتماد",
-  approve: "اعتماد",
-  reject: "رفض",
-  activate: "تفعيل",
-  suspend: "تعليق",
-  resume: "استئناف",
-  close: "إغلاق",
-  archive: "أرشفة",
-  resubmit: "إعادة الإرسال",
-};
+type TabId =
+  | "overview"
+  | "strategy"
+  | "structure"
+  | "programs"
+  | "projects"
+  | "financials"
+  | "risks"
+  | "governance"
+  | "history";
 
 export function PortfolioDetailPage() {
+  const { t } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const {
@@ -411,7 +380,30 @@ export function PortfolioDetailPage() {
   const { departments } = useData();
   const can = useCan();
   const { policy, profileLabel, workflowLabel } = useOrgPortfolioPolicy();
-  const [tab, setTab] = useState<TabId>("overview");
+  
+  const TABS = useMemo(
+    () => [
+      { id: "overview" as const, label: t("portfolioDetail.tab.overview") },
+      { id: "strategy" as const, label: t("portfolioDetail.tab.strategy") },
+      { id: "structure" as const, label: t("portfolioDetail.tab.structure") },
+      { id: "programs" as const, label: t("portfolioDetail.tab.programs") },
+      { id: "projects" as const, label: t("portfolioDetail.tab.projects") },
+      { id: "financials" as const, label: t("portfolioDetail.tab.financials") },
+      { id: "risks" as const, label: t("portfolioDetail.tab.risks") },
+      { id: "governance" as const, label: t("portfolioDetail.tab.governance") },
+      { id: "history" as const, label: t("portfolioDetail.tab.history") },
+    ],
+    [t],
+  );
+  const actionLabel = (action: PortfolioWorkflowAction | string) =>
+    t(`portfolio.action.${action}`);
+  const riskSeverityLabel = (id: string) =>
+    labelOf(t, "portfolio.risk.severity", id);
+  const riskStatusLabel = (id: string) =>
+    labelOf(t, "portfolio.risk.status", id);
+  const benefitStatusLabel = (id: string) =>
+    labelOf(t, "portfolio.benefit.status", id);
+const [tab, setTab] = useState<TabId>("overview");
   const [reasonOpen, setReasonOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PortfolioWorkflowAction | null>(null);
   const [reason, setReason] = useState("");
@@ -616,9 +608,9 @@ export function PortfolioDetailPage() {
   if (!portfolio) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">المحفظة غير موجودة.</p>
+        <p className="text-sm text-steel-500">{t("portfolioDetail.k088")}</p>
         <Button className="mt-3" onClick={() => navigate("/portfolios")}>
-          العودة للسجل
+          {t("portfolioDetail.ui.backToList")}
         </Button>
       </Card>
     );
@@ -678,7 +670,7 @@ export function PortfolioDetailPage() {
       return;
     }
     const res = runPortfolioWorkflow(portfolio.id, action, { actorUserId: user?.id });
-    if (!res.ok) setActionError(res.reason || "تعذّر تنفيذ الإجراء.");
+    if (!res.ok) setActionError(res.reason || t("portfolioDetail.k039"));
     else setActionError("");
   };
 
@@ -688,7 +680,7 @@ export function PortfolioDetailPage() {
       actorUserId: user?.id,
       reason,
     });
-    if (!res.ok) setActionError(res.reason || "تعذّر تنفيذ الإجراء.");
+    if (!res.ok) setActionError(res.reason || t("portfolioDetail.k039"));
     else {
       setActionError("");
       setReasonOpen(false);
@@ -700,14 +692,14 @@ export function PortfolioDetailPage() {
     <div className="space-y-4">
       <PageHeader
         title={portfolio.name}
-        subtitle={`${portfolio.code} · ${PORTFOLIO_PRIORITY_LABELS[portfolio.priority || "medium"]} · ${profileLabel} / ${workflowLabel}`}
+        subtitle={`${portfolio.code} · ${priorityLabel(t, portfolio.priority || "medium")} · ${profileLabel} / ${workflowLabel}`}
         icon={<Briefcase className="h-6 w-6" />}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <PortfolioStatusBadge status={portfolio.status} className="text-xs" />
             {canEdit ? (
               <Button variant="outline" onClick={() => navigate(`/portfolios/${portfolio.id}/edit`)}>
-                تعديل
+                {t("portfolioDetail.ui.edit")}
               </Button>
             ) : null}
             {actions.map((a) => (
@@ -716,7 +708,7 @@ export function PortfolioDetailPage() {
                 variant={a === "reject" || a === "close" ? "danger" : a === "approve" || a === "activate" ? "primary" : "outline"}
                 onClick={() => runAction(a)}
               >
-                {ACTION_LABELS[a]}
+                {actionLabel(a)}
               </Button>
             ))}
           </div>
@@ -724,13 +716,13 @@ export function PortfolioDetailPage() {
       />
 
       <Card className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Meta label="المالك" value={users.find((u) => u.id === portfolio.ownerUserId)?.name ?? "—"} />
-        <Meta label="الراعي" value={users.find((u) => u.id === portfolio.sponsorUserId)?.name ?? "—"} />
+        <Meta label={t("portfolioDetail.k040")} value={users.find((u) => u.id === portfolio.ownerUserId)?.name ?? "—"} />
+        <Meta label={t("portfolioDetail.k041")} value={users.find((u) => u.id === portfolio.sponsorUserId)?.name ?? "—"} />
         <Meta
-          label="الميزانية المعتمدة"
-          value={`${approved.toLocaleString("en-US")} ${portfolio.currency === "AED" ? "د.إ" : "ر.س"}`}
+          label={t("portfolioDetail.k042")}
+          value={formatMoney(t, approved, portfolio.currency)}
         />
-        <Meta label="الصحة" value={PORTFOLIO_HEALTH_LABELS[portfolio.health || "unknown"]} />
+        <Meta label={t("portfolioDetail.k043")} value={labelOf(t, "portfolio.health", portfolio.health || "unknown")} />
       </Card>
 
       <PortfolioLifecycleStepper status={portfolio.status} policy={policy} />
@@ -764,59 +756,59 @@ export function PortfolioDetailPage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="space-y-3 p-4 lg:col-span-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-extrabold">الهوية والوصف</h3>
+                <h3 className="text-sm font-extrabold">{t("portfolioDetail.k091")}</h3>
                 <PortfolioStatusBadge status={portfolio.status} />
               </div>
               <p className="text-sm text-steel-600 dark:text-steel-300">
-                {portfolio.description || "لا يوجد وصف."}
+                {portfolio.description || t("portfolioDetail.k044")}
               </p>
               {portfolio.expectedBenefits ? (
                 <p className="text-xs text-steel-500">
-                  المنافع المتوقعة: {portfolio.expectedBenefits}
+                  {t("portfolioDetail.ui.expectedBenefits")} {portfolio.expectedBenefits}
                 </p>
               ) : null}
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <p>
-                  <span className="text-steel-400">الرمز: </span>
+                  <span className="text-steel-400">{t("portfolioDetail.ui.code")}</span>
                   {portfolio.code || "—"}
                 </p>
                 <p>
-                  <span className="text-steel-400">النوع: </span>
-                  {PORTFOLIO_TYPE_LABELS[portfolio.portfolioType || "other"]}
+                  <span className="text-steel-400">{t("portfolioDetail.ui.type")}</span>
+                  {labelOf(t, "portfolio.type", portfolio.portfolioType || "other")}
                 </p>
                 <p>
-                  <span className="text-steel-400">الأولوية: </span>
-                  {PORTFOLIO_PRIORITY_LABELS[portfolio.priority || "medium"]}
+                  <span className="text-steel-400">{t("portfolioDetail.ui.priority")}</span>
+                  {priorityLabel(t, portfolio.priority || "medium")}
                 </p>
                 <p>
-                  <span className="text-steel-400">السنة المالية: </span>
+                  <span className="text-steel-400">{t("portfolioDetail.ui.fiscalYear")}</span>
                   {portfolio.fiscalYear || "—"}
                 </p>
                 <p>
-                  <span className="text-steel-400">الحوكمة: </span>
-                  {GOVERNANCE_LABELS[portfolio.governanceModel || "pmo_central"]}
+                  <span className="text-steel-400">{t("portfolioDetail.ui.governance")}</span>
+                  {labelOf(t, "governance", portfolio.governanceModel || "pmo_central")}
                 </p>
                 <p>
-                  <span className="text-steel-400">الإدارة: </span>
+                  <span className="text-steel-400">{t("portfolioDetail.ui.department")}</span>
                   {departments.find((d) => d.id === portfolio.departmentId)?.name ??
                     "—"}
                 </p>
                 <p className="sm:col-span-2">
-                  <span className="text-steel-400">الجدول: </span>
+                  <span className="text-steel-400">{t("portfolioDetail.ui.schedule")}</span>
                   {portfolio.startDate || "—"} → {portfolio.endDate || "—"}
                 </p>
               </div>
             </Card>
 
             <Card className="space-y-3 p-4">
-              <h3 className="text-sm font-extrabold">الصحة والمخاطر</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k099")}</h3>
               <p className="text-sm font-semibold">
-                {PORTFOLIO_HEALTH_LABELS[portfolio.health || "unknown"]}
+                {labelOf(t, "portfolio.health", portfolio.health || "unknown")}
               </p>
               <p className="text-xs text-steel-500">
-                مخاطر مفتوحة: {openRisks.length}
+                {t("portfolioDetail.ui.openRisks")} {openRisks.length}
                 {criticalRisks.length > 0
-                  ? ` · منها ${criticalRisks.length} عالية/حرجة`
+                  ? t("pf.criticalOf", { count: criticalRisks.length })
                   : ""}
               </p>
               {criticalRisks.length > 0 ? (
@@ -832,7 +824,7 @@ export function PortfolioDetailPage() {
                 </ul>
               ) : (
                 <p className="text-[11px] text-steel-400">
-                  لا مخاطر عالية مفتوحة حالياً.
+                  {t("portfolioDetail.ui.noHighRisks")}
                 </p>
               )}
               <button
@@ -840,36 +832,36 @@ export function PortfolioDetailPage() {
                 className="text-[11px] font-bold text-brand-700 hover:underline"
                 onClick={() => setTab("risks")}
               >
-                عرض المخاطر والمنافع
+                {t("portfolioDetail.ui.viewRisksBenefits")}
               </button>
             </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="space-y-2 p-4">
-              <h3 className="text-sm font-extrabold">ملخص مالي</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k102")}</h3>
               <div className="grid gap-2 text-xs">
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">معتمد</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k103")}</span>
                   <span className="font-bold tabular-nums">
                     {approved.toLocaleString("en-US")}{" "}
-                    {portfolio.currency === "AED" ? "د.إ" : "ر.س"}
+                    {portfolio.currency === "AED" ? t("portfolioDetail.k008") : t("portfolioDetail.k009")}
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">منصرف</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k104")}</span>
                   <span className="font-bold tabular-nums">
                     {actual.toLocaleString("en-US")}
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">متبقي</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k105")}</span>
                   <span className="font-bold tabular-nums">
                     {remaining.toLocaleString("en-US")}
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">مخطط</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k106")}</span>
                   <span className="tabular-nums">
                     {(portfolio.plannedBudgetSar || 0).toLocaleString("en-US")}
                   </span>
@@ -880,19 +872,24 @@ export function PortfolioDetailPage() {
                 className="text-[11px] font-bold text-brand-700 hover:underline"
                 onClick={() => setTab("financials")}
               >
-                تفاصيل المالية
+                {t("portfolioDetail.ui.financialDetails")}
               </button>
             </Card>
 
             <Card className="space-y-2 p-4">
-              <h3 className="text-sm font-extrabold">الهيكل المختصر</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k108")}</h3>
               <div className="grid gap-1.5 text-xs">
-                <p>برامج: {pfPrograms.length}</p>
-                <p>مبادرات: {pfInitiatives.length}</p>
-                <p>مشاريع (بدون تكرار): {uniqueProjects.length}</p>
+                <p>{t("portfolioDetail.ui.programsCount")} {pfPrograms.length}</p>
+                <p>{t("portfolioDetail.ui.initiativesCount")} {pfInitiatives.length}</p>
+                <p>{t("portfolioDetail.ui.projectsUnique")} {uniqueProjects.length}</p>
                 <p className="text-steel-400">
-                  مباشر: {directOnlyCount} · عبر برنامج: {viaProgramOnlyCount}
-                  {bothLinkCount ? ` · مشترك: ${bothLinkCount}` : ""}
+                  {t("pf.linkBreakdown", {
+                    direct: directOnlyCount,
+                    via: viaProgramOnlyCount,
+                  })}
+                  {bothLinkCount
+                    ? t("pf.linkBoth", { count: bothLinkCount })
+                    : ""}
                 </p>
               </div>
               <button
@@ -900,14 +897,14 @@ export function PortfolioDetailPage() {
                 className="text-[11px] font-bold text-brand-700 hover:underline"
                 onClick={() => setTab("structure")}
               >
-                الهيكل والعلاقات
+                {t("portfolioDetail.ui.linkStructure")}
               </button>
             </Card>
 
             <Card className="space-y-2 p-4">
-              <h3 className="text-sm font-extrabold">المواءمة الاستراتيجية</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k110")}</h3>
               {linkedObjectives.length === 0 ? (
-                <p className="text-xs text-steel-400">لا أهداف مرتبطة.</p>
+                <p className="text-xs text-steel-400">{t("portfolioDetail.k111")}</p>
               ) : (
                 <ul className="space-y-1.5">
                   {linkedObjectives.slice(0, 3).map((o) => (
@@ -920,7 +917,7 @@ export function PortfolioDetailPage() {
                   ))}
                   {linkedObjectives.length > 3 ? (
                     <li className="text-[11px] text-steel-400">
-                      و{linkedObjectives.length - 3} أخرى
+                      {t("pf.andMore", { count: linkedObjectives.length - 3 })}
                     </li>
                   ) : null}
                 </ul>
@@ -930,7 +927,7 @@ export function PortfolioDetailPage() {
                 className="text-[11px] font-bold text-brand-700 hover:underline"
                 onClick={() => setTab("strategy")}
               >
-                الاستراتيجية
+                {t("portfolioDetail.ui.strategy")}
               </button>
             </Card>
           </div>
@@ -938,16 +935,16 @@ export function PortfolioDetailPage() {
           <Card className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-steel-500">
               <p>
-                <span className="text-steel-400">آخر تحديث: </span>
+                <span className="text-steel-400">{t("portfolioDetail.ui.lastUpdate")}</span>
                 {portfolio.updatedAt?.slice(0, 16)?.replace("T", " ") || "—"}
               </p>
               <p className="mt-1">
-                <span className="text-steel-400">آخر نشاط: </span>
+                <span className="text-steel-400">{t("portfolioDetail.ui.lastActivity")}</span>
                 {lastAudit
-                  ? `${ACTION_LABELS[lastAudit.action as PortfolioWorkflowAction] || lastAudit.action}${
+                  ? `${actionLabel(lastAudit.action as PortfolioWorkflowAction) || lastAudit.action}${
                       lastAudit.toStatus ? ` → ${lastAudit.toStatus}` : ""
                     } · ${lastAudit.createdAt.slice(0, 16).replace("T", " ")}`
-                  : "لا أحداث مسجّلة"}
+                  : t("portfolioDetail.k045")}
               </p>
             </div>
             <button
@@ -955,7 +952,7 @@ export function PortfolioDetailPage() {
               className="text-[11px] font-bold text-brand-700 hover:underline"
               onClick={() => setTab("history")}
             >
-              فتح السجل
+              {t("portfolioDetail.ui.openHistory")}
             </button>
           </Card>
         </div>
@@ -965,7 +962,7 @@ export function PortfolioDetailPage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-extrabold text-steel-800 dark:text-steel-100">
-              الاستراتيجية والمواءمة
+              {t("portfolioDetail.ui.strategyAlignment")}
             </h3>
             {canEdit && availableObjectivesToLink.length > 0 ? (
               <div className="flex flex-wrap items-end gap-2">
@@ -973,7 +970,7 @@ export function PortfolioDetailPage() {
                   <SearchableSelect
                     value={linkObjectiveId}
                     onChange={setLinkObjectiveId}
-                    placeholder="اختر هدفاً للربط…"
+                    placeholder={t("portfolioDetail.k046")}
                     truncateLabel={false}
                     options={availableObjectivesToLink.map((o) => ({
                       value: o.id,
@@ -998,7 +995,7 @@ export function PortfolioDetailPage() {
                     setLinkObjectiveId("");
                   }}
                 >
-                  ربط هدف
+                  {t("portfolioDetail.ui.linkObjective")}
                 </Button>
               </div>
             ) : null}
@@ -1006,20 +1003,20 @@ export function PortfolioDetailPage() {
 
           <Card className="grid gap-3 p-3 sm:grid-cols-3">
             <Meta
-              label="أهداف مرتبطة"
+              label={t("portfolioDetail.k047")}
               value={String(linkedObjectives.length)}
             />
             <Meta
-              label="السنة المالية"
+              label={t("portfolioDetail.k048")}
               value={String(portfolio.fiscalYear || "—")}
             />
             <Meta
-              label="المواءمة عند التقديم"
+              label={t("portfolioDetail.k049")}
               value={
                 policy.requireObjectivesOnSubmit ||
                 policy.requiredAtSubmit.includes("objectiveIds")
-                  ? "إلزامية"
-                  : "اختيارية"
+                  ? t("portfolioDetail.k050")
+                  : t("portfolioDetail.k051")
               }
             />
           </Card>
@@ -1027,17 +1024,17 @@ export function PortfolioDetailPage() {
           {policy.requireObjectivesOnSubmit &&
           linkedObjectives.length === 0 ? (
             <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              سياسة المنظمة تتطلب ربط هدف استراتيجي واحد على الأقل قبل التقديم.
+              {t("pf.policyNeedObjective")}
             </p>
           ) : null}
 
           <Card className="overflow-hidden p-0">
             <div className="border-b border-steel-100 px-4 py-3 dark:border-steel-800">
-              <h4 className="text-sm font-extrabold">الأهداف الاستراتيجية</h4>
+              <h4 className="text-sm font-extrabold">{t("portfolioDetail.k119")}</h4>
             </div>
             {linkedObjectives.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-steel-500">
-                لا توجد أهداف مرتبطة بهذه المحفظة.
+                {t("portfolioDetail.k120")}
               </p>
             ) : (
               <ul className="divide-y divide-steel-100 dark:divide-steel-800">
@@ -1054,7 +1051,7 @@ export function PortfolioDetailPage() {
                         {o.description || "—"}
                       </p>
                       <p className="mt-1 text-[11px] text-steel-400">
-                        السنة المستهدفة: {o.targetYear}
+                        {t("pf.targetYear", { year: o.targetYear })}
                       </p>
                     </div>
                     {canEdit ? (
@@ -1073,7 +1070,7 @@ export function PortfolioDetailPage() {
                           )
                         }
                       >
-                        فك الارتباط
+                        {t("portfolioDetail.ui.unlink")}
                       </Button>
                     ) : null}
                   </li>
@@ -1084,13 +1081,13 @@ export function PortfolioDetailPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="space-y-2 p-4">
-              <h4 className="text-sm font-extrabold">المنافع المتوقعة</h4>
+              <h4 className="text-sm font-extrabold">{t("portfolioDetail.k122")}</h4>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-steel-600 dark:text-steel-300">
                 {portfolio.expectedBenefits?.trim() || "—"}
               </p>
             </Card>
             <Card className="space-y-2 p-4">
-              <h4 className="text-sm font-extrabold">مؤشرات النجاح</h4>
+              <h4 className="text-sm font-extrabold">{t("portfolioDetail.k123")}</h4>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-steel-600 dark:text-steel-300">
                 {portfolio.successMetrics?.trim() || "—"}
               </p>
@@ -1102,13 +1099,13 @@ export function PortfolioDetailPage() {
       {tab === "structure" ? (
         <Card className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-extrabold">علاقات المحفظة</h3>
+            <h3 className="text-sm font-extrabold">{t("portfolioDetail.k124")}</h3>
             {perm.managePortfolio ? (
-              <Button onClick={() => setRelOpen(true)}>إضافة علاقة</Button>
+              <Button onClick={() => setRelOpen(true)}>{t("portfolioDetail.k125")}</Button>
             ) : null}
           </div>
           {pfRels.length === 0 ? (
-            <p className="text-sm text-steel-400">لا علاقات نشطة.</p>
+            <p className="text-sm text-steel-400">{t("portfolioDetail.k126")}</p>
           ) : (
             <ul className="space-y-2">
               {pfRels.map((r) => {
@@ -1127,7 +1124,7 @@ export function PortfolioDetailPage() {
                         {def.nameAr}
                       </span>
                       <br />
-                      {entityLabelAr(otherType)}:{" "}
+                      {entityTypeLabel(t, otherType)}:{" "}
                       {findEntityName(entities, otherType, otherId)}
                     </span>
                     {perm.managePortfolio ? (
@@ -1137,11 +1134,11 @@ export function PortfolioDetailPage() {
                         onClick={() =>
                           removeRelationship(r.id, {
                             userId: user?.id,
-                            reason: "إزالة من تفاصيل المحفظة",
+                            reason: t("portfolioDetail.k052"),
                           })
                         }
                       >
-                        إزالة العلاقة
+                        {t("portfolioDetail.ui.removeRelationship")}
                       </Button>
                     ) : null}
                   </li>
@@ -1150,9 +1147,9 @@ export function PortfolioDetailPage() {
             </ul>
           )}
           <p className="text-[11px] text-steel-400">
-            إزالة العلاقة لا تحذف الكيان المرتبط. التسلسل الكامل متاح في{" "}
+            {t("pf.removeRelNote")}{" "}
             <Link to="/strategy" className="text-brand-700 hover:underline">
-              النظرة الاستراتيجية
+              {t("pf.strategicOverview")}
             </Link>
             .
           </p>
@@ -1163,7 +1160,7 @@ export function PortfolioDetailPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="overflow-hidden p-0">
             <div className="border-b border-steel-100 px-4 py-3 text-sm font-extrabold dark:border-steel-800">
-              البرامج ({pfPrograms.length})
+              {t("pf.programsCount", { count: pfPrograms.length })}
             </div>
             <ul className="divide-y divide-steel-100 dark:divide-steel-800">
               {pfPrograms.map((prg) => {
@@ -1179,9 +1176,9 @@ export function PortfolioDetailPage() {
                       {prg.name}
                     </Link>
                     <p className="text-[11px] text-steel-400">
-                      المبادرة: {initiative?.name ?? "—"}
+                      {t("portfolioDetail.ui.initiative")} {initiative?.name ?? "—"}
                       {" · "}
-                      المدير:{" "}
+                      {t("portfolioDetail.ui.manager")}{" "}
                       {users.find((u) => u.id === prg.managerUserId)?.name ??
                         "—"}
                     </p>
@@ -1189,13 +1186,13 @@ export function PortfolioDetailPage() {
                 );
               })}
               {pfPrograms.length === 0 ? (
-                <li className="px-4 py-6 text-xs text-steel-400">لا برامج مرتبطة.</li>
+                <li className="px-4 py-6 text-xs text-steel-400">{t("portfolioDetail.k129")}</li>
               ) : null}
             </ul>
           </Card>
           <Card className="overflow-hidden p-0">
             <div className="border-b border-steel-100 px-4 py-3 text-sm font-extrabold dark:border-steel-800">
-              المبادرات ({pfInitiatives.length})
+              {t("pf.initiativesCount", { count: pfInitiatives.length })}
             </div>
             <ul className="divide-y divide-steel-100 dark:divide-steel-800">
               {pfInitiatives.map((ini) => {
@@ -1213,9 +1210,9 @@ export function PortfolioDetailPage() {
                       {ini.name}
                     </Link>
                     <p className="text-[11px] text-steel-400">
-                      الهدف: {goals || "—"}
+                      {t("portfolioDetail.ui.goal")} {goals || "—"}
                       {" · "}
-                      البرامج:{" "}
+                      {t("portfolioDetail.ui.programsCount")}{" "}
                       {childPrograms.length
                         ? childPrograms.map((p) => p.name).join(" · ")
                         : "—"}
@@ -1225,7 +1222,7 @@ export function PortfolioDetailPage() {
               })}
               {pfInitiatives.length === 0 ? (
                 <li className="px-4 py-6 text-xs text-steel-400">
-                  لا مبادرات مرتبطة بهذه المحفظة.
+                  {t("portfolioDetail.k128")}
                 </li>
               ) : null}
             </ul>
@@ -1238,32 +1235,32 @@ export function PortfolioDetailPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-4 text-[12px] text-steel-500">
               <span>
-                المشاريع:{" "}
+                {t("pf.projectsLabel")}{" "}
                 <span className="font-bold tabular-nums text-steel-800 dark:text-steel-100">
                   {projectTabSummary.n}
                 </span>
               </span>
               <span>
-                متوسط التقدم:{" "}
+                {t("pf.avgProgress")}{" "}
                 <span className="font-bold tabular-nums text-steel-800 dark:text-steel-100">
                   {projectTabSummary.avg}%
                 </span>
               </span>
               <span>
-                إجمالي الميزانية:{" "}
+                {t("pf.totalBudget")}{" "}
                 <span className="font-bold tabular-nums text-steel-800 dark:text-steel-100">
-                  {formatMoney(projectTabSummary.budget)}
+                  {formatMoney(t, projectTabSummary.budget)}
                 </span>
               </span>
             </div>
             {perm.managePortfolio ? (
-              <Button onClick={() => setRelOpen(true)}>ربط مشروع</Button>
+              <Button onClick={() => setRelOpen(true)}>{t("portfolioDetail.k131")}</Button>
             ) : null}
           </div>
 
           <Card className="grid gap-2 p-3 sm:grid-cols-3">
             <Input
-              placeholder="بحث بالاسم أو الرمز"
+              placeholder={t("portfolioDetail.k053")}
               value={projectQuery}
               onChange={(e) => setProjectQuery(e.target.value)}
             />
@@ -1271,20 +1268,30 @@ export function PortfolioDetailPage() {
               value={projectStatusFilter}
               onChange={setProjectStatusFilter}
               options={[
-                { value: "all", label: "كل الحالات" },
-                ...Object.entries(PROJECT_STATUS_LABELS).map(
-                  ([value, label]) => ({ value, label }),
-                ),
+                { value: "all", label: t("portfolioDetail.k054") },
+                ...(
+                  [
+                    "draft",
+                    "planned",
+                    "active",
+                    "on_hold",
+                    "completed",
+                    "cancelled",
+                  ] as const
+                ).map((value) => ({
+                  value,
+                  label: projectStatusLabel(t, value),
+                })),
               ]}
             />
             <SearchableSelect
               value={projectLinkFilter}
               onChange={setProjectLinkFilter}
               options={[
-                { value: "all", label: "كل أنواع الارتباط" },
-                { value: "direct", label: "مباشر" },
-                { value: "via_program", label: "عبر برنامج" },
-                { value: "both", label: "مباشر وعبر برنامج" },
+                { value: "all", label: t("portfolioDetail.k055") },
+                { value: "direct", label: t("portfolioDetail.k005") },
+                { value: "via_program", label: t("portfolioDetail.k006") },
+                { value: "both", label: t("portfolioDetail.k007") },
               ]}
             />
           </Card>
@@ -1294,14 +1301,14 @@ export function PortfolioDetailPage() {
               <table className="w-full min-w-[960px] text-sm">
                 <thead>
                   <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-                    <th className="px-3 py-2 font-bold">المشروع</th>
-                    <th className="px-3 py-2 font-bold">البرنامج</th>
-                    <th className="px-3 py-2 font-bold">الارتباط</th>
-                    <th className="px-3 py-2 font-bold">الحالة</th>
-                    <th className="px-3 py-2 font-bold">الأولوية</th>
-                    <th className="px-3 py-2 font-bold">المدير</th>
-                    <th className="px-3 py-2 font-bold">التقدم</th>
-                    <th className="px-3 py-2 font-bold">الميزانية</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k132")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k133")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k134")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k135")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k136")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k137")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k138")}</th>
+                    <th className="px-3 py-2 font-bold">{t("portfolioDetail.k139")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1329,7 +1336,7 @@ export function PortfolioDetailPage() {
                           {programName ?? "—"}
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          {projectLinkLabel(p.link)}
+                          {projectLinkLabel(t, p.link)}
                         </td>
                         <td className="px-3 py-2">
                           <span
@@ -1339,11 +1346,11 @@ export function PortfolioDetailPage() {
                                 PROJECT_STATUS_BADGE.draft,
                             )}
                           >
-                            {PROJECT_STATUS_LABELS[p.status] ?? p.status}
+                            {projectStatusLabel(t, p.status) ?? p.status}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          {PROJECT_PRIORITY_LABELS[p.priority] ?? p.priority}
+                          {priorityLabel(t, p.priority) ?? p.priority}
                         </td>
                         <td className="px-3 py-2 text-xs">
                           {users.find((u) => u.id === p.managerUserId)?.name ??
@@ -1365,7 +1372,7 @@ export function PortfolioDetailPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2 tabular-nums text-xs">
-                          {formatMoney(p.budgetSar || 0)}
+                          {formatMoney(t, p.budgetSar || 0)}
                         </td>
                       </tr>
                     );
@@ -1378,9 +1385,7 @@ export function PortfolioDetailPage() {
                       >
                         {uniqueProjects.length === 0
                           ? perm.managePortfolio
-                            ? "لا مشاريع مرتبطة بهذه المحفظة. استخدم زر ربط مشروع لإضافة علاقة."
-                            : "لا مشاريع مرتبطة بهذه المحفظة."
-                          : "لا نتائج مطابقة لعوامل التصفية الحالية."}
+                            ? t("portfolioDetail.k056") : t("portfolioDetail.k057") : t("portfolioDetail.k058")}
                       </td>
                     </tr>
                   ) : null}
@@ -1395,22 +1400,22 @@ export function PortfolioDetailPage() {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="space-y-1 border border-steel-200 p-3 dark:border-steel-700">
-              <p className="text-[10px] font-bold text-steel-400">الميزانية المعتمدة</p>
+              <p className="text-[10px] font-bold text-steel-400">{t("portfolioDetail.k140")}</p>
               <p className="text-base font-extrabold tabular-nums text-steel-800 dark:text-steel-100">
-                {formatMoney(approved, currency)}
+                {formatMoney(t, approved, currency)}
               </p>
             </Card>
             <Card className="space-y-1 border border-steel-200 p-3 dark:border-steel-700">
-              <p className="text-[10px] font-bold text-steel-400">المنصرف الفعلي</p>
+              <p className="text-[10px] font-bold text-steel-400">{t("portfolioDetail.k141")}</p>
               <p className="text-base font-extrabold tabular-nums text-steel-800 dark:text-steel-100">
-                {formatMoney(actual, currency)}
+                {formatMoney(t, actual, currency)}
               </p>
               <p className="text-[11px] tabular-nums text-steel-500">
-                {spendPct}% من المعتمد
+                {spendPct}% {t("portfolioDetail.ui.pctOfApproved")}
               </p>
             </Card>
             <Card className="space-y-1 border border-steel-200 p-3 dark:border-steel-700">
-              <p className="text-[10px] font-bold text-steel-400">المتبقي</p>
+              <p className="text-[10px] font-bold text-steel-400">{t("portfolioDetail.k142")}</p>
               <p
                 className={cn(
                   "text-base font-extrabold tabular-nums",
@@ -1419,12 +1424,12 @@ export function PortfolioDetailPage() {
                     : "text-steel-800 dark:text-steel-100",
                 )}
               >
-                {formatMoney(remaining, currency)}
+                {formatMoney(t, remaining, currency)}
               </p>
             </Card>
             <Card className="space-y-1 border border-steel-200 p-3 dark:border-steel-700">
               <p className="text-[10px] font-bold text-steel-400">
-                الانحراف (منصرف − معتمد)
+                {t("portfolioDetail.ui.varianceLabel")}
               </p>
               <p
                 className={cn(
@@ -1436,24 +1441,24 @@ export function PortfolioDetailPage() {
                       : "text-steel-800 dark:text-steel-100",
                 )}
               >
-                {formatMoney(variance, currency)}
+                {formatMoney(t, variance, currency)}
               </p>
               <p className="text-[11px] tabular-nums text-steel-500">
-                {variancePct}% · عتبة التحذير {policy.varianceWarningPct}%
+                {t("pf.varianceWarn", { pct: variancePct, warn: policy.varianceWarningPct })}
               </p>
             </Card>
           </div>
 
           {varianceWarn ? (
             <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-              انحراف الميزانية يتجاوز عتبة التحذير المعتمدة في سياسة المنشأة (
+              {t("pf.varianceExceed")}
               {policy.varianceWarningPct}%).
             </p>
           ) : null}
 
           <Card className="space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-extrabold">استهلاك الميزانية المعتمدة</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k144")}</h3>
               <span className="text-[11px] tabular-nums text-steel-500">
                 {spendPct}%
               </span>
@@ -1469,29 +1474,29 @@ export function PortfolioDetailPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3 text-xs">
               <div>
-                <p className="text-[10px] font-bold text-steel-400">الميزانية المخططة</p>
+                <p className="text-[10px] font-bold text-steel-400">{t("portfolioDetail.k145")}</p>
                 <p className="font-semibold tabular-nums">
-                  {formatMoney(planned, currency)}
+                  {formatMoney(t, planned, currency)}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-steel-400">
-                  المخصصة للمشاريع
+                  {t("portfolioDetail.ui.allocatedToProjects")}
                 </p>
                 <p className="font-semibold tabular-nums">
-                  {formatMoney(allocated, currency)}
+                  {formatMoney(t, allocated, currency)}
                 </p>
                 <p className="text-[11px] text-steel-500">
-                  {allocatedPct}% من المعتمد
+                  {allocatedPct}% {t("portfolioDetail.ui.pctOfApproved")}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-steel-400">الإنفاق المتوقع</p>
+                <p className="text-[10px] font-bold text-steel-400">{t("portfolioDetail.k147")}</p>
                 <p className="font-semibold tabular-nums">
-                  {formatMoney(forecast, currency)}
+                  {formatMoney(t, forecast, currency)}
                 </p>
                 <p className="text-[11px] text-steel-500">
-                  {forecastPct}% من المعتمد
+                  {forecastPct}% {t("portfolioDetail.ui.pctOfApproved")}
                 </p>
               </div>
             </div>
@@ -1499,11 +1504,11 @@ export function PortfolioDetailPage() {
 
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-100 px-4 py-2.5 dark:border-steel-800">
-              <h3 className="text-sm font-extrabold">تفكيك ميزانيات المشاريع</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k148")}</h3>
               <p className="text-[11px] tabular-nums text-steel-500">
-                منصرف المشاريع {formatMoney(projectsSpentTotal, currency)}
+                {t("pf.projectsSpent", { amount: formatMoney(t, projectsSpentTotal, currency) })}
                 {" · "}
-                إجمالي ميزانياتها {formatMoney(projectsBudgetTotal, currency)}
+                {t("pf.projectsBudgetTotal", { amount: formatMoney(t, projectsBudgetTotal, currency) })}
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -1517,16 +1522,16 @@ export function PortfolioDetailPage() {
                 <thead>
                   <tr className="border-b border-steel-200 bg-steel-50 dark:border-steel-700 dark:bg-steel-800/60">
                     <th className="px-4 py-2.5 text-start text-xs font-bold text-steel-600 dark:text-steel-300">
-                      المشروع
+                      {t("pf.colProject")}
                     </th>
                     <th className="px-4 py-2.5 text-start text-xs font-bold text-steel-600 dark:text-steel-300">
-                      الميزانية
+                      {t("pf.colBudget")}
                     </th>
                     <th className="px-4 py-2.5 text-start text-xs font-bold text-steel-600 dark:text-steel-300">
-                      المنصرف
+                      {t("pf.colSpent")}
                     </th>
                     <th className="px-4 py-2.5 text-start text-xs font-bold text-steel-600 dark:text-steel-300">
-                      الاستهلاك
+                      {t("pf.colBurn")}
                     </th>
                   </tr>
                 </thead>
@@ -1548,10 +1553,10 @@ export function PortfolioDetailPage() {
                         </p>
                       </td>
                       <td className="px-4 py-2.5 text-start align-middle text-xs font-semibold tabular-nums whitespace-nowrap text-steel-800 dark:text-steel-100">
-                        {formatMoney(row.budget, currency)}
+                        {formatMoney(t, row.budget, currency)}
                       </td>
                       <td className="px-4 py-2.5 text-start align-middle text-xs font-semibold tabular-nums whitespace-nowrap text-steel-800 dark:text-steel-100">
-                        {formatMoney(row.spent, currency)}
+                        {formatMoney(t, row.spent, currency)}
                       </td>
                       <td className="px-4 py-2.5 text-start align-middle">
                         <div className="flex max-w-[11rem] items-center gap-2">
@@ -1576,7 +1581,7 @@ export function PortfolioDetailPage() {
                         colSpan={4}
                         className="px-4 py-8 text-center text-steel-400"
                       >
-                        لا مشاريع مرتبطة لعرض تفكيك الميزانية.
+                        {t("pf.budgetEmpty")}
                       </td>
                     </tr>
                   ) : null}
@@ -1587,28 +1592,28 @@ export function PortfolioDetailPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="space-y-2 p-4">
-              <h3 className="text-sm font-extrabold">سياسة المالية</h3>
+              <h3 className="text-sm font-extrabold">{t("portfolioDetail.k152")}</h3>
               <div className="grid gap-2 text-xs">
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">عتبة تحذير الانحراف</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k153")}</span>
                   <span className="font-bold tabular-nums">
                     {policy.varianceWarningPct}%
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">تغيير الميزانية يحتاج اعتماداً</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k154")}</span>
                   <span className="font-bold">
-                    {policy.budgetChangeRequiresApproval ? "نعم" : "لا"}
+                    {policy.budgetChangeRequiresApproval ? t("portfolioDetail.k059") : t("portfolioDetail.k060")}
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">حد الاعتماد المباشر</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k155")}</span>
                   <span className="font-bold tabular-nums">
-                    {formatMoney(policy.budgetApprovalThresholdSar || 0, currency)}
+                    {formatMoney(t, policy.budgetApprovalThresholdSar || 0, currency)}
                   </span>
                 </p>
                 <p className="flex justify-between gap-2">
-                  <span className="text-steel-400">عملة المحفظة</span>
+                  <span className="text-steel-400">{t("portfolioDetail.k156")}</span>
                   <span className="font-bold">{currency}</span>
                 </p>
               </div>
@@ -1616,7 +1621,7 @@ export function PortfolioDetailPage() {
 
             <Card className="space-y-3 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-extrabold">ملاحظات الميزانية</h3>
+                <h3 className="text-sm font-extrabold">{t("portfolioDetail.k157")}</h3>
                 {canEditBudget && budgetNotesEdit === null ? (
                   <Button
                     variant="outline"
@@ -1625,7 +1630,7 @@ export function PortfolioDetailPage() {
                       setBudgetNotesEdit(portfolio.budgetNotes || "")
                     }
                   >
-                    تعديل
+                    {t("portfolioDetail.ui.edit")}
                   </Button>
                 ) : null}
               </div>
@@ -1642,7 +1647,7 @@ export function PortfolioDetailPage() {
                       size="sm"
                       onClick={() => setBudgetNotesEdit(null)}
                     >
-                      إلغاء
+                      {t("portfolioDetail.ui.cancel")}
                     </Button>
                     <Button
                       size="sm"
@@ -1655,7 +1660,7 @@ export function PortfolioDetailPage() {
                         setBudgetNotesEdit(null);
                       }}
                     >
-                      حفظ الملاحظات
+                      {t("portfolioDetail.ui.editNotes")}
                     </Button>
                   </div>
                 </div>
@@ -1663,7 +1668,7 @@ export function PortfolioDetailPage() {
                 <p className="text-xs text-steel-500">
                   {portfolio.budgetNotes?.trim()
                     ? portfolio.budgetNotes
-                    : "لا ملاحظات مالية مسجّلة."}
+                    : t("portfolioDetail.k061")}
                 </p>
               )}
             </Card>
@@ -1671,7 +1676,7 @@ export function PortfolioDetailPage() {
 
           {canEditBudget ? (
             <Card className="flex flex-wrap items-end gap-2 p-4">
-              <Field label="تحديث الميزانية المعتمدة">
+              <Field label={t("portfolioDetail.k062")}>
                 <Input
                   value={budgetEdit}
                   onChange={(e) => setBudgetEdit(e.target.value)}
@@ -1682,7 +1687,7 @@ export function PortfolioDetailPage() {
                 onClick={() => {
                   const n = Number(budgetEdit);
                   if (!Number.isFinite(n) || n < 0) {
-                    setActionError("قيمة ميزانية غير صالحة.");
+                    setActionError(t("portfolioDetail.k063"));
                     return;
                   }
                   const gate = canApplyBudgetChangeDirectly(
@@ -1692,7 +1697,7 @@ export function PortfolioDetailPage() {
                     n,
                   );
                   if (!gate.ok) {
-                    setActionError(gate.reason || "تعذّر تحديث الميزانية.");
+                    setActionError(gate.reason || t("portfolioDetail.k064"));
                     return;
                   }
                   updatePortfolio(
@@ -1704,15 +1709,13 @@ export function PortfolioDetailPage() {
                   setActionError("");
                 }}
               >
-                حفظ الميزانية
+                {t("portfolioDetail.ui.saveBudget")}
               </Button>
             </Card>
           ) : null}
 
           <p className="text-[11px] text-steel-400">
-            المنصرف الفعلي في الديمو مأخوذ من حقل المحفظة و/أو تجميع المشاريع
-            المرتبطة عند التحديث اليدوي — ليس تكاملاً محاسبياً. لا يُجمع عبر عملات
-            مختلفة.
+            {t("pf.spentDemoNote")}
           </p>
         </div>
       ) : null}
@@ -1722,17 +1725,15 @@ export function PortfolioDetailPage() {
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <p className="text-[12px] text-steel-500">
-                سجل على مستوى المحفظة لدعم قرار الراعي وPMO — ليس بديلاً عن مخاطر
-                المشاريع اليومية.
+                {t("pf.riskIntro")}
               </p>
               <p className="mt-1 text-[11px] tabular-nums text-steel-400">
-                مخاطر مفتوحة {riskBenefitSummary.open}
-                {" · "}
-                عالية/حرجة {riskBenefitSummary.criticalHigh}
-                {" · "}
-                منافع قيد التحقق {riskBenefitSummary.inProgress}
-                {" · "}
-                محققة {riskBenefitSummary.realized}
+                {t("pf.riskSummary", {
+                  open: riskBenefitSummary.open,
+                  critical: riskBenefitSummary.criticalHigh,
+                  progress: riskBenefitSummary.inProgress,
+                  realized: riskBenefitSummary.realized,
+                })}
               </p>
             </div>
           </div>
@@ -1741,7 +1742,7 @@ export function PortfolioDetailPage() {
             <div className="space-y-2.5 border-b border-steel-100 px-4 py-3 dark:border-steel-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-extrabold">
-                  مخاطر المحفظة
+                  {t("pf.portfolioRisks")}
                   <span className="ms-1 font-bold text-steel-400">
                     ({filteredRisks.length})
                   </span>
@@ -1752,7 +1753,7 @@ export function PortfolioDetailPage() {
                     size="sm"
                     onClick={() => setRiskLogOpen(true)}
                   >
-                    سجل التغييرات
+                    {t("portfolioDetail.ui.changeLog")}
                   </Button>
                   {perm.managePortfolio ? (
                     <Button
@@ -1762,36 +1763,36 @@ export function PortfolioDetailPage() {
                         setRiskModalOpen(true);
                       }}
                     >
-                      إضافة مخاطرة
+                      {t("portfolioDetail.ui.addRisk")}
                     </Button>
                   ) : null}
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <SegmentedFilter
-                  label="الشدة"
+                  label={t("portfolioDetail.k065")}
                   value={riskSeverityFilter}
                   onChange={setRiskSeverityFilter}
                   options={[
-                    { value: "all", label: "الكل", count: risks.length },
-                    ...Object.entries(RISK_SEVERITY_LABELS).map(
-                      ([value, label]) => ({
+                    { value: "all", label: t("portfolioDetail.k066"), count: risks.length },
+                    ...(["low", "medium", "high", "critical"] as const).map(
+                      (value) => ({
                         value,
-                        label,
+                        label: riskSeverityLabel(value),
                         count: risks.filter((r) => r.severity === value).length,
                       }),
                     ),
                   ]}
                 />
                 <SegmentedFilter
-                  label="الحالة"
+                  label={t("portfolioDetail.k067")}
                   value={riskStatusFilter}
                   onChange={setRiskStatusFilter}
                   options={[
-                    { value: "all", label: "الكل", count: risks.length },
+                    { value: "all", label: t("portfolioDetail.k066"), count: risks.length },
                     ...RISK_STATUS_FLOW.map((value) => ({
                       value,
-                      label: RISK_STATUS_LABELS[value],
+                      label: riskStatusLabel(value),
                       count: risks.filter((r) => r.status === value).length,
                     })),
                   ]}
@@ -1802,8 +1803,7 @@ export function PortfolioDetailPage() {
             {filteredRisks.length === 0 ? (
               <p className="px-4 py-7 text-center text-sm text-steel-400">
                 {risks.length === 0
-                  ? "لا مخاطر مسجّلة على هذه المحفظة."
-                  : "لا نتائج مطابقة لعوامل التصفية الحالية."}
+                  ? t("portfolioDetail.k068") : t("portfolioDetail.k058")}
               </p>
             ) : (
               <ul className="divide-y divide-steel-100 dark:divide-steel-800">
@@ -1821,9 +1821,9 @@ export function PortfolioDetailPage() {
                           </p>
                           <TinyBadge
                             label={
-                              RISK_SEVERITY_LABELS[
-                                r.severity as keyof typeof RISK_SEVERITY_LABELS
-                              ] ?? r.severity
+                              riskSeverityLabel(
+                                r.severity
+                              ) ?? r.severity
                             }
                             className={
                               RISK_SEVERITY_BADGE[
@@ -1833,7 +1833,7 @@ export function PortfolioDetailPage() {
                           />
                           <TinyBadge
                             label={
-                              RISK_STATUS_LABELS[r.status as RiskStatusFlow] ??
+                              riskStatusLabel(r.status as RiskStatusFlow) ??
                               r.status
                             }
                             className={
@@ -1843,11 +1843,11 @@ export function PortfolioDetailPage() {
                           />
                         </div>
                         <p className="mt-1 text-[11px] text-steel-500">
-                          المالك:{" "}
+                          {t("portfolioDetail.ui.owner")}{" "}
                           {users.find((u) => u.id === r.ownerUserId)?.name ??
                             "—"}
                           <span className="mx-1.5 text-steel-300">·</span>
-                          التخفيف: {r.mitigation?.trim() || "—"}
+                          {t("portfolioDetail.ui.mitigation")} {r.mitigation?.trim() || "—"}
                         </p>
                       </div>
                       {perm.managePortfolio && next ? (
@@ -1859,7 +1859,7 @@ export function PortfolioDetailPage() {
                             updatePortfolioRisk(r.id, { status: next }, user?.id)
                           }
                         >
-                          {RISK_STATUS_LABELS[next]}
+                          {riskStatusLabel(next)}
                         </Button>
                       ) : null}
                     </li>
@@ -1873,7 +1873,7 @@ export function PortfolioDetailPage() {
             <div className="space-y-2.5 border-b border-steel-100 px-4 py-3 dark:border-steel-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-extrabold">
-                  منافع المحفظة
+                  {t("pf.portfolioBenefits")}
                   <span className="ms-1 font-bold text-steel-400">
                     ({filteredBenefits.length})
                   </span>
@@ -1884,7 +1884,7 @@ export function PortfolioDetailPage() {
                     size="sm"
                     onClick={() => setBenefitLogOpen(true)}
                   >
-                    سجل التغييرات
+                    {t("portfolioDetail.ui.changeLog")}
                   </Button>
                   {perm.managePortfolio ? (
                     <Button
@@ -1894,17 +1894,17 @@ export function PortfolioDetailPage() {
                         setBenefitModalOpen(true);
                       }}
                     >
-                      إضافة منفعة
+                      {t("portfolioDetail.ui.addBenefit")}
                     </Button>
                   ) : null}
                 </div>
               </div>
               <SegmentedFilter
-                label="الحالة"
+                label={t("portfolioDetail.k067")}
                 value={benefitStatusFilter}
                 onChange={setBenefitStatusFilter}
                 options={[
-                  { value: "all", label: "الكل", count: benefits.length },
+                  { value: "all", label: t("portfolioDetail.k066"), count: benefits.length },
                   ...(
                     [
                       "planned",
@@ -1914,7 +1914,7 @@ export function PortfolioDetailPage() {
                     ] as BenefitStatusAll[]
                   ).map((value) => ({
                     value,
-                    label: BENEFIT_STATUS_LABELS[value],
+                    label: benefitStatusLabel(value),
                     count: benefits.filter((b) => b.status === value).length,
                   })),
                 ]}
@@ -1924,8 +1924,7 @@ export function PortfolioDetailPage() {
             {filteredBenefits.length === 0 ? (
               <p className="px-4 py-7 text-center text-sm text-steel-400">
                 {benefits.length === 0
-                  ? "لا منافع مسجّلة على هذه المحفظة."
-                  : "لا نتائج مطابقة لعوامل التصفية الحالية."}
+                  ? t("portfolioDetail.k069") : t("portfolioDetail.k058")}
               </p>
             ) : (
               <ul className="divide-y divide-steel-100 dark:divide-steel-800">
@@ -1945,9 +1944,9 @@ export function PortfolioDetailPage() {
                           </p>
                           <TinyBadge
                             label={
-                              BENEFIT_STATUS_LABELS[
+                              benefitStatusLabel(
                                 b.status as BenefitStatusAll
-                              ] ?? b.status
+                              ) ?? b.status
                             }
                             className={
                               BENEFIT_STATUS_BADGE[
@@ -1957,7 +1956,7 @@ export function PortfolioDetailPage() {
                           />
                         </div>
                         <p className="mt-1 text-[11px] text-steel-500">
-                          المؤشر المستهدف: {b.targetMetric?.trim() || "—"}
+                          {t("portfolioDetail.ui.targetMetric")} {b.targetMetric?.trim() || "—"}
                         </p>
                       </div>
                       {perm.managePortfolio && (next || canDefer) ? (
@@ -1974,7 +1973,7 @@ export function PortfolioDetailPage() {
                               }
                               className="text-[11px] font-bold text-steel-400 transition-colors duration-150 hover:text-amber-800"
                             >
-                              تأجيل
+                              {t("portfolioDetail.ui.defer")}
                             </button>
                           ) : null}
                           {next ? (
@@ -1989,7 +1988,7 @@ export function PortfolioDetailPage() {
                                 )
                               }
                             >
-                              {BENEFIT_STATUS_LABELS[next]}
+                              {benefitStatusLabel(next)}
                             </Button>
                           ) : null}
                         </div>
@@ -2005,6 +2004,8 @@ export function PortfolioDetailPage() {
 
       {tab === "governance" ? (
         <GovernancePanel
+          t={t}
+          actionLabel={actionLabel}
           users={users}
           actions={actions}
           audit={audit}
@@ -2014,9 +2015,9 @@ export function PortfolioDetailPage() {
 
       {tab === "history" ? (
         <Card className="p-4">
-          <h3 className="text-sm font-extrabold">سجل التدقيق</h3>
+          <h3 className="text-sm font-extrabold">{t("portfolioDetail.k169")}</h3>
           {audit.length === 0 ? (
-            <p className="mt-3 text-sm text-steel-400">لا أحداث مسجّلة.</p>
+            <p className="mt-3 text-sm text-steel-400">{t("portfolioDetail.k170")}</p>
           ) : (
             <ol className="relative mt-4 space-y-4 border-s border-steel-200 ps-4 dark:border-steel-700">
               {[...audit]
@@ -2029,18 +2030,16 @@ export function PortfolioDetailPage() {
                       style={{ insetInlineStart: "calc(-1rem - 4px)" }}
                     />
                     <p className="text-sm font-semibold text-steel-800 dark:text-steel-100">
-                      {ACTION_LABELS[a.action as PortfolioWorkflowAction] ??
+                      {actionLabel(a.action as PortfolioWorkflowAction) ??
                         (a.action === "created"
-                          ? "إنشاء المحفظة"
-                          : a.action === "updated"
-                            ? "تحديث البيانات"
-                            : a.action)}
+                          ? t("portfolioDetail.k070") : a.action === "updated"
+                            ? t("portfolioDetail.k071") : a.action)}
                       {a.fromStatus && a.toStatus
-                        ? ` · ${PORTFOLIO_STATUS_LABELS[a.fromStatus] ?? a.fromStatus} ← ${PORTFOLIO_STATUS_LABELS[a.toStatus] ?? a.toStatus}`
+                        ? ` · ${labelOf(t, "portfolio.status", a.fromStatus) ?? a.fromStatus} ← ${labelOf(t, "portfolio.status", a.toStatus) ?? a.toStatus}`
                         : ""}
                     </p>
                     <p className="mt-0.5 text-[11px] text-steel-400">
-                      {users.find((u) => u.id === a.actorUserId)?.name ?? "النظام"}
+                      {users.find((u) => u.id === a.actorUserId)?.name ?? t("portfolioDetail.k072")}
                       <span className="mx-1.5 text-steel-300">·</span>
                       <span className="tabular-nums">{formatStamp(a.createdAt)}</span>
                     </p>
@@ -2057,17 +2056,17 @@ export function PortfolioDetailPage() {
       <Modal
         open={reasonOpen}
         onClose={() => setReasonOpen(false)}
-        title="سبب الإجراء"
+        title={t("portfolioDetail.k073")}
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setReasonOpen(false)}>
-              إلغاء
+              {t("portfolioDetail.ui.cancel")}
             </Button>
-            <Button onClick={confirmReason}>تأكيد</Button>
+            <Button onClick={confirmReason}>{t("portfolioDetail.k171")}</Button>
           </div>
         }
       >
-        <Field label="السبب" required>
+        <Field label={t("portfolioDetail.k074")} required>
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} />
         </Field>
       </Modal>
@@ -2078,7 +2077,7 @@ export function PortfolioDetailPage() {
           setRiskModalOpen(false);
           setRiskForm(emptyRiskForm);
         }}
-        title="إضافة مخاطرة للمحفظة"
+        title={t("portfolioDetail.k075")}
         size="lg"
         footer={
           <div className="flex justify-end gap-2">
@@ -2089,7 +2088,7 @@ export function PortfolioDetailPage() {
                 setRiskForm(emptyRiskForm);
               }}
             >
-              إلغاء
+              {t("portfolioDetail.ui.cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -2111,53 +2110,54 @@ export function PortfolioDetailPage() {
                 setRiskModalOpen(false);
               }}
             >
-              حفظ المخاطرة
+              {t("portfolioDetail.ui.saveRisk")}
             </Button>
           </div>
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="عنوان المخاطرة" required>
+          <Field label={t("portfolioDetail.k076")} required>
             <Input
               value={riskForm.title}
               onChange={(e) =>
                 setRiskForm((f) => ({ ...f, title: e.target.value }))
               }
-              placeholder="مثال: تأخر اعتمادات تمويل مشتركة"
+              placeholder={t("portfolioDetail.k077")}
             />
           </Field>
-          <Field label="الشدة">
+          <Field label={t("portfolioDetail.k065")}>
             <SearchableSelect
               value={riskForm.severity}
               onChange={(v) => setRiskForm((f) => ({ ...f, severity: v }))}
-              options={Object.entries(RISK_SEVERITY_LABELS).map(
-                ([value, label]) => ({ value, label }),
+              options={(["low", "medium", "high", "critical"] as const).map(
+                (value) => ({ value, label: riskSeverityLabel(value) }),
               )}
             />
           </Field>
-          <Field label="الحالة">
+          <Field label={t("portfolioDetail.k067")}>
             <SearchableSelect
               value={riskForm.status}
               onChange={(v) => setRiskForm((f) => ({ ...f, status: v }))}
-              options={Object.entries(RISK_STATUS_LABELS).map(
-                ([value, label]) => ({ value, label }),
-              )}
+              options={RISK_STATUS_FLOW.map((value) => ({
+                value,
+                label: riskStatusLabel(value),
+              }))}
             />
           </Field>
-          <Field label="المالك">
+          <Field label={t("portfolioDetail.k040")}>
             <SearchableSelect
               value={riskForm.ownerUserId}
               onChange={(v) =>
                 setRiskForm((f) => ({ ...f, ownerUserId: v }))
               }
               options={[
-                { value: "", label: "بدون مالك" },
+                { value: "", label: t("portfolioDetail.k078") },
                 ...users.map((u) => ({ value: u.id, label: u.name })),
               ]}
             />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="خطة التخفيف">
+            <Field label={t("portfolioDetail.k079")}>
               <Input
                 value={riskForm.mitigation}
                 onChange={(e) =>
@@ -2166,7 +2166,7 @@ export function PortfolioDetailPage() {
                     mitigation: e.target.value,
                   }))
                 }
-                placeholder="إجراء مختصر"
+                placeholder={t("portfolioDetail.k080")}
               />
             </Field>
           </div>
@@ -2179,7 +2179,7 @@ export function PortfolioDetailPage() {
           setBenefitModalOpen(false);
           setBenefitForm(emptyBenefitForm);
         }}
-        title="إضافة منفعة للمحفظة"
+        title={t("portfolioDetail.k081")}
         footer={
           <div className="flex justify-end gap-2">
             <Button
@@ -2189,7 +2189,7 @@ export function PortfolioDetailPage() {
                 setBenefitForm(emptyBenefitForm);
               }}
             >
-              إلغاء
+              {t("portfolioDetail.ui.cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -2210,31 +2210,34 @@ export function PortfolioDetailPage() {
                 setBenefitModalOpen(false);
               }}
             >
-              حفظ المنفعة
+              {t("portfolioDetail.ui.saveBenefit")}
             </Button>
           </div>
         }
       >
         <div className="grid gap-3">
-          <Field label="عنوان المنفعة" required>
+          <Field label={t("portfolioDetail.k082")} required>
             <Input
               value={benefitForm.title}
               onChange={(e) =>
                 setBenefitForm((f) => ({ ...f, title: e.target.value }))
               }
-              placeholder="مثال: خفض زمن اعتماد العقود"
+              placeholder={t("portfolioDetail.k083")}
             />
           </Field>
-          <Field label="الحالة">
+          <Field label={t("portfolioDetail.k067")}>
             <SearchableSelect
               value={benefitForm.status}
               onChange={(v) => setBenefitForm((f) => ({ ...f, status: v }))}
-              options={Object.entries(BENEFIT_STATUS_LABELS).map(
-                ([value, label]) => ({ value, label }),
-              )}
+              options={(
+                [...BENEFIT_STATUS_FLOW, "deferred"] as BenefitStatusAll[]
+              ).map((value) => ({
+                value,
+                label: benefitStatusLabel(value),
+              }))}
             />
           </Field>
-          <Field label="المؤشر المستهدف">
+          <Field label={t("portfolioDetail.k084")}>
             <Input
               value={benefitForm.targetMetric}
               onChange={(e) =>
@@ -2243,7 +2246,7 @@ export function PortfolioDetailPage() {
                   targetMetric: e.target.value,
                 }))
               }
-              placeholder="مثال: 5 أيام عمل"
+              placeholder={t("portfolioDetail.k085")}
             />
           </Field>
         </div>
@@ -2252,18 +2255,19 @@ export function PortfolioDetailPage() {
       <Modal
         open={riskLogOpen}
         onClose={() => setRiskLogOpen(false)}
-        title="سجل تغييرات المخاطر"
+        title={t("portfolioDetail.k086")}
         size="lg"
         footer={
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setRiskLogOpen(false)}>
-              إغلاق
+              {t("portfolioDetail.k039")}
             </Button>
           </div>
         }
       >
         <ChangeTimeline
-          rows={riskTimeline(risks)}
+          t={t}
+          rows={riskTimeline(t, risks)}
           actorName={(id) => users.find((u) => u.id === id)?.name ?? "—"}
         />
       </Modal>
@@ -2271,18 +2275,19 @@ export function PortfolioDetailPage() {
       <Modal
         open={benefitLogOpen}
         onClose={() => setBenefitLogOpen(false)}
-        title="سجل تغييرات المنافع"
+        title={t("portfolioDetail.k087")}
         size="lg"
         footer={
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => setBenefitLogOpen(false)}>
-              إغلاق
+              {t("portfolioDetail.k039")}
             </Button>
           </div>
         }
       >
         <ChangeTimeline
-          rows={benefitTimeline(benefits)}
+          t={t}
+          rows={benefitTimeline(t, benefits)}
           actorName={(id) => users.find((u) => u.id === id)?.name ?? "—"}
         />
       </Modal>
@@ -2316,13 +2321,15 @@ const FORWARD_ACTIONS: PortfolioWorkflowAction[] = [
   "resume",
 ];
 
-function GovernancePanel({
+function GovernancePanel({ t, actionLabel, 
   users,
   actions,
   audit,
   onAction,
 }: {
   users: { id: string; name: string }[];
+  t: TFn;
+  actionLabel: (a: PortfolioWorkflowAction | string) => string;
   actions: PortfolioWorkflowAction[];
   audit: PortfolioAuditEvent[];
   onAction: (action: PortfolioWorkflowAction) => void;
@@ -2337,22 +2344,22 @@ function GovernancePanel({
   return (
     <div className="space-y-3">
       <Card className="space-y-3 p-4">
-        <h3 className="text-sm font-extrabold">الإجراءات المتاحة</h3>
+        <h3 className="text-sm font-extrabold">{t("portfolioDetail.k175")}</h3>
         {actions.length === 0 ? (
-          <p className="text-xs text-steel-400">لا إجراءات متاحة في الحالة الحالية.</p>
+          <p className="text-xs text-steel-400">{t("portfolioDetail.k176")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {primary ? (
-              <Button onClick={() => onAction(primary)}>{ACTION_LABELS[primary]}</Button>
+              <Button onClick={() => onAction(primary)}>{actionLabel(primary)}</Button>
             ) : null}
             {rest.map((a) => (
               <Button key={a} variant="outline" onClick={() => onAction(a)}>
-                {ACTION_LABELS[a]}
+                {actionLabel(a)}
               </Button>
             ))}
             {actions.includes("reject") ? (
               <Button variant="danger" onClick={() => onAction("reject")}>
-                {ACTION_LABELS.reject}
+                {actionLabel("reject")}
               </Button>
             ) : null}
           </div>
@@ -2360,9 +2367,9 @@ function GovernancePanel({
       </Card>
 
       <Card className="p-4">
-        <h3 className="text-sm font-extrabold">سجل الإجراءات</h3>
+        <h3 className="text-sm font-extrabold">{t("portfolioDetail.k177")}</h3>
         {steps.length === 0 ? (
-          <p className="mt-3 text-xs text-steel-400">لم يُسجَّل أي إجراء بعد.</p>
+          <p className="mt-3 text-xs text-steel-400">{t("portfolioDetail.k178")}</p>
         ) : (
           <ol className="relative mt-4 space-y-4 border-s border-steel-200 ps-4">
             {steps.map((event) => (
@@ -2373,8 +2380,8 @@ function GovernancePanel({
                   style={{ insetInlineStart: "calc(-1rem - 4px)" }}
                 />
                 <p className="text-sm font-semibold text-steel-800">
-                  {ACTION_LABELS[event.action as PortfolioWorkflowAction] ??
-                    (event.action === "created" ? "إنشاء المحفظة" : event.action)}
+                  {actionLabel(event.action as PortfolioWorkflowAction) ??
+                    (event.action === "created" ? t("portfolioDetail.k070") : event.action)}
                 </p>
                 <p className="mt-0.5 text-[11px] text-steel-400">
                   {nameOf(event.actorUserId)}

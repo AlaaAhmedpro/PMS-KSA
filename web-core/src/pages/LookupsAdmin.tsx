@@ -22,24 +22,25 @@ import { categoryLabel } from "../lib/categoryHelpers";
 import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
 import { Pagination } from "../components/ui/Pagination";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
 
 type TabId = "branches" | "departments" | "categories" | "entities";
 
-const TABS: { id: TabId; label: string; icon: typeof Factory }[] = [
-  { id: "branches", label: "الفروع / المناطق", icon: Factory },
-  { id: "departments", label: "الإدارات", icon: Building2 },
-  { id: "categories", label: "تصنيفات الإدارات", icon: Tags },
-  { id: "entities", label: "الجهات المعنية", icon: Landmark },
-];
-
 export function LookupsAdmin() {
+  const { t } = useLocale();
   const [tab, setTab] = useState<TabId>("branches");
+  const TABS: { id: TabId; label: string; icon: typeof Factory }[] = [
+    { id: "branches", label: t("lookups.tab.branches"), icon: Factory },
+    { id: "departments", label: t("lookups.tab.departments"), icon: Building2 },
+    { id: "categories", label: t("lookups.tab.categories"), icon: Tags },
+    { id: "entities", label: t("lookups.tab.entities"), icon: Landmark },
+  ];
 
   return (
     <div>
       <PageHeader
-        title="إدارة القوائم المرجعية"
-        subtitle="إضافة وتعديل وحذف وعرض كل القوائم المنسدلة في النظام"
+        title={t("lookups.title")}
+        subtitle={t("lookups.subtitle")}
         icon={<List className="h-6 w-6" />}
       />
 
@@ -71,6 +72,7 @@ export function LookupsAdmin() {
 }
 
 function BranchesPanel() {
+  const { t } = useLocale();
   const { branches, addBranch, updateBranch, removeBranch } = useData();
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -94,18 +96,18 @@ function BranchesPanel() {
 
   const handleDelete = (id: string) => {
     const res = removeBranch(id);
-    if (!res.ok) setError(res.reason || "تعذر الحذف");
+    if (!res.ok) setError(res.reason || t("lookups.deleteFailed"));
     else setError("");
   };
 
   return (
     <LookupCard
-      title="الفرع / المنطقة"
-      subtitle={`${branches.length} فرع — يظهر في نموذج تسجيل المشاريع والمهام`}
+      title={t("lookups.branches.title")}
+      subtitle={t("lookups.branches.subtitle", { n: branches.length })}
       onSubmit={submit}
       name={name}
       onNameChange={setName}
-      placeholder="مثال: فرع الرياض"
+      placeholder={t("lookups.branches.placeholder")}
       error={error}
     >
       <LookupTable
@@ -121,13 +123,14 @@ function BranchesPanel() {
         onSaveEdit={saveEdit}
         onCancelEdit={() => setEditingId(null)}
         onDelete={handleDelete}
-        emptyMessage="لا توجد مقار مصانع مسجلة"
+        emptyMessage={t("lookups.branches.empty")}
       />
     </LookupCard>
   );
 }
 
 function CategoriesPanel() {
+  const { t } = useLocale();
   const { categories, addCategory, updateCategory, removeCategory } = useData();
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,18 +153,18 @@ function CategoriesPanel() {
 
   const handleDelete = (id: string) => {
     const res = removeCategory(id);
-    if (!res.ok) setError(res.reason || "تعذر الحذف");
+    if (!res.ok) setError(res.reason || t("lookups.deleteFailed"));
     else setError("");
   };
 
   return (
     <LookupCard
-      title="تصنيفات الإدارات"
-      subtitle={`${categories.length} تصنيف — يظهر عند إضافة إدارة وفي تصنيف السجل`}
+      title={t("lookups.categories.title")}
+      subtitle={t("lookups.categories.subtitle", { n: categories.length })}
       onSubmit={submit}
       name={name}
       onNameChange={setName}
-      placeholder="مثال: شؤون بيئية"
+      placeholder={t("lookups.categories.placeholder")}
       error={error}
     >
       <LookupTable
@@ -177,13 +180,14 @@ function CategoriesPanel() {
         onSaveEdit={saveEdit}
         onCancelEdit={() => setEditingId(null)}
         onDelete={handleDelete}
-        emptyMessage="لا توجد تصنيفات مسجلة"
+        emptyMessage={t("lookups.categories.empty")}
       />
     </LookupCard>
   );
 }
 
 function DepartmentsPanel() {
+  const { t } = useLocale();
   const {
     departments,
     categories,
@@ -202,7 +206,7 @@ function DepartmentsPanel() {
   const [error, setError] = useState("");
 
   const branchOptions = [
-    { value: "", label: "مشتركة — كل الفروع" },
+    { value: "", label: t("lookups.departments.shared") },
     ...branches.map((b) => ({ value: b.id, label: b.name })),
   ];
 
@@ -227,7 +231,7 @@ function DepartmentsPanel() {
 
   const handleDelete = (id: string) => {
     const res = removeDepartment(id);
-    if (!res.ok) setError(res.reason || "تعذر الحذف");
+    if (!res.ok) setError(res.reason || t("lookups.deleteFailed"));
     else setError("");
   };
 
@@ -240,56 +244,56 @@ function DepartmentsPanel() {
   return (
     <Card>
       <CardHeader
-        title="الإدارات"
-        subtitle={`${departments.length} إدارة — يمكن ربطها بفرع أو إبقاؤها مشتركة على مستوى المؤسسة`}
+        title={t("lookups.departments.title")}
+        subtitle={t("lookups.departments.subtitle", { n: departments.length })}
       />
       <form onSubmit={submit} className="space-y-3 border-b border-steel-100 p-5 dark:border-steel-800">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Field label="اسم الإدارة" required>
+          <Field label={t("lookups.departments.name")} required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="مثال: الشؤون الإدارية"
+              placeholder={t("lookups.departments.namePlaceholder")}
             />
           </Field>
-          <Field label="التصنيف">
+          <Field label={t("lookups.departments.category")}>
             <SearchableSelect
               value={category}
               onChange={setCategory}
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              searchPlaceholder="بحث في التصنيفات..."
+              searchPlaceholder={t("lookups.departments.categorySearch")}
             />
           </Field>
-          <Field label="الفرع">
+          <Field label={t("lookups.departments.branch")}>
             <SearchableSelect
               value={branchId}
               onChange={setBranchId}
               options={branchOptions}
-              searchPlaceholder="بحث في الفروع..."
+              searchPlaceholder={t("lookups.departments.branchSearch")}
             />
           </Field>
         </div>
         {error && <p className="text-sm font-semibold text-red-500">{error}</p>}
         <Button type="submit" size="sm">
           <Plus className="h-4 w-4" />
-          إضافة
+          {t("common.add")}
         </Button>
       </form>
       <div className="overflow-x-auto p-5 pt-3">
         <table className="w-full text-right text-sm">
           <thead>
             <tr className="border-b border-steel-100 text-xs text-steel-500 dark:border-steel-800">
-              <th className="px-3 py-2 font-bold">الاسم</th>
-              <th className="px-3 py-2 font-bold">التصنيف</th>
-              <th className="px-3 py-2 font-bold">الفرع</th>
-              <th className="px-3 py-2 font-bold w-28">إجراءات</th>
+              <th className="px-3 py-2 font-bold">{t("common.name")}</th>
+              <th className="px-3 py-2 font-bold">{t("lookups.departments.col.category")}</th>
+              <th className="px-3 py-2 font-bold">{t("lookups.departments.col.branch")}</th>
+              <th className="px-3 py-2 font-bold w-28">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {departments.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-steel-400">
-                  لا توجد إدارات مسجلة
+                  {t("common.empty")}
                 </td>
               </tr>
             ) : (
@@ -321,7 +325,6 @@ function DepartmentsPanel() {
                           value: c.id,
                           label: c.name,
                         }))}
-                        searchPlaceholder="بحث..."
                       />
                     ) : (
                       categoryLabel(categories, d.category)
@@ -334,10 +337,10 @@ function DepartmentsPanel() {
                         onChange={setEditBranchId}
                         className="h-9"
                         options={branchOptions}
-                        searchPlaceholder="بحث..."
                       />
                     ) : (
-                      branches.find((b) => b.id === d.branchId)?.name ?? "مشتركة"
+                      branches.find((b) => b.id === d.branchId)?.name ??
+                      t("lookups.departments.sharedShort")
                     )}
                   </td>
                   <td className="px-3 py-2.5">
@@ -376,6 +379,7 @@ function DepartmentsPanel() {
 }
 
 function EntitiesPanel() {
+  const { t } = useLocale();
   const { entities, addEntity, updateEntity, removeEntity } = useData();
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -398,18 +402,18 @@ function EntitiesPanel() {
 
   const handleDelete = (id: string) => {
     const res = removeEntity(id);
-    if (!res.ok) setError(res.reason || "تعذر الحذف");
+    if (!res.ok) setError(res.reason || t("lookups.deleteFailed"));
     else setError("");
   };
 
   return (
     <LookupCard
-      title="الجهات المرسلة"
-      subtitle={`${entities.length} جهة — تظهر في نموذج السجل والفلاتر`}
+      title={t("lookups.entities.title")}
+      subtitle={t("lookups.entities.subtitle", { n: entities.length })}
       onSubmit={submit}
       name={name}
       onNameChange={setName}
-      placeholder="مثال: وزارة الصناعة"
+      placeholder={t("lookups.entities.placeholder")}
       error={error}
     >
       <LookupTable
@@ -425,7 +429,7 @@ function EntitiesPanel() {
         onSaveEdit={saveEdit}
         onCancelEdit={() => setEditingId(null)}
         onDelete={handleDelete}
-        emptyMessage="لا توجد جهات مسجلة"
+        emptyMessage={t("lookups.entities.empty")}
       />
     </LookupCard>
   );
@@ -450,6 +454,7 @@ function LookupCard({
   error?: string;
   children: React.ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <Card>
       <CardHeader title={title} subtitle={subtitle} />
@@ -457,7 +462,7 @@ function LookupCard({
         onSubmit={onSubmit}
         className="flex flex-col gap-3 border-b border-steel-100 p-5 dark:border-steel-800 sm:flex-row sm:items-end"
       >
-        <Field label="الاسم" required className="flex-1">
+        <Field label={t("common.name")} required className="flex-1">
           <Input
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
@@ -466,7 +471,7 @@ function LookupCard({
         </Field>
         <Button type="submit" className="shrink-0">
           <Plus className="h-4 w-4" />
-          إضافة
+          {t("common.add")}
         </Button>
       </form>
       {error && (
@@ -498,6 +503,7 @@ function LookupTable({
   onDelete: (id: string) => void;
   emptyMessage: string;
 }) {
+  const { t } = useLocale();
   const pagination = usePagination(items, PAGE_SIZE_DEFAULT, [items.length]);
 
   if (items.length === 0) {
@@ -514,8 +520,8 @@ function LookupTable({
           <thead>
             <tr className="border-b border-steel-100 text-xs text-steel-500 dark:border-steel-800">
               <th className="px-3 py-2 font-bold">#</th>
-              <th className="px-3 py-2 font-bold">الاسم</th>
-              <th className="px-3 py-2 font-bold w-28">إجراءات</th>
+              <th className="px-3 py-2 font-bold">{t("common.name")}</th>
+              <th className="px-3 py-2 font-bold w-28">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -579,6 +585,7 @@ function RowActions({
   onCancel: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLocale();
   if (isEditing) {
     return (
       <div className="flex gap-1">
@@ -586,7 +593,7 @@ function RowActions({
           type="button"
           onClick={onSave}
           className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-500/10"
-          title="حفظ"
+          title={t("common.save")}
         >
           <Save className="h-4 w-4" />
         </button>
@@ -594,7 +601,7 @@ function RowActions({
           type="button"
           onClick={onCancel}
           className="rounded-lg p-1.5 text-steel-400 hover:bg-steel-100 dark:hover:bg-steel-800"
-          title="إلغاء"
+          title={t("common.cancel")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -608,7 +615,7 @@ function RowActions({
         type="button"
         onClick={onEdit}
         className="rounded-lg p-1.5 text-steel-400 hover:bg-brand-500/10 hover:text-brand-600"
-        title="تعديل"
+        title={t("common.edit")}
       >
         <Pencil className="h-4 w-4" />
       </button>
@@ -616,7 +623,7 @@ function RowActions({
         type="button"
         onClick={onDelete}
         className="rounded-lg p-1.5 text-steel-400 hover:bg-red-500/10 hover:text-red-500"
-        title="حذف"
+        title={t("common.delete")}
       >
         <Trash2 className="h-4 w-4" />
       </button>

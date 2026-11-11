@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { useLocale } from "./LocaleContext";
 
 export interface ConfirmOptions {
   title?: string;
@@ -31,6 +32,7 @@ interface PendingState extends Required<
 }
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<PendingState | null>(null);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
@@ -42,21 +44,29 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setPending(null);
   }, []);
 
-  const confirm = useCallback((options: ConfirmOptions) => {
-    return new Promise<boolean>((resolve) => {
-      resolveRef.current?.(false);
-      resolveRef.current = resolve;
-      setPending({
-        title: options.title ?? (options.danger ? "تأكيد الحذف" : "تأكيد"),
-        message: options.message,
-        confirmLabel:
-          options.confirmLabel ?? (options.danger ? "حذف" : "تأكيد"),
-        cancelLabel: options.cancelLabel ?? "إلغاء",
-        danger: Boolean(options.danger),
+  const confirm = useCallback(
+    (options: ConfirmOptions) => {
+      return new Promise<boolean>((resolve) => {
+        resolveRef.current?.(false);
+        resolveRef.current = resolve;
+        setPending({
+          title:
+            options.title ??
+            (options.danger
+              ? t("common.confirmDeleteTitle")
+              : t("common.confirmTitle")),
+          message: options.message,
+          confirmLabel:
+            options.confirmLabel ??
+            (options.danger ? t("common.delete") : t("common.confirm")),
+          cancelLabel: options.cancelLabel ?? t("common.cancel"),
+          danger: Boolean(options.danger),
+        });
+        setOpen(true);
       });
-      setOpen(true);
-    });
-  }, []);
+    },
+    [t],
+  );
 
   const value = useMemo(() => ({ confirm }), [confirm]);
 

@@ -14,11 +14,11 @@ import { useCan } from "../store/RbacContext";
 import { useConfirm } from "../store/ConfirmContext";
 import {
   GOVERNANCE_LABELS,
-  PORTFOLIO_PRIORITY_LABELS,
-  PORTFOLIO_TYPE_LABELS,
   generatePortfolioCode,
   normalizePortfolio,
 } from "../lib/portfolioDomain";
+import { useLocale } from "../store/LocaleContext";
+import { labelOf } from "../i18n/label";
 import { canCreatePortfolio, canEditPortfolio } from "../lib/portfolioPermissions";
 import { validateSubmission } from "../services/portfolioWorkflow";
 import { useOrgPortfolioPolicy } from "../hooks/useOrgPortfolioPolicy";
@@ -29,6 +29,7 @@ import { cn } from "../lib/cn";
 type Step = 1 | 2 | 3;
 
 export function PortfolioFormPage() {
+  const { t } = useLocale();
   const { id } = useParams();
   const editing = Boolean(id);
   const navigate = useNavigate();
@@ -40,6 +41,9 @@ export function PortfolioFormPage() {
   const confirm = useConfirm();
   const { policy, profileLabel, workflowLabel } = useOrgPortfolioPolicy();
   const existing = portfolios.find((p) => p.id === id);
+
+  const req = (label: string, required: boolean) =>
+    required ? `${label} *` : label;
 
   const allow = editing
     ? canEditPortfolio(
@@ -154,63 +158,63 @@ export function PortfolioFormPage() {
   const collectStepErrors = (s: Step): Record<string, string> => {
     const e: Record<string, string> = {};
     if (s === 1) {
-      if (!form.name.trim()) e.name = "الاسم مطلوب.";
-      if (!form.description.trim()) e.description = "الوصف مطلوب.";
-      if (!form.code.trim()) e.code = "الرمز مطلوب.";
+      if (!form.name.trim()) e.name = t("portfolioForm.k011");
+      if (!form.description.trim()) e.description = t("portfolioForm.k022");
+      if (!form.code.trim()) e.code = t("portfolioForm.k016");
       const dup = portfolios.some(
         (p) => p.code === form.code.trim() && p.id !== id,
       );
-      if (dup) e.code = "رمز المحفظة مستخدم مسبقاً.";
+      if (dup) e.code = t("portfolioForm.k034");
       if (form.startDate && form.endDate && form.endDate < form.startDate) {
-        e.endDate = "تاريخ الانتهاء يجب أن يكون بعد البدء.";
+        e.endDate = t("portfolioForm.k025");
       }
       if (
         policy.requiredAtSubmit.includes("startDate") &&
         !form.startDate
       ) {
-        e.startDate = "تاريخ البدء مطلوب حسب سياسة المنظمة.";
+        e.startDate = t("portfolioForm.k026");
       }
       if (
         policy.requiredAtSubmit.includes("departmentId") &&
         !form.departmentId
       ) {
-        e.departmentId = "الإدارة مطلوبة حسب سياسة المنظمة.";
+        e.departmentId = t("portfolioForm.k010");
       }
     }
     if (s === 2) {
-      if (!form.ownerUserId) e.ownerUserId = "مالك المحفظة مطلوب.";
+      if (!form.ownerUserId) e.ownerUserId = t("portfolioForm.k038");
       if (
         (policy.requireSponsor ||
           policy.requiredAtSubmit.includes("sponsorUserId")) &&
         !form.sponsorUserId
       ) {
-        e.sponsorUserId = "الراعي التنفيذي مطلوب حسب سياسة المنظمة.";
+        e.sponsorUserId = t("portfolioForm.k014");
       }
     }
     if (s === 3) {
       if (Number(form.plannedBudgetSar) < 0) {
-        e.plannedBudgetSar = "قيمة غير صالحة.";
+        e.plannedBudgetSar = t("portfolioForm.k035");
       }
       if (
         (policy.requireBudgetOnSubmit ||
           policy.requiredAtSubmit.includes("plannedBudgetSar")) &&
         !(Number(form.plannedBudgetSar) > 0)
       ) {
-        e.plannedBudgetSar = "الميزانية المخططة مطلوبة عند التقديم.";
+        e.plannedBudgetSar = t("portfolioForm.k020");
       }
       if (
         (policy.requireObjectivesOnSubmit ||
           policy.requiredAtSubmit.includes("objectiveIds")) &&
         form.objectiveIds.length === 0
       ) {
-        e.objectiveIds = "يجب ربط هدف استراتيجي واحد على الأقل.";
+        e.objectiveIds = t("portfolioForm.k042");
       }
       if (
         policy.requireDocumentsOnSubmit &&
         !(form.budgetNotes || form.successMetrics || form.expectedBenefits)
       ) {
         e.budgetNotes =
-          "أضف ملاحظات ميزانية أو مؤشرات نجاح أو منافع كمستندات داعمة.";
+          t("portfolioForm.k007");
       }
     }
     return e;
@@ -317,7 +321,7 @@ export function PortfolioFormPage() {
         seed,
       });
       if (!res.ok) {
-        setErrors({ general: res.reason || "تعذّر الإرسال." });
+        setErrors({ general: res.reason || t("portfolioForm.k031") });
         return;
       }
       setDirty(false);
@@ -330,9 +334,9 @@ export function PortfolioFormPage() {
   if (editing && id && !existing) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">المحفظة غير موجودة.</p>
+        <p className="text-sm text-steel-500">{t("portfolioForm.k043")}</p>
         <Button className="mt-3" onClick={() => navigate("/portfolios")}>
-          العودة
+          {t("common.back")}
         </Button>
       </Card>
     );
@@ -341,9 +345,9 @@ export function PortfolioFormPage() {
   if (!allow) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">ليس لديك صلاحية إنشاء/تعديل المحافظ.</p>
+        <p className="text-sm text-steel-500">{t("portfolioForm.k044")}</p>
         <Button className="mt-3" onClick={() => navigate("/portfolios")}>
-          العودة
+          {t("common.back")}
         </Button>
       </Card>
     );
@@ -352,8 +356,11 @@ export function PortfolioFormPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={editing ? "تعديل محفظة" : "إنشاء محفظة"}
-        subtitle={`لا يُشترط إنشاء برنامج أو مشروع أثناء الإنشاء · السياسة: ${profileLabel} / ${workflowLabel}`}
+        title={editing ? t("portfolioForm.k030") : t("portfolioForm.k023")}
+        subtitle={t("portfolioForm.k045", {
+          profile: profileLabel,
+          workflow: workflowLabel,
+        })}
         icon={<Briefcase className="h-6 w-6" />}
       />
 
@@ -371,10 +378,10 @@ export function PortfolioFormPage() {
             )}
           >
             {s === 1
-              ? "1. معلومات أساسية"
+              ? t("portfolioForm.k001")
               : s === 2
-                ? "2. الحوكمة"
-                : "3. الاستراتيجية والمالية"}
+                ? t("portfolioForm.k002")
+                : t("portfolioForm.k003")}
           </button>
         ))}
       </div>
@@ -382,11 +389,11 @@ export function PortfolioFormPage() {
       <Card className="space-y-3 p-4">
         {step === 1 ? (
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="اسم المحفظة" required>
+            <Field label={t("portfolioForm.k006")} required>
               <Input value={form.name} onChange={(e) => patch("name", e.target.value)} />
               {errors.name ? <p className="text-xs text-red-500">{errors.name}</p> : null}
             </Field>
-            <Field label="الرمز" required>
+            <Field label={t("portfolioForm.k015")} required>
               <Input
                 value={form.code}
                 disabled={locked("code")}
@@ -394,7 +401,7 @@ export function PortfolioFormPage() {
               />
               {errors.code ? <p className="text-xs text-red-500">{errors.code}</p> : null}
             </Field>
-            <Field label="الوصف" required className="md:col-span-2">
+            <Field label={t("portfolioForm.k021")} required className="md:col-span-2">
               <Textarea
                 value={form.description}
                 onChange={(e) => patch("description", e.target.value)}
@@ -403,18 +410,28 @@ export function PortfolioFormPage() {
                 <p className="text-xs text-red-500">{errors.description}</p>
               ) : null}
             </Field>
-            <Field label="نوع المحفظة">
+            <Field label={t("portfolioForm.k041")}>
               <SearchableSelect
                 value={form.portfolioType}
                 onChange={(v) => patch("portfolioType", v)}
-                options={Object.entries(PORTFOLIO_TYPE_LABELS).map(([value, label]) => ({
+                options={Object.keys({
+                  strategic: true,
+                  digital: true,
+                  operational: true,
+                  capital: true,
+                  it: true,
+                  other: true,
+                }).map((value) => ({
                   value,
-                  label,
+                  label: labelOf(t, "portfolio.type", value),
                 }))}
               />
             </Field>
             <Field
-              label={`الإدارة${policy.requiredAtSubmit.includes("departmentId") ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k046"),
+                policy.requiredAtSubmit.includes("departmentId"),
+              )}
             >
               <SearchableSelect
                 value={form.departmentId}
@@ -428,24 +445,32 @@ export function PortfolioFormPage() {
                 <p className="text-xs text-red-500">{errors.departmentId}</p>
               ) : null}
             </Field>
-            <Field label="السنة المالية">
+            <Field label={t("portfolioForm.k017")}>
               <Input
                 value={form.fiscalYear}
                 onChange={(e) => patch("fiscalYear", e.target.value)}
               />
             </Field>
-            <Field label="الأولوية">
+            <Field label={t("portfolioForm.k012")}>
               <SearchableSelect
                 value={form.priority}
                 onChange={(v) => patch("priority", v)}
-                options={Object.entries(PORTFOLIO_PRIORITY_LABELS).map(([value, label]) => ({
+                options={Object.keys({
+                  critical: true,
+                  high: true,
+                  medium: true,
+                  low: true,
+                }).map((value) => ({
                   value,
-                  label,
+                  label: labelOf(t, "portfolio.priority", value),
                 }))}
               />
             </Field>
             <Field
-              label={`تاريخ البدء${policy.requiredAtSubmit.includes("startDate") ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k047"),
+                policy.requiredAtSubmit.includes("startDate"),
+              )}
             >
               <Input
                 type="date"
@@ -456,7 +481,7 @@ export function PortfolioFormPage() {
                 <p className="text-xs text-red-500">{errors.startDate}</p>
               ) : null}
             </Field>
-            <Field label="تاريخ الانتهاء المستهدف">
+            <Field label={t("portfolioForm.k024")}>
               <Input
                 type="date"
                 value={form.endDate}
@@ -471,7 +496,7 @@ export function PortfolioFormPage() {
 
         {step === 2 ? (
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="مالك / مدير المحفظة" required>
+            <Field label={t("portfolioForm.k037")} required>
               <SearchableSelect
                 value={form.ownerUserId}
                 onChange={(v) => patch("ownerUserId", v)}
@@ -482,7 +507,11 @@ export function PortfolioFormPage() {
               ) : null}
             </Field>
             <Field
-              label={`الراعي التنفيذي${policy.requireSponsor || policy.requiredAtSubmit.includes("sponsorUserId") ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k048"),
+                policy.requireSponsor ||
+                  policy.requiredAtSubmit.includes("sponsorUserId"),
+              )}
             >
               <SearchableSelect
                 value={form.sponsorUserId}
@@ -496,17 +525,17 @@ export function PortfolioFormPage() {
                 <p className="text-xs text-red-500">{errors.sponsorUserId}</p>
               ) : null}
             </Field>
-            <Field label="نموذج الحوكمة">
+            <Field label={t("portfolioForm.k040")}>
               <SearchableSelect
                 value={form.governanceModel}
                 onChange={(v) => patch("governanceModel", v)}
-                options={Object.entries(GOVERNANCE_LABELS).map(([value, label]) => ({
+                options={Object.keys(GOVERNANCE_LABELS).map((value) => ({
                   value,
-                  label,
+                  label: labelOf(t, "portfolio.governance", value),
                 }))}
               />
             </Field>
-            <Field label="أعضاء الفريق (متعدد)">
+            <Field label={t("portfolioForm.k008")}>
               <SearchableSelect
                 value={form.teamUserIds[0] || ""}
                 onChange={(v) => {
@@ -524,7 +553,7 @@ export function PortfolioFormPage() {
                 }))}
               />
               <p className="mt-1 text-[11px] text-steel-400">
-                المحدد:{" "}
+                {t("portfolioForm.k049")}{" "}
                 {form.teamUserIds
                   .map((tid) => users.find((u) => u.id === tid)?.name)
                   .filter(Boolean)
@@ -537,7 +566,11 @@ export function PortfolioFormPage() {
         {step === 3 ? (
           <div className="grid gap-3 md:grid-cols-2">
             <Field
-              label={`الأهداف الاستراتيجية${policy.requireObjectivesOnSubmit || policy.requiredAtSubmit.includes("objectiveIds") ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k050"),
+                policy.requireObjectivesOnSubmit ||
+                  policy.requiredAtSubmit.includes("objectiveIds"),
+              )}
               className="md:col-span-2"
             >
               <SearchableSelect
@@ -565,25 +598,29 @@ export function PortfolioFormPage() {
                     .filter(Boolean)
                     .join(" · ") ||
                     (policy.requireObjectivesOnSubmit
-                      ? "مطلوب قبل الإرسال للمراجعة"
-                      : "اختياري عند المسودة")}
+                      ? t("portfolioForm.k039")
+                      : t("portfolioForm.k004"))}
                 </p>
               )}
             </Field>
-            <Field label="المنافع المتوقعة" className="md:col-span-2">
+            <Field label={t("portfolioForm.k019")} className="md:col-span-2">
               <Textarea
                 value={form.expectedBenefits}
                 onChange={(e) => patch("expectedBenefits", e.target.value)}
               />
             </Field>
-            <Field label="مؤشرات النجاح" className="md:col-span-2">
+            <Field label={t("portfolioForm.k036")} className="md:col-span-2">
               <Textarea
                 value={form.successMetrics}
                 onChange={(e) => patch("successMetrics", e.target.value)}
               />
             </Field>
             <Field
-              label={`الميزانية المخططة${policy.requireBudgetOnSubmit || policy.requiredAtSubmit.includes("plannedBudgetSar") ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k051"),
+                policy.requireBudgetOnSubmit ||
+                  policy.requiredAtSubmit.includes("plannedBudgetSar"),
+              )}
             >
               <Input
                 value={form.plannedBudgetSar}
@@ -594,18 +631,21 @@ export function PortfolioFormPage() {
                 <p className="text-xs text-red-500">{errors.plannedBudgetSar}</p>
               ) : null}
             </Field>
-            <Field label="العملة">
+            <Field label={t("portfolioForm.k018")}>
               <SearchableSelect
                 value={form.currency}
                 onChange={(v) => patch("currency", v)}
                 options={[
-                  { value: "SAR", label: "ر.س (SAR)" },
-                  { value: "AED", label: "د.إ (AED)" },
+                  { value: "SAR", label: t("portfolioForm.k033") },
+                  { value: "AED", label: t("portfolioForm.k032") },
                 ]}
               />
             </Field>
             <Field
-              label={`ملاحظات الميزانية${policy.requireDocumentsOnSubmit ? " *" : ""}`}
+              label={req(
+                t("portfolioForm.k052"),
+                policy.requireDocumentsOnSubmit,
+              )}
               className="md:col-span-2"
             >
               <Textarea
@@ -627,8 +667,7 @@ export function PortfolioFormPage() {
 
         {!submissionReady ? (
           <p className="text-[11px] text-steel-400">
-            زر «إرسال للمراجعة» يُفعَّل بعد استيفاء الحقول الإلزامية حسب سياسة المنظمة
-            ({profileLabel}). يمكن حفظ المسودة في أي وقت بعد الخطوة 1.
+            {t("portfolioForm.k053", { profile: profileLabel })}
           </p>
         ) : null}
 
@@ -642,7 +681,7 @@ export function PortfolioFormPage() {
                   setErrors({});
                 }}
               >
-                السابق
+                {t("common.prev")}
               </Button>
             ) : null}
             {step < 3 ? (
@@ -653,7 +692,7 @@ export function PortfolioFormPage() {
                   if (validateStep(step)) setStep((s) => (s + 1) as Step);
                 }}
               >
-                التالي
+                {t("common.next")}
               </Button>
             ) : null}
           </div>
@@ -663,37 +702,37 @@ export function PortfolioFormPage() {
               onClick={async () => {
                 if (dirty) {
                   const ok = await confirm({
-                    title: "تجاهل التغييرات",
-                    message: "تجاهل التغييرات غير المحفوظة؟",
-                    confirmLabel: "تجاهل",
-                    cancelLabel: "البقاء",
+                    title: t("portfolioForm.k028"),
+                    message: t("portfolioForm.k029"),
+                    confirmLabel: t("portfolioForm.k027"),
+                    cancelLabel: t("portfolioForm.k013"),
                   });
                   if (!ok) return;
                 }
                 navigate(editing ? `/portfolios/${id}` : "/portfolios?tab=manage");
               }}
             >
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button variant="outline" disabled={saving} onClick={saveDraft}>
-              حفظ كمسودة
+              {t("portfolioForm.k054")}
             </Button>
             <Button
               disabled={!submissionReady || saving}
               onClick={submitReview}
               title={
                 submissionReady
-                  ? "إرسال وفق مسار الاعتماد النشط"
-                  : "أكمل الحقول الإلزامية أولاً"
+                  ? t("portfolioForm.k005")
+                  : t("portfolioForm.k009")
               }
             >
-              إرسال للمراجعة
+              {t("portfolioForm.k055")}
             </Button>
           </div>
         </div>
         <p className="text-[11px] text-steel-400">
           <Link to="/portfolios?tab=manage" className="text-brand-700 hover:underline">
-            العودة للسجل
+            {t("common.backToRegistry")}
           </Link>
         </p>
       </Card>

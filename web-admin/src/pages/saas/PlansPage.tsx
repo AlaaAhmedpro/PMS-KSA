@@ -45,7 +45,10 @@ export function PlansPage() {
               <span className="text-xs font-semibold text-slate-400"> / شهرياً</span>
             </p>
             <p className="text-xs text-slate-500">
-              سنوي {formatSar(p.priceAnnual)} · تجربة {p.trialDays} يوماً
+              {p.priceAnnual != null
+                ? `سنوي ${formatSar(p.priceAnnual)} · `
+                : ""}
+              تجربة {p.trialDays} يوماً
             </p>
             <ul className="mt-3 space-y-1 text-xs text-slate-600">
               <li>مستخدمون: {p.limits.maxUsers}</li>

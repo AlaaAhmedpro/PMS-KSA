@@ -5,7 +5,6 @@ import { Field, Input } from "../ui/Input";
 import { SearchableSelect } from "../ui/SearchableSelect";
 import {
   RELATIONSHIP_TYPES,
-  entityLabelAr,
   getRelationshipDef,
 } from "../../lib/relationshipRules";
 import type { StrategicEntityRef } from "../../lib/strategicEntities";
@@ -16,6 +15,8 @@ import type {
 import { useHierarchy } from "../../store/HierarchyStore";
 import { useAuth } from "../../store/AuthContext";
 import { useOrgPortfolioPolicy } from "../../hooks/useOrgPortfolioPolicy";
+import { useLocale } from "../../store/LocaleContext";
+import { entityTypeLabel, relationshipTypeLabel } from "../../i18n/label";
 
 export function AddRelationshipModal({
   open,
@@ -28,6 +29,7 @@ export function AddRelationshipModal({
   entities: StrategicEntityRef[];
   presetSource?: { type: StrategicEntityType; id: string } | null;
 }) {
+  const { t } = useLocale();
   const { addRelationship, relationships } = useHierarchy();
   const { user } = useAuth();
   const { policy } = useOrgPortfolioPolicy();
@@ -60,9 +62,9 @@ export function AddRelationshipModal({
         .filter((e) => !sourceType || e.type === sourceType)
         .map((e) => ({
           value: `${e.type}:${e.id}`,
-          label: `${entityLabelAr(e.type)} — ${e.name}`,
+          label: `${entityTypeLabel(t, e.type)} — ${e.name}`,
         })),
-    [entities, def, sourceType],
+    [entities, def, sourceType, t],
   );
 
   const targetOptions = useMemo(
@@ -72,22 +74,22 @@ export function AddRelationshipModal({
         .filter((e) => !targetType || e.type === targetType)
         .map((e) => ({
           value: `${e.type}:${e.id}`,
-          label: `${entityLabelAr(e.type)} — ${e.name}`,
+          label: `${entityTypeLabel(t, e.type)} — ${e.name}`,
         })),
-    [entities, def, targetType],
+    [entities, def, targetType, t],
   );
 
-  const typeOptions = RELATIONSHIP_TYPES.filter((t) =>
-    policy.allowedRelationshipTypes.includes(t.key),
-  ).map((t) => ({
-    value: t.key,
-    label: t.nameAr,
+  const typeOptions = RELATIONSHIP_TYPES.filter((row) =>
+    policy.allowedRelationshipTypes.includes(row.key),
+  ).map((row) => ({
+    value: row.key,
+    label: relationshipTypeLabel(t, row.key),
   }));
 
   const entityTypeOptions = (
     types: StrategicEntityType[],
   ): { value: string; label: string }[] =>
-    types.map((t) => ({ value: t, label: entityLabelAr(t) }));
+    types.map((type) => ({ value: type, label: entityTypeLabel(t, type) }));
 
   const reset = () => {
     setRelationshipType("contains");
@@ -121,7 +123,7 @@ export function AddRelationshipModal({
       return;
     }
     setErrors({});
-    setSuccess("تم حفظ العلاقة. لم يُحذف أي كيان.");
+    setSuccess(t("addRelationship.success"));
     setTimeout(() => {
       reset();
       onClose();
@@ -135,7 +137,7 @@ export function AddRelationshipModal({
         reset();
         onClose();
       }}
-      title="إضافة علاقة"
+      title={t("strategy.addRelationship")}
       size="lg"
       footer={
         <div className="flex justify-end gap-2">
@@ -146,16 +148,18 @@ export function AddRelationshipModal({
               onClose();
             }}
           >
-            إلغاء
+            {t("common.cancel")}
           </Button>
-          <Button onClick={save}>حفظ العلاقة</Button>
+          <Button onClick={save}>{t("addRelationship.save")}</Button>
         </div>
       }
     >
       <div className="space-y-3 p-1">
-        <p className="text-xs text-steel-500">{def.descriptionAr}</p>
+        <p className="text-xs text-steel-500">
+          {t(`relationship.desc.${relationshipType}`)}
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="نوع العلاقة" required>
+          <Field label={t("addRelationship.field.type")} required>
             <SearchableSelect
               value={relationshipType}
               onChange={(v) => {
@@ -164,7 +168,11 @@ export function AddRelationshipModal({
                 const d = getRelationshipDef(next);
                 setSourceType(d.allowedSources[0]);
                 setTargetType(d.allowedTargets[0]);
-                setSourceId(presetSource?.id && d.allowedSources.includes(presetSource.type) ? presetSource.id : "");
+                setSourceId(
+                  presetSource?.id && d.allowedSources.includes(presetSource.type)
+                    ? presetSource.id
+                    : "",
+                );
                 setTargetId("");
                 setErrors({});
               }}
@@ -175,15 +183,30 @@ export function AddRelationshipModal({
             ) : null}
           </Field>
           <div className="rounded-xl border border-steel-100 bg-steel-50/80 p-3 text-[11px] text-steel-500 dark:border-steel-800 dark:bg-steel-800/40">
-            <p>اتجاهية: {def.isDirectional ? "نعم" : "لا"}</p>
-            <p>هرمية: {def.isHierarchical ? "نعم" : "لا"}</p>
-            <p>دورات: {def.allowCycles ? "مسموحة" : "ممنوعة"}</p>
-            <p className="mt-1">العلاقات النشطة: {relationships.filter((r) => r.isActive).length}</p>
+            <p>
+              {t("addRelationship.directional")}:{" "}
+              {def.isDirectional ? t("common.yes") : t("common.no")}
+            </p>
+            <p>
+              {t("addRelationship.hierarchical")}:{" "}
+              {def.isHierarchical ? t("common.yes") : t("common.no")}
+            </p>
+            <p>
+              {t("addRelationship.cycles")}:{" "}
+              {def.allowCycles
+                ? t("addRelationship.cyclesAllowed")
+                : t("addRelationship.cyclesForbidden")}
+            </p>
+            <p className="mt-1">
+              {t("addRelationship.activeCount", {
+                n: relationships.filter((r) => r.isActive).length,
+              })}
+            </p>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="نوع المصدر" required>
+          <Field label={t("addRelationship.field.sourceType")} required>
             <SearchableSelect
               value={sourceType}
               onChange={(v) => {
@@ -193,7 +216,7 @@ export function AddRelationshipModal({
               options={entityTypeOptions(def.allowedSources)}
             />
           </Field>
-          <Field label="الكيان المصدر" required>
+          <Field label={t("addRelationship.field.sourceEntity")} required>
             <SearchableSelect
               value={sourceId ? `${sourceType}:${sourceId}` : ""}
               onChange={(v) => {
@@ -206,7 +229,7 @@ export function AddRelationshipModal({
               <p className="mt-1 text-xs text-red-500">{errors.source}</p>
             ) : null}
           </Field>
-          <Field label="نوع الهدف" required>
+          <Field label={t("addRelationship.field.targetType")} required>
             <SearchableSelect
               value={targetType}
               onChange={(v) => {
@@ -216,7 +239,7 @@ export function AddRelationshipModal({
               options={entityTypeOptions(def.allowedTargets)}
             />
           </Field>
-          <Field label="الكيان الهدف" required>
+          <Field label={t("addRelationship.field.targetEntity")} required>
             <SearchableSelect
               value={targetId ? `${targetType}:${targetId}` : ""}
               onChange={(v) => {
@@ -231,22 +254,22 @@ export function AddRelationshipModal({
           </Field>
         </div>
 
-        <Field label="الوصف / المبرر">
+        <Field label={t("addRelationship.field.description")}>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="اختياري"
+            placeholder={t("addRelationship.optionalPlaceholder")}
           />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="ساري من">
+          <Field label={t("addRelationship.field.effectiveFrom")}>
             <Input
               type="date"
               value={effectiveFrom}
               onChange={(e) => setEffectiveFrom(e.target.value)}
             />
           </Field>
-          <Field label="ساري إلى">
+          <Field label={t("addRelationship.field.effectiveTo")}>
             <Input
               type="date"
               value={effectiveTo}

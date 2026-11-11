@@ -1,5 +1,7 @@
 /** Bridge: Core PMS billing UI ↔ Super Admin localStorage (same-browser demo). */
 
+import { getFormatLocale } from "./format";
+
 export const ADMIN_BILLING_LS = {
   tenants: "pms_admin_tenants_v2",
   plans: "pms_admin_plans_v2",
@@ -518,10 +520,11 @@ export function isCoreOrgSuspended(coreOrgId: string): boolean {
 }
 
 export function formatSar(amount: number): string {
-  return `${amount.toLocaleString("en-US", {
+  const n = amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} ر.س`;
+  });
+  return getFormatLocale() === "en" ? `${n} SAR` : `${n} ر.س`;
 }
 
 export const INVOICE_STATUS_LABELS: Record<string, string> = {

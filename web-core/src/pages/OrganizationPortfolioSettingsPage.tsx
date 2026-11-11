@@ -8,8 +8,6 @@ import { SearchableSelect } from "../components/ui/SearchableSelect";
 import { useAuth } from "../store/AuthContext";
 import {
   PORTFOLIO_POLICY_PRESETS,
-  PROFILE_TEMPLATE_LABELS,
-  WORKFLOW_MODE_LABELS,
   normalizePortfolioPolicy,
   validatePolicyConfig,
 } from "../lib/orgPortfolioPolicy";
@@ -24,6 +22,8 @@ import type {
   RelationshipTypeKey,
 } from "../models/domain";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
+import type { TFn } from "../lib/i18nDisplay";
 
 type SectionId =
   | "profile"
@@ -32,22 +32,33 @@ type SectionId =
   | "finance"
   | "preview";
 
-const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "profile", label: "ملف المنظمة" },
-  { id: "policies", label: "سياسات المحفظة" },
-  { id: "workflow", label: "مسار الاعتماد" },
-  { id: "finance", label: "الحوكمة المالية" },
-  { id: "preview", label: "معاينة قبل الحفظ" },
+const REL_KEYS: RelationshipTypeKey[] = [
+  "contains",
+  "aligns_with",
+  "depends_on",
+  "related_to",
 ];
 
-const REL_OPTIONS: { value: RelationshipTypeKey; label: string }[] = [
-  { value: "contains", label: "يحتوي / يملك" },
-  { value: "aligns_with", label: "يتوافق مع" },
-  { value: "depends_on", label: "يعتمد على" },
-  { value: "related_to", label: "مرتبط بـ" },
-];
+function workflowModeLabel(t: TFn, mode: PortfolioWorkflowMode): string {
+  return t(`portfolioSettings.workflowMode.${mode}`);
+}
+
+function profileTemplateLabel(
+  t: TFn,
+  key: PortfolioProfileTemplate,
+): string {
+  return t(`portfolioSettings.profileTemplate.${key}`);
+}
 
 export function OrganizationPortfolioSettingsPage() {
+  const { t, L, locale } = useLocale();
+  const SECTIONS: { id: SectionId; label: string }[] = [
+    { id: "profile", label: t("portfolioSettings.section.profile") },
+    { id: "policies", label: t("portfolioSettings.section.policies") },
+    { id: "workflow", label: t("portfolioSettings.section.workflow") },
+    { id: "finance", label: t("portfolioSettings.section.finance") },
+    { id: "preview", label: t("portfolioSettings.section.preview") },
+  ];
   const {
     organization,
     user,
@@ -92,40 +103,41 @@ export function OrganizationPortfolioSettingsPage() {
     const lines: string[] = [];
     if (draft.workflowMode !== active.workflowMode) {
       lines.push(
-        `تغيير نمط المسار من «${WORKFLOW_MODE_LABELS[active.workflowMode]}» إلى «${WORKFLOW_MODE_LABELS[draft.workflowMode]}». الطلبات الجارية تحتفظ بانتقالاتها الحالية عبر التحقق عند كل إجراء.`,
+        t("portfolioSettings.impact.workflowChange", {
+          from: workflowModeLabel(t, active.workflowMode),
+          to: workflowModeLabel(t, draft.workflowMode),
+        }),
       );
     }
     if (JSON.stringify(draft.stages) !== JSON.stringify(active.stages)) {
-      lines.push(
-        "تغيير مراحل الاعتماد يؤثر على الطلبات الجديدة فقط. الإصدارات السابقة تُسجَّل في سجل التدقيق (رقم السياسة).",
-      );
+      lines.push(t("portfolioSettings.impact.stages"));
     }
     if (draft.requireObjectivesOnSubmit !== active.requireObjectivesOnSubmit) {
       lines.push(
         draft.requireObjectivesOnSubmit
-          ? "سيصبح ربط الأهداف الاستراتيجية إلزامياً عند التقديم."
-          : "لن يُطلب ربط الأهداف عند التقديم.",
+          ? t("portfolioSettings.impact.objectivesOn")
+          : t("portfolioSettings.impact.objectivesOff"),
       );
     }
     if (draft.requireBudgetOnSubmit !== active.requireBudgetOnSubmit) {
       lines.push(
         draft.requireBudgetOnSubmit
-          ? "الميزانية المخططة ستصبح إلزامية عند التقديم."
-          : "الميزانية عند التقديم اختيارية.",
+          ? t("portfolioSettings.impact.budgetOn")
+          : t("portfolioSettings.impact.budgetOff"),
       );
     }
     if (draft.lockFieldsAfterApproval !== active.lockFieldsAfterApproval) {
       lines.push(
         draft.lockFieldsAfterApproval
-          ? "بعد الاعتماد ستُقفل حقول الميزانية/الأهداف/الرمز."
-          : "لن تُقفل الحقول بعد الاعتماد.",
+          ? t("portfolioSettings.impact.lockOn")
+          : t("portfolioSettings.impact.lockOff"),
       );
     }
     if (!lines.length) {
-      lines.push("لا تغييرات جوهرية على الحقول الإلزامية أو المسار.");
+      lines.push(t("portfolioSettings.impact.none"));
     }
     return lines;
-  }, [draft, active]);
+  }, [draft, active, t]);
 
   const applyTemplate = (key: "small" | "enterprise" | "government") => {
     const preset = structuredClone(PORTFOLIO_POLICY_PRESETS[key]);
@@ -138,7 +150,9 @@ export function OrganizationPortfolioSettingsPage() {
     });
     setMessage({
       ok: true,
-      text: `تم تحميل قالب «${PROFILE_TEMPLATE_LABELS[key]}». راجع المعاينة ثم احفظ.`,
+      text: t("portfolioSettings.templateLoaded", {
+        name: profileTemplateLabel(t, key),
+      }),
     });
     setSection("preview");
   };
@@ -202,7 +216,7 @@ export function OrganizationPortfolioSettingsPage() {
       setConfirmApply(true);
       setMessage({
         ok: true,
-        text: "راجع أثر التغييرات ثم أكّد الحفظ مرة أخرى.",
+        text: t("portfolioSettings.reviewSave"),
       });
       return;
     }
@@ -210,22 +224,23 @@ export function OrganizationPortfolioSettingsPage() {
       alsoSetClientType: alsoClientType,
     });
     if (!res.ok) {
-      setMessage({ ok: false, text: res.reason || "تعذّر الحفظ." });
+      setMessage({
+        ok: false,
+        text: L(res.reason) || t("common.saveFailed"),
+      });
       return;
     }
     setConfirmApply(false);
     setMessage({
       ok: true,
-      text: `تم حفظ السياسة (الإصدار سيُحدَّث عند تغيير المسار). الطلبات قيد التنفيذ لا تُعاد كتابتها صامتة.`,
+      text: t("portfolioSettings.saved"),
     });
   };
 
   if (!allow) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">
-          إعداد سياسات المحفظة متاح لمسؤول المؤسسة فقط (محاكاة صلاحيات الديمو).
-        </p>
+        <p className="text-sm text-steel-500">{t("portfolioSettings.noAccess")}</p>
       </Card>
     );
   }
@@ -233,8 +248,8 @@ export function OrganizationPortfolioSettingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="إعدادات حوكمة المحافظ"
-        subtitle={`${organization?.name ?? ""} — ملف تشغيلي قابل للتخصيص دون تكرار للمنتج`}
+        title={t("portfolioSettings.title")}
+        subtitle={`${organization?.name ?? ""} — ${t("portfolioSettings.subtitleSuffix")}`}
         icon={<Settings2 className="h-6 w-6" />}
       />
 
@@ -272,14 +287,14 @@ export function OrganizationPortfolioSettingsPage() {
       {section === "profile" ? (
         <Card className="space-y-4 p-4">
           <CardHeader
-            title="ملف المنظمة والقالب"
-            subtitle="القوالب نقاط بداية — يمكن تخصيصها بعد التحميل"
+            title={t("portfolioSettings.profile.title")}
+            subtitle={t("portfolioSettings.profile.subtitle")}
           />
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="اسم المنظمة">
+            <Field label={t("portfolioSettings.profile.orgName")}>
               <Input value={organization?.name ?? ""} disabled />
             </Field>
-            <Field label="نوع المنظمة الحالي">
+            <Field label={t("portfolioSettings.profile.orgType")}>
               <SearchableSelect
                 value={organization?.clientType ?? "government"}
                 onChange={(v) => {
@@ -290,29 +305,29 @@ export function OrganizationPortfolioSettingsPage() {
                   Object.keys(CLIENT_TYPE_META) as OrgClientType[]
                 ).map((k) => ({
                   value: k,
-                  label: CLIENT_TYPE_META[k].label,
+                  label: t(`client.${k}.short`),
                 }))}
               />
             </Field>
-            <Field label="الدولة / المنطقة">
+            <Field label={t("portfolioSettings.profile.region")}>
               <Input
                 value={draft.countryRegion}
                 onChange={(e) => patch("countryRegion", e.target.value)}
               />
             </Field>
-            <Field label="العملة الافتراضية">
+            <Field label={t("portfolioSettings.profile.currency")}>
               <SearchableSelect
                 value={draft.defaultCurrency}
                 onChange={(v) =>
                   patch("defaultCurrency", v as OrgPortfolioPolicy["defaultCurrency"])
                 }
                 options={[
-                  { value: "SAR", label: "ر.س (SAR)" },
-                  { value: "AED", label: "د.إ (AED)" },
+                  { value: "SAR", label: t("portfolioSettings.currency.SAR") },
+                  { value: "AED", label: t("portfolioSettings.currency.AED") },
                 ]}
               />
             </Field>
-            <Field label="شهر بداية السنة المالية (1–12)">
+            <Field label={t("portfolioSettings.profile.fiscalMonth")}>
               <Input
                 value={String(draft.fiscalYearStartMonth)}
                 onChange={(e) =>
@@ -320,28 +335,24 @@ export function OrganizationPortfolioSettingsPage() {
                 }
               />
             </Field>
-            <Field label="القالب النشط">
+            <Field label={t("portfolioSettings.profile.activeTemplate")}>
               <Input
-                value={PROFILE_TEMPLATE_LABELS[draft.profileTemplate]}
+                value={profileTemplateLabel(t, draft.profileTemplate)}
                 disabled
               />
             </Field>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
-            {(
-              [
-                ["small", "شركة صغيرة"],
-                ["enterprise", "مؤسسة كبيرة"],
-                ["government", "جهة حكومية"],
-              ] as const
-            ).map(([key, label]) => (
+            {(["small", "enterprise", "government"] as const).map((key) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => applyTemplate(key)}
                 className="rounded-xl border border-steel-200 p-3 text-start hover:border-brand-400 hover:bg-brand-500/5"
               >
-                <p className="text-sm font-extrabold">{label}</p>
+                <p className="text-sm font-extrabold">
+                  {t(`portfolioSettings.template.${key}`)}
+                </p>
                 <p className="mt-1 text-[11px] text-steel-500">
                   {PORTFOLIO_POLICY_PRESETS[key].notes}
                 </p>
@@ -354,68 +365,68 @@ export function OrganizationPortfolioSettingsPage() {
       {section === "policies" ? (
         <Card className="space-y-3 p-4">
           <CardHeader
-            title="سياسات الحقول والعلاقات"
-            subtitle="تُفرض عند الإنشاء / التقديم / التفعيل"
+            title={t("portfolioSettings.policies.title")}
+            subtitle={t("portfolioSettings.policies.subtitle")}
           />
           <Toggle
-            label="الراعي التنفيذي إلزامي"
+            label={t("portfolioSettings.policies.sponsor")}
             checked={draft.requireSponsor}
             onChange={(v) => patch("requireSponsor", v)}
           />
           <Toggle
-            label="الأهداف الاستراتيجية إلزامية عند التقديم"
+            label={t("portfolioSettings.policies.objectives")}
             checked={draft.requireObjectivesOnSubmit}
             onChange={(v) => patch("requireObjectivesOnSubmit", v)}
           />
           <Toggle
-            label="الميزانية إلزامية عند التقديم"
+            label={t("portfolioSettings.policies.budget")}
             checked={draft.requireBudgetOnSubmit}
             onChange={(v) => patch("requireBudgetOnSubmit", v)}
           />
           <Toggle
-            label="مستندات / معلومات داعمة عند التقديم"
+            label={t("portfolioSettings.policies.documents")}
             checked={draft.requireDocumentsOnSubmit}
             onChange={(v) => patch("requireDocumentsOnSubmit", v)}
           />
           <Toggle
-            label="السماح بربط مشروع مباشرة بالمحفظة"
+            label={t("portfolioSettings.policies.directProject")}
             checked={draft.allowDirectProjectLink}
             onChange={(v) => patch("allowDirectProjectLink", v)}
           />
           <Toggle
-            label="قفل الحقول الحساسة بعد الاعتماد"
+            label={t("portfolioSettings.policies.lockAfterApproval")}
             checked={draft.lockFieldsAfterApproval}
             onChange={(v) => patch("lockFieldsAfterApproval", v)}
           />
           <Toggle
-            label="فصل المهام (لا يعتمد مقدّم الطلب)"
+            label={t("portfolioSettings.policies.separation")}
             checked={draft.separationOfDuties}
             onChange={(v) => patch("separationOfDuties", v)}
           />
           <Toggle
-            label="سبب إلزامي عند الرفض"
+            label={t("portfolioSettings.policies.rejectReason")}
             checked={draft.requireReasonOnReject}
             onChange={(v) => patch("requireReasonOnReject", v)}
           />
           <Toggle
-            label="سبب إلزامي عند الإعادة للتعديل"
+            label={t("portfolioSettings.policies.returnReason")}
             checked={draft.requireReasonOnReturn}
             onChange={(v) => patch("requireReasonOnReturn", v)}
           />
-          <Field label="أنواع العلاقات المسموحة">
+          <Field label={t("portfolioSettings.policies.relTypes")}>
             <div className="flex flex-wrap gap-2">
-              {REL_OPTIONS.map((r) => {
-                const on = draft.allowedRelationshipTypes.includes(r.value);
+              {REL_KEYS.map((value) => {
+                const on = draft.allowedRelationshipTypes.includes(value);
                 return (
                   <button
-                    key={r.value}
+                    key={value}
                     type="button"
                     onClick={() => {
                       const next = on
                         ? draft.allowedRelationshipTypes.filter(
-                            (x) => x !== r.value,
+                            (x) => x !== value,
                           )
-                        : [...draft.allowedRelationshipTypes, r.value];
+                        : [...draft.allowedRelationshipTypes, value];
                       patch(
                         "allowedRelationshipTypes",
                         next.length ? next : ["related_to"],
@@ -428,13 +439,13 @@ export function OrganizationPortfolioSettingsPage() {
                         : "border-steel-200 text-steel-500",
                     )}
                   >
-                    {r.label}
+                    {t(`portfolioSettings.rel.${value}`)}
                   </button>
                 );
               })}
             </div>
           </Field>
-          <Field label="ملاحظات السياسة">
+          <Field label={t("portfolioSettings.policies.notes")}>
             <Textarea
               value={draft.notes || ""}
               onChange={(e) => patch("notes", e.target.value)}
@@ -446,16 +457,17 @@ export function OrganizationPortfolioSettingsPage() {
       {section === "workflow" ? (
         <Card className="space-y-4 p-4">
           <CardHeader
-            title="تكوين مسار الاعتماد"
-            subtitle="لا تُعاد كتابة مثيلات المسار الجارية عند الحفظ"
+            title={t("portfolioSettings.workflow.title")}
+            subtitle={t("portfolioSettings.workflow.subtitle")}
           />
-          <Field label="نمط المسار">
+          <Field label={t("portfolioSettings.workflow.mode")}>
             <SearchableSelect
               value={draft.workflowMode}
               onChange={(v) => ensureStages(v as PortfolioWorkflowMode)}
-              options={(
-                Object.keys(WORKFLOW_MODE_LABELS) as PortfolioWorkflowMode[]
-              ).map((k) => ({ value: k, label: WORKFLOW_MODE_LABELS[k] }))}
+              options={(["simple", "standard", "formal"] as const).map((k) => ({
+                value: k,
+                label: workflowModeLabel(t, k),
+              }))}
             />
           </Field>
           <ul className="space-y-2">
@@ -467,20 +479,33 @@ export function OrganizationPortfolioSettingsPage() {
                 <span className="text-xs font-bold text-steel-400">
                   {idx + 1}.
                 </span>
-                <Input
-                  className="min-w-[12rem] flex-1"
-                  value={s.nameAr}
-                  onChange={(e) => renameStage(s.id, e.target.value)}
-                />
+                {locale === "en" ? (
+                  <span className="min-w-[12rem] flex-1 text-sm font-semibold text-steel-700 dark:text-steel-200">
+                    {L(s.nameAr)}
+                  </span>
+                ) : (
+                  <Input
+                    className="min-w-[12rem] flex-1"
+                    value={s.nameAr}
+                    onChange={(e) => renameStage(s.id, e.target.value)}
+                  />
+                )}
                 <span className="text-[11px] text-steel-400">
-                  دور: {s.requiredRole} · مفتاح: {s.key}
+                  {t("portfolioSettings.workflow.stageMeta", {
+                    role: t(
+                      `portfolioSettings.workflow.role.${s.requiredRole}`,
+                    ),
+                    step: t(`portfolioSettings.workflow.step.${s.key}`),
+                  })}
                 </span>
                 <Button
                   variant={s.enabled ? "primary" : "outline"}
                   size="sm"
                   onClick={() => toggleStage(s.id)}
                 >
-                  {s.enabled ? "مفعّلة" : "معطّلة"}
+                  {s.enabled
+                    ? t("portfolioSettings.workflow.stageEnabled")
+                    : t("portfolioSettings.workflow.stageDisabled")}
                 </Button>
               </li>
             ))}
@@ -489,7 +514,7 @@ export function OrganizationPortfolioSettingsPage() {
             <p className="text-sm text-red-600">{validation.errors.join(" ")}</p>
           ) : (
             <p className="text-xs text-steel-500">
-              المسار صالح للتفعيل. الطلبات الجديدة تستخدم الإصدار بعد الحفظ.
+              {t("portfolioSettings.workflow.valid")}
             </p>
           )}
         </Card>
@@ -498,15 +523,15 @@ export function OrganizationPortfolioSettingsPage() {
       {section === "finance" ? (
         <Card className="space-y-3 p-4">
           <CardHeader
-            title="الحوكمة المالية"
-            subtitle="لا يتم جمع عملات مختلفة دون قاعدة تحويل — الديمو يستخدم عملة المحفظة فقط"
+            title={t("portfolioSettings.finance.title")}
+            subtitle={t("portfolioSettings.finance.subtitle")}
           />
           <Toggle
-            label="تغيير الميزانية بعد الاعتماد يتطلب موافقة عند تجاوز العتبة"
+            label={t("portfolioSettings.finance.budgetApproval")}
             checked={draft.budgetChangeRequiresApproval}
             onChange={(v) => patch("budgetChangeRequiresApproval", v)}
           />
-          <Field label="عتبة اعتماد تغيير الميزانية (ر.س)">
+          <Field label={t("portfolioSettings.finance.threshold")}>
             <Input
               value={String(draft.budgetApprovalThresholdSar)}
               onChange={(e) =>
@@ -517,7 +542,7 @@ export function OrganizationPortfolioSettingsPage() {
               }
             />
           </Field>
-          <Field label="نسبة تحذير انحراف الميزانية (%)">
+          <Field label={t("portfolioSettings.finance.variance")}>
             <Input
               value={String(draft.varianceWarningPct)}
               onChange={(e) =>
@@ -531,8 +556,8 @@ export function OrganizationPortfolioSettingsPage() {
       {section === "preview" ? (
         <Card className="space-y-3 p-4">
           <CardHeader
-            title="معاينة أثر التغيير"
-            subtitle="مطلوب تأكيد صريح قبل الحفظ عند وجود أثر على المسار أو الحقول"
+            title={t("portfolioSettings.preview.title")}
+            subtitle={t("portfolioSettings.preview.subtitle")}
           />
           <ul className="list-disc space-y-1 pe-5 text-sm text-steel-600">
             {impactPreview.map((line) => (
@@ -541,18 +566,22 @@ export function OrganizationPortfolioSettingsPage() {
           </ul>
           <div className="rounded-xl border border-steel-100 bg-steel-50 p-3 text-xs dark:border-steel-800 dark:bg-steel-900/40">
             <p>
-              القالب: {PROFILE_TEMPLATE_LABELS[draft.profileTemplate]} · المسار:{" "}
-              {WORKFLOW_MODE_LABELS[draft.workflowMode]} · مراحل مفعّلة:{" "}
-              {draft.stages.filter((s) => s.enabled).length}
+              {t("portfolioSettings.preview.summary", {
+                template: profileTemplateLabel(t, draft.profileTemplate),
+                workflow: workflowModeLabel(t, draft.workflowMode),
+                n: draft.stages.filter((s) => s.enabled).length,
+              })}
             </p>
             <p className="mt-1 text-steel-500">
-              الإصدار الحالي المخزّن: {active.version} · آخر تحديث:{" "}
-              {active.updatedAt?.slice(0, 19) || "—"}
+              {t("portfolioSettings.preview.version", {
+                version: active.version,
+                at: active.updatedAt?.slice(0, 19) || t("common.emDash"),
+              })}
             </p>
           </div>
           {confirmApply ? (
             <p className="text-sm font-semibold text-amber-700">
-              أكّد الحفظ بالضغط على «حفظ السياسة» أدناه.
+              {t("portfolioSettings.preview.confirm")}
             </p>
           ) : null}
         </Card>
@@ -568,17 +597,17 @@ export function OrganizationPortfolioSettingsPage() {
             setMessage(null);
           }}
         >
-          تجاهل
+          {t("common.discard")}
         </Button>
         <Button
           variant="outline"
           disabled={!dirty}
           onClick={() => save(true)}
         >
-          حفظ ومزامنة نوع المنظمة
+          {t("common.saveAndSyncOrgType")}
         </Button>
         <Button disabled={!dirty} onClick={() => save(false)}>
-          حفظ السياسة
+          {t("common.savePolicy")}
         </Button>
       </div>
     </div>

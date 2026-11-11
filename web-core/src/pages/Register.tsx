@@ -2,16 +2,18 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2, Lock, Mail, User, UserPlus } from "lucide-react";
 import { useAuth } from "../store/AuthContext";
+import { useLocale } from "../store/LocaleContext";
 import { AuthShell } from "../components/auth/AuthShell";
 import { Field, Input } from "../components/ui/Input";
 import { DEMO_MODE } from "../demo-mode/config";
 
 export function Register() {
+  const { t, L } = useLocale();
   const { registerOrganization } = useAuth();
   const navigate = useNavigate();
   const [orgName, setOrgName] = useState("");
-  const [sector, setSector] = useState("قطاع خاص");
-  const [city, setCity] = useState("الرياض");
+  const [sector, setSector] = useState(() => t("register.defaultSector"));
+  const [city, setCity] = useState(() => t("city.riyadh"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState<string>(DEMO_MODE.defaultPassword);
@@ -22,23 +24,23 @@ export function Register() {
     e.preventDefault();
     setError("");
     if (!orgName.trim() || !name.trim() || !email.trim() || !password.trim()) {
-      setError("أكمل بيانات المنشأة ومسؤول المؤسسة.");
+      setError(t("register.error.incomplete"));
       return;
     }
     if (!emailConfirmed) {
-      setError("فعّل تأكيد البريد (Demo) للمتابعة.");
+      setError(t("register.error.emailConfirm"));
       return;
     }
     const res = registerOrganization({
       orgName: orgName.trim(),
-      sector: sector.trim() || "قطاع خاص",
-      city: city.trim() || "الرياض",
+      sector: sector.trim() || t("register.defaultSector"),
+      city: city.trim() || t("city.riyadh"),
       adminName: name.trim(),
       adminEmail: email.trim(),
       password,
     });
     if (!res.ok) {
-      setError(res.reason || "تعذّر إنشاء المنشأة.");
+      setError(L(res.reason) || t("register.error.create"));
       return;
     }
     navigate("/");
@@ -55,48 +57,46 @@ export function Register() {
             <Building2 className="h-5 w-5" />
           </span>
           <div className="auth-card__titles">
-            <h2 className="auth-card__heading">تسجيل منشأة جديدة</h2>
-            <p className="auth-card__sub">
-              محاكاة إنشاء مؤسسة وتعيين أول مسؤول مؤسسة (Org Admin)
-            </p>
+            <h2 className="auth-card__heading">{t("register.title")}</h2>
+            <p className="auth-card__sub">{t("register.subtitle")}</p>
           </div>
         </header>
 
         <div className="auth-card__section auth-card__section--fields auth-card__section--scroll">
-          <Field label="اسم المنشأة" required>
+          <Field label={t("register.orgName")} required>
             <div className="auth-field">
               <Building2 className="auth-field__icon" aria-hidden />
               <Input
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                placeholder="مثال: شركة أفق للتطوير"
+                placeholder={t("register.orgNamePlaceholder")}
                 className="auth-field__input"
               />
             </div>
           </Field>
 
           <div className="auth-form__row">
-            <Field label="القطاع">
+            <Field label={t("register.sector")}>
               <Input value={sector} onChange={(e) => setSector(e.target.value)} />
             </Field>
-            <Field label="المدينة">
+            <Field label={t("register.city")}>
               <Input value={city} onChange={(e) => setCity(e.target.value)} />
             </Field>
           </div>
 
-          <Field label="اسم مسؤول المؤسسة" required>
+          <Field label={t("register.adminName")} required>
             <div className="auth-field">
               <User className="auth-field__icon" aria-hidden />
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="الاسم الثلاثي"
+                placeholder={t("register.adminNamePlaceholder")}
                 className="auth-field__input"
               />
             </div>
           </Field>
 
-          <Field label="البريد الإلكتروني" required>
+          <Field label={t("login.email")} required>
             <div className="auth-field">
               <Mail className="auth-field__icon" aria-hidden />
               <Input
@@ -110,7 +110,7 @@ export function Register() {
             </div>
           </Field>
 
-          <Field label="كلمة المرور" required>
+          <Field label={t("login.password")} required>
             <div className="auth-field">
               <Lock className="auth-field__icon" aria-hidden />
               <Input
@@ -129,22 +129,22 @@ export function Register() {
               checked={emailConfirmed}
               onChange={(e) => setEmailConfirmed(e.target.checked)}
             />
-            تم تأكيد البريد (Demo — بدون إرسال فعلي)
+            {t("register.emailConfirmed")}
           </label>
 
           {error && <p className="auth-form__error">{error}</p>}
 
           <button type="submit" className="auth-submit">
             <UserPlus className="h-5 w-5" />
-            إنشاء المنشأة والدخول
+            {t("register.submit")}
           </button>
         </div>
 
         <footer className="auth-card__footer">
           <p className="auth-footer-link">
-            لديك حساب بالفعل؟{" "}
+            {t("register.hasAccount")}{" "}
             <Link to="/login" className="auth-link">
-              تسجيل الدخول
+              {t("login.title")}
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </p>

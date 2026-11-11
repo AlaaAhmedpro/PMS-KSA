@@ -77,7 +77,7 @@ function QuickRoleTile({
 
 export function Login() {
   const { login, completeMfa, loginAs, users, resetPassword } = useAuth();
-  const { t, locale } = useLocale();
+  const { t, L, locale } = useLocale();
   const quickUsers = users.filter((u) => u.active !== false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,7 +138,7 @@ export function Login() {
     const res = await login(email, password);
     setBusy(false);
     if (!res.ok) {
-      setError(res.reason || t("login.errorGeneric"));
+      setError(L(res.reason) || t("login.errorGeneric"));
       return;
     }
     if (res.needsMfa && res.pendingUser) {
@@ -158,7 +158,7 @@ export function Login() {
     const res = await completeMfa(otp, mfaPending);
     setBusy(false);
     if (!res.ok) {
-      setError(res.reason || t("mfa.error"));
+      setError(L(res.reason) || t("mfa.error"));
       return;
     }
     goAfterAuth(res.needsPasswordChange);
@@ -174,7 +174,7 @@ export function Login() {
     }
     const res = resetPassword(email, newPassword);
     if (!res.ok) {
-      setError(res.reason || t("forgot.error"));
+      setError(L(res.reason) || t("forgot.error"));
       return;
     }
     setPassword(newPassword);

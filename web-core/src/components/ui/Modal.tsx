@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 interface Props {
   open: boolean;
@@ -36,6 +37,7 @@ export function Modal({
   className,
   bodyClassName,
 }: Props) {
+  const { t } = useLocale();
   const hasHeader = title != null || subtitle != null;
 
   return (
@@ -79,7 +81,7 @@ export function Modal({
                 <button
                   type="button"
                   onClick={onClose}
-                  aria-label="إغلاق"
+                  aria-label={t("ui.modal.close")}
                   className="ui-modal__close"
                 >
                   <X className="h-5 w-5" />

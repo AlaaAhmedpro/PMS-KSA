@@ -10,19 +10,22 @@ import { useHierarchy } from "../store/HierarchyStore";
 import { useAuth } from "../store/AuthContext";
 import { useCan } from "../store/RbacContext";
 import { usePagination } from "../hooks/usePagination";
-import { TASK_STATUS_LABELS } from "../lib/constants";
+import { useLocale } from "../store/LocaleContext";
 import { isTaskOverdue } from "../services/projectService";
 import type { Priority, TaskItem, TaskStatus } from "../models/domain";
 import { cn } from "../lib/cn";
 
 type StatusFilter = "all" | "active" | "overdue" | "done";
 
-const PRIORITY_LABELS: Record<Priority, string> = {
-  low: "منخفضة",
-  normal: "عادية",
-  high: "عالية",
-  critical: "حرجة",
-};
+const PRIORITY_VALUES: Priority[] = ["low", "normal", "high", "critical"];
+
+const TASK_STATUS_IDS = [
+  "todo",
+  "in_progress",
+  "blocked",
+  "done",
+  "cancelled",
+] as const;
 
 const PRIORITY_BADGE: Record<Priority, string> = {
   low: "border-steel-200 bg-steel-50 text-steel-600 dark:border-steel-700 dark:text-steel-300",
@@ -54,6 +57,7 @@ function taskRank(t: TaskItem): number {
 }
 
 export function TasksPage() {
+  const { t } = useLocale();
   const { tasks, projects, milestones, projectCategories, updateTask } =
     useHierarchy();
   const { user } = useAuth();
@@ -131,29 +135,29 @@ export function TasksPage() {
   };
 
   const tabs: { id: StatusFilter; label: string; count: number }[] = [
-    { id: "all", label: "الكل", count: counts.all },
-    { id: "active", label: "قيد العمل", count: counts.active },
-    { id: "overdue", label: "متأخرة", count: counts.overdue },
-    { id: "done", label: "منجزة", count: counts.done },
+    { id: "all", label: t("common.all"), count: counts.all },
+    { id: "active", label: t("tasks.tab.active"), count: counts.active },
+    { id: "overdue", label: t("tasks.tab.overdue"), count: counts.overdue },
+    { id: "done", label: t("tasks.tab.done"), count: counts.done },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="مهامي"
+        title={t("tasks.title")}
         subtitle={
           user
-            ? `قائمة عملك الشخصية — ${user.name}`
-            : "تعذّر تحديد المستخدم الحالي"
+            ? t("tasks.subtitle.user", { name: user.name })
+            : t("tasks.subtitle.noUser")
         }
         icon={<ListTodo className="h-6 w-6" />}
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryTile
-          label="قيد العمل"
+          label={t("tasks.summary.active")}
           value={counts.active}
-          hint="مهام لم تُنجز بعد"
+          hint={t("tasks.summary.activeHint")}
           active={tab === "active"}
           onClick={() => {
             setTab("active");
@@ -161,9 +165,9 @@ export function TasksPage() {
           }}
         />
         <SummaryTile
-          label="متأخرة"
+          label={t("tasks.summary.overdue")}
           value={counts.overdue}
-          hint="تجاوزت تاريخ الاستحقاق"
+          hint={t("tasks.summary.overdueHint")}
           tone={counts.overdue > 0 ? "danger" : "default"}
           active={tab === "overdue"}
           onClick={() => {
@@ -172,9 +176,9 @@ export function TasksPage() {
           }}
         />
         <SummaryTile
-          label="منجزة"
+          label={t("tasks.summary.done")}
           value={counts.done}
-          hint="أُغلقت بنجاح"
+          hint={t("tasks.summary.doneHint")}
           tone="success"
           active={tab === "done"}
           onClick={() => {
@@ -220,8 +224,8 @@ export function TasksPage() {
             setQ(e.target.value);
             setPage(1);
           }}
-          placeholder="بحث بالعنوان أو المشروع أو المهمة الأب"
-          aria-label="بحث في مهامي"
+          placeholder={t("tasks.searchPlaceholder")}
+          aria-label={t("tasks.searchAria")}
         />
         <SearchableSelect
           value={priorityFilter}
@@ -230,10 +234,10 @@ export function TasksPage() {
             setPage(1);
           }}
           options={[
-            { value: "all", label: "كل الأولويات" },
-            ...Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
+            { value: "all", label: t("common.allPriorities") },
+            ...PRIORITY_VALUES.map((value) => ({
               value,
-              label,
+              label: t(`priority.${value}`),
             })),
           ]}
         />
@@ -252,13 +256,13 @@ export function TasksPage() {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">المهمة</th>
-              <th className="px-4 py-3 text-start font-bold">المشروع</th>
-              <th className="px-4 py-3 text-start font-bold">المرحلة / الفئة</th>
-              <th className="px-4 py-3 text-start font-bold">الأولوية</th>
-              <th className="px-4 py-3 text-start font-bold">الحالة</th>
-              <th className="px-4 py-3 text-start font-bold">التقدّم</th>
-              <th className="px-4 py-3 text-start font-bold">الاستحقاق</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.task")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.project")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.context")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.priority")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.status")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.progress")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("tasks.col.due")}</th>
             </tr>
           </thead>
           <tbody>
@@ -268,48 +272,50 @@ export function TasksPage() {
                   colSpan={7}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا مهام مطابقة للبحث أو التصفية.
+                  {t("tasks.empty")}
                 </td>
               </tr>
             ) : (
-              paginated.map((t) => {
-                const project = projects.find((p) => p.id === t.projectId);
-                const parent = t.parentTaskId
-                  ? tasks.find((x) => x.id === t.parentTaskId)
+              paginated.map((task) => {
+                const project = projects.find((p) => p.id === task.projectId);
+                const parent = task.parentTaskId
+                  ? tasks.find((x) => x.id === task.parentTaskId)
                   : undefined;
-                const overdue = isTaskOverdue(t);
+                const overdue = isTaskOverdue(task);
                 return (
                   <tr
-                    key={t.id}
+                    key={task.id}
                     className="border-b border-steel-100 dark:border-steel-800"
                   >
                     <td className="px-4 py-3 align-middle">
                       <Link
-                        to={`/projects/${t.projectId}#stages`}
+                        to={`/projects/${task.projectId}#stages`}
                         className="block truncate font-semibold text-brand-700 hover:underline"
-                        title={t.title}
+                        title={task.title}
                       >
-                        {t.title}
+                        {task.title}
                       </Link>
                       <p className="mt-0.5 truncate text-[11px] text-steel-400">
-                        {t.parentTaskId ? (
+                        {task.parentTaskId ? (
                           <>
-                            فرعية
-                            {parent ? ` · ضمن: ${parent.title}` : null}
+                            {t("tasks.subtask")}
+                            {parent
+                              ? t("tasks.subtaskWithin", { title: parent.title })
+                              : null}
                           </>
                         ) : (
-                          "مهمة أصلية"
+                          t("tasks.rootTask")
                         )}
-                        {overdue && t.status !== "done" ? (
+                        {overdue && task.status !== "done" ? (
                           <span className="ms-1.5 font-bold text-red-600">
-                            · متأخرة
+                            {t("tasks.overdueBadge")}
                           </span>
                         ) : null}
                       </p>
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <Link
-                        to={`/projects/${t.projectId}`}
+                        to={`/projects/${task.projectId}`}
                         className="block truncate font-semibold text-brand-700 hover:underline"
                         title={project?.name}
                       >
@@ -319,9 +325,9 @@ export function TasksPage() {
                     <td className="px-4 py-3 align-middle">
                       <span className="block truncate text-steel-700 dark:text-steel-200">
                         {resolveContext(
-                          t.projectId,
-                          t.categoryId,
-                          t.milestoneId,
+                          task.projectId,
+                          task.categoryId,
+                          task.milestoneId,
                         )}
                       </span>
                     </td>
@@ -329,42 +335,40 @@ export function TasksPage() {
                       <span
                         className={cn(
                           "inline-flex rounded border px-1.5 py-0.5 text-[11px] font-bold",
-                          PRIORITY_BADGE[t.priority],
+                          PRIORITY_BADGE[task.priority],
                         )}
                       >
-                        {PRIORITY_LABELS[t.priority]}
+                        {t(`priority.${task.priority}`)}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle">
                       {canUpdate ? (
                         <NativeSelect
-                          value={t.status}
+                          value={task.status}
                           onChange={(e) => {
                             const status = e.target.value as TaskStatus;
-                            updateTask(t.id, {
+                            updateTask(task.id, {
                               status,
-                              progress: status === "done" ? 100 : t.progress,
+                              progress: status === "done" ? 100 : task.progress,
                             });
                           }}
                           className="min-w-[7.5rem]"
-                          aria-label={`حالة ${t.title}`}
+                          aria-label={t("tasks.statusAria", { title: task.title })}
                         >
-                          {Object.entries(TASK_STATUS_LABELS).map(
-                            ([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ),
-                          )}
+                          {TASK_STATUS_IDS.map((value) => (
+                            <option key={value} value={value}>
+                              {t(`status.task.${value}`)}
+                            </option>
+                          ))}
                         </NativeSelect>
                       ) : (
                         <span
                           className={cn(
                             "inline-flex rounded border px-1.5 py-0.5 text-[11px] font-bold",
-                            STATUS_BADGE[t.status] ?? STATUS_BADGE.todo,
+                            STATUS_BADGE[task.status] ?? STATUS_BADGE.todo,
                           )}
                         >
-                          {TASK_STATUS_LABELS[t.status] ?? t.status}
+                          {t(`status.task.${task.status}`)}
                         </span>
                       )}
                     </td>
@@ -374,24 +378,24 @@ export function TasksPage() {
                           <div
                             className="h-1.5 rounded-full bg-brand-500"
                             style={{
-                              width: `${Math.min(100, Math.max(0, t.progress))}%`,
+                              width: `${Math.min(100, Math.max(0, task.progress))}%`,
                             }}
                           />
                         </div>
                         <span className="shrink-0 tabular-nums text-[11px] text-steel-500">
-                          {t.progress}%
+                          {task.progress}%
                         </span>
                       </div>
                     </td>
                     <td
                       className={cn(
                         "px-4 py-3 align-middle tabular-nums text-[12px]",
-                        overdue && t.status !== "done"
+                        overdue && task.status !== "done"
                           ? "font-bold text-red-600"
                           : "text-steel-700 dark:text-steel-200",
                       )}
                     >
-                      {t.dueDate}
+                      {task.dueDate}
                     </td>
                   </tr>
                 );

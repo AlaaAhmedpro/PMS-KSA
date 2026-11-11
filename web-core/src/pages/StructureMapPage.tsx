@@ -26,6 +26,7 @@ import {
 } from "../lib/hierarchyLinks";
 import { getProjectPlacement } from "../lib/orgModules";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
 import type { Initiative, Project } from "../models/domain";
 
 type FilterType = "all" | "org" | "chain" | "flexible" | "standalone";
@@ -51,6 +52,7 @@ function orphanStandaloneProjects(
 }
 
 export function StructureMapPage() {
+  const { t } = useLocale();
   const { organization } = useAuth();
   const { branches, departments } = useData();
   const { portfolios, programs, initiatives, projects } = useHierarchy();
@@ -116,18 +118,21 @@ export function StructureMapPage() {
   );
 
   const filters: { id: FilterType; label: string }[] = [
-    { id: "all", label: "الكل" },
-    { id: "org", label: "الفروع والإدارات" },
-    { id: "chain", label: "التسلسل المتكامل" },
-    { id: "flexible", label: "ارتباطات مرنة" },
-    { id: "standalone", label: "مستقلة تماماً" },
+    { id: "all", label: t("explorer.filter.all") },
+    { id: "org", label: t("explorer.filter.org") },
+    { id: "chain", label: t("explorer.filter.chain") },
+    { id: "flexible", label: t("explorer.filter.flexible") },
+    { id: "standalone", label: t("explorer.filter.standalone") },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="مستكشف العمل"
-        subtitle={`${organization?.name ?? ""} — ${clientMeta.label} · تسلسل مرن وليس شجرة إلزامية`}
+        title={t("explorer.title")}
+        subtitle={t("explorer.subtitle", {
+          org: organization?.name ?? "",
+          client: clientMeta.label,
+        })}
         icon={<GitBranch className="h-6 w-6" />}
       />
 
@@ -138,7 +143,7 @@ export function StructureMapPage() {
             className="ps-9"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="بحث بالاسم عبر المحافظ والمبادرات والبرامج والمشاريع…"
+            placeholder={t("explorer.searchPlaceholder")}
           />
         </div>
         <div className="flex flex-wrap gap-1">
@@ -160,10 +165,7 @@ export function StructureMapPage() {
         </div>
       </Card>
 
-      <p className="text-xs text-steel-500">
-        المؤسسة ← فروع ← إدارات · وبالتوازي: محفظة ← مبادرة ← برنامج ← مشاريع.
-        الكيانات غير المرتبطة تظهر في فروع مرنة أو كمشاريع مستقلة.
-      </p>
+      <p className="text-xs text-steel-500">{t("explorer.legendNote")}</p>
 
       <Card className="overflow-hidden border border-steel-200 p-0 dark:border-steel-700">
         <TreeNode
@@ -171,9 +173,13 @@ export function StructureMapPage() {
           onToggle={() => toggle("org")}
           tone="org"
           icon={Building2}
-          label="المؤسسة"
-          title={organization?.name ?? "المؤسسة"}
-          meta={`${clientMeta.shortLabel} · ${branches.length} فروع · ${departments.length} إدارات`}
+          label={t("explorer.node.organization")}
+          title={organization?.name ?? t("explorer.node.organizationFallback")}
+          meta={t("explorer.meta.org", {
+            client: clientMeta.shortLabel,
+            branches: branches.length,
+            depts: departments.length,
+          })}
           hasChildren
           root
         >
@@ -184,9 +190,12 @@ export function StructureMapPage() {
               onToggle={() => toggle("org:structure")}
               tone="org"
               icon={MapPin}
-              label="هيكل"
-              title="الفروع والإدارات"
-              meta={`${branches.length} فرع · ${departments.length} إدارة`}
+              label={t("explorer.node.structureLabel")}
+              title={t("explorer.node.structureTitle")}
+              meta={t("explorer.meta.structure", {
+                branches: branches.length,
+                depts: departments.length,
+              })}
               hasChildren={branches.length > 0 || sharedDepartments.length > 0}
             >
               {branches
@@ -226,13 +235,16 @@ export function StructureMapPage() {
                       onToggle={() => toggle(bKey, false)}
                       tone="branch"
                       icon={MapPin}
-                      label="فرع"
+                      label={t("explorer.label.branch")}
                       title={
                         <Link to="/lookups" className="hover:underline">
                           {branch.name}
                         </Link>
                       }
-                      meta={`${allDepts.length} إدارة · ${branchProjects.length} مشروع`}
+                      meta={t("explorer.meta.branch", {
+                        depts: allDepts.length,
+                        projects: branchProjects.length,
+                      })}
                       hasChildren={
                         allDepts.length > 0 || branchProjects.length > 0
                       }
@@ -249,14 +261,14 @@ export function StructureMapPage() {
                             onToggle={() => toggle(dKey, false)}
                             tone="department"
                             icon={Building2}
-                            label="إدارة"
+                            label={t("explorer.label.department")}
                             title={
                               <Link to="/lookups" className="hover:underline">
                                 {dept.name}
                               </Link>
                             }
-                            badge={!dept.branchId ? "مشتركة" : undefined}
-                            meta={`${deptProjects.length} مشروع`}
+                            badge={!dept.branchId ? t("explorer.badge.shared") : undefined}
+                            meta={t("explorer.meta.deptProjects", { n: deptProjects.length })}
                             hasChildren={deptProjects.length > 0}
                           >
                             {deptProjects.map((p, idx) => (
@@ -273,7 +285,7 @@ export function StructureMapPage() {
                       {branchProjects.filter(
                         (p) => !allDepts.some((d) => d.id === p.departmentId),
                       ).length > 0 ? (
-                        <FlexibleGroup label="مشاريع بلا إدارة مطابقة في هذا الفرع">
+                        <FlexibleGroup label={t("explorer.group.noDeptInBranch")}>
                           {branchProjects
                             .filter(
                               (p) =>
@@ -293,7 +305,7 @@ export function StructureMapPage() {
                 })}
 
               {sharedDepartments.length > 0 ? (
-                <FlexibleGroup label="إدارات مشتركة على مستوى المؤسسة">
+                <FlexibleGroup label={t("explorer.group.sharedDepts")}>
                   {sharedDepartments.map((dept) => {
                     const kids = projects.filter(
                       (p) => p.departmentId === dept.id,
@@ -306,10 +318,10 @@ export function StructureMapPage() {
                         onToggle={() => toggle(dKey, false)}
                         tone="department"
                         icon={Building2}
-                        label="إدارة"
+                        label={t("explorer.label.department")}
                         title={dept.name}
-                        badge="مشتركة"
-                        meta={`${kids.length} مشروع`}
+                        badge={t("explorer.badge.shared")}
+                        meta={t("explorer.meta.deptProjects", { n: kids.length })}
                         hasChildren={kids.length > 0}
                       >
                         {kids.map((p) => (
@@ -335,9 +347,14 @@ export function StructureMapPage() {
               onToggle={() => toggle("org:strategy")}
               tone="portfolio"
               icon={PieChart}
-              label="تسلسل"
-              title="التسلسل الاستراتيجي والتنفيذي"
-              meta={`${portfolios.length} محفظة · ${programs.length} برنامج · ${initiatives.length} مبادرة · ${projects.length} مشروع`}
+              label={t("explorer.label.sequence")}
+              title={t("explorer.node.strategyTitle")}
+              meta={t("explorer.meta.strategy", {
+                portfolios: portfolios.length,
+                programs: programs.length,
+                initiatives: initiatives.length,
+                projects: projects.length,
+              })}
               hasChildren
             >
           {modules.portfolio && showChain
@@ -387,13 +404,17 @@ export function StructureMapPage() {
                     onToggle={() => toggle(pfKey)}
                     tone="portfolio"
                     icon={PieChart}
-                    label="محفظة"
+                    label={t("explorer.label.portfolio")}
                     title={
                       <Link to="/portfolios" className="hover:underline">
                         {pf.name}
                       </Link>
                     }
-                    meta={`${chainInis.length} مبادرة · ${prgs.length} برنامج · ${allProjects} مشروع`}
+                    meta={t("explorer.meta.portfolio", {
+                      initiatives: chainInis.length,
+                      programs: prgs.length,
+                      projects: allProjects,
+                    })}
                     hasChildren={
                       chainInis.length > 0 ||
                       (showFlexible &&
@@ -420,13 +441,16 @@ export function StructureMapPage() {
                           onToggle={() => toggle(iniKey)}
                           tone="initiative"
                           icon={Target}
-                          label="مبادرة"
+                          label={t("explorer.label.initiative")}
                           title={
                             <Link to="/initiatives" className="hover:underline">
                               {ini.name}
                             </Link>
                           }
-                          meta={`${childPrograms.length} برنامج · ${prgProjects.length + directProjects.length} مشروع`}
+                          meta={t("explorer.meta.initiative", {
+                            programs: childPrograms.length,
+                            projects: prgProjects.length + directProjects.length,
+                          })}
                           hasChildren={
                             childPrograms.length > 0 || directProjects.length > 0
                           }
@@ -442,7 +466,7 @@ export function StructureMapPage() {
                                 }
                                 tone="program"
                                 icon={Layers}
-                                label="برنامج"
+                                label={t("explorer.label.program")}
                                 title={
                                   <Link
                                     to="/programs"
@@ -451,7 +475,7 @@ export function StructureMapPage() {
                                     {prg.name}
                                   </Link>
                                 }
-                                meta={`${kids.length} مشروع`}
+                                meta={t("explorer.meta.program", { n: kids.length })}
                                 hasChildren={kids.length > 0}
                               >
                                 {kids.map((p, idx) => (
@@ -466,13 +490,13 @@ export function StructureMapPage() {
                             );
                           })}
                           {directProjects.length > 0 ? (
-                            <FlexibleGroup label="مشاريع مرتبطة مباشرة بالمبادرة">
+                            <FlexibleGroup label={t("explorer.group.directToInitiative")}>
                               {directProjects.map((p) => (
                                 <TreeLeaf
                                   key={p.id}
                                   to={`/projects/${p.id}`}
                                   name={p.name}
-                                  badge="ارتباط مرن"
+                                  badge={t("explorer.badge.flexLink")}
                                 />
                               ))}
                             </FlexibleGroup>
@@ -483,7 +507,7 @@ export function StructureMapPage() {
 
                     {/* Flexible: programs in portfolio without an initiative */}
                     {showFlexible && freePrograms.length > 0 ? (
-                      <FlexibleGroup label="برامج بلا مبادرة (ارتباط مرن)">
+                      <FlexibleGroup label={t("explorer.group.programsNoInitiative")}>
                         {freePrograms.map((prg) => {
                           const kids = projectsForProgram(projects, prg.id);
                           const pKey = `${pfKey}:free:${prg.id}`;
@@ -494,7 +518,7 @@ export function StructureMapPage() {
                               onToggle={() => toggle(pKey, false)}
                               tone="program"
                               icon={Layers}
-                              label="برنامج"
+                              label={t("explorer.label.program")}
                               title={
                                 <Link
                                   to="/programs"
@@ -503,8 +527,8 @@ export function StructureMapPage() {
                                   {prg.name}
                                 </Link>
                               }
-                              badge="بلا مبادرة"
-                              meta={`${kids.length} مشروع`}
+                              badge={t("explorer.badge.noInitiative")}
+                              meta={t("explorer.meta.program", { n: kids.length })}
                               hasChildren={kids.length > 0}
                             >
                               {kids.map((p, idx) => (
@@ -523,13 +547,13 @@ export function StructureMapPage() {
 
                     {/* Flexible: portfolio-only projects */}
                     {showFlexible && solo.length > 0 ? (
-                      <FlexibleGroup label="مشاريع مستقلة تحت المحفظة">
+                      <FlexibleGroup label={t("explorer.group.standaloneUnderPortfolio")}>
                         {solo.map((p) => (
                           <TreeLeaf
                             key={p.id}
                             to={`/projects/${p.id}`}
                             name={p.name}
-                            badge="مشاريع مستقلة"
+                            badge={t("explorer.badge.standaloneProjects")}
                           />
                         ))}
                       </FlexibleGroup>
@@ -550,7 +574,7 @@ export function StructureMapPage() {
                 return p ? matches(p.name) : false;
               }),
           ) ? (
-            <FlexibleGroup label="مبادرات بلا محفظة">
+            <FlexibleGroup label={t("explorer.group.initiativesNoPortfolio")}>
               {standaloneInitiatives
                 .filter(
                   (i) =>
@@ -572,14 +596,14 @@ export function StructureMapPage() {
                       onToggle={() => toggle(key, false)}
                       tone="initiative"
                       icon={Target}
-                      label="مبادرة"
+                      label={t("explorer.label.initiative")}
                       title={
                         <Link to="/initiatives" className="hover:underline">
                           {ini.name}
                         </Link>
                       }
-                      badge="مبادرة مستقلة"
-                      meta={`${kids.length} مشروع`}
+                      badge={t("explorer.badge.standaloneInitiative")}
+                      meta={t("explorer.meta.deptProjects", { n: kids.length })}
                       hasChildren={kids.length > 0}
                     >
                       {kids.map((p) => (
@@ -587,7 +611,7 @@ export function StructureMapPage() {
                           key={p.id}
                           to={`/projects/${p.id}`}
                           name={p.name}
-                          badge="ارتباط مرن"
+                          badge={t("explorer.badge.flexLink")}
                         />
                       ))}
                     </TreeNode>
@@ -598,13 +622,13 @@ export function StructureMapPage() {
 
           {/* Fully independent projects */}
           {showStandalone && orphanProjects.length > 0 ? (
-            <FlexibleGroup label="مشاريع مستقلة تماماً (بلا محفظة أو برنامج أو مبادرة)">
+            <FlexibleGroup label={t("explorer.group.fullyIndependent")}>
               {orphanProjects.map((p) => (
                 <TreeLeaf
                   key={p.id}
                   to={`/projects/${p.id}`}
                   name={p.name}
-                  badge="مستقل"
+                  badge={t("explorer.badge.independent")}
                 />
               ))}
             </FlexibleGroup>
@@ -615,7 +639,7 @@ export function StructureMapPage() {
           orphanProjects.length === 0 &&
           standaloneInitiatives.length === 0 ? (
             <p className="px-3 py-4 text-xs text-steel-400">
-              لا كيانات للعرض حسب البحث أو الفلاتر.
+              {t("explorer.empty.filtered")}
             </p>
           ) : null}
             </TreeNode>
@@ -624,13 +648,13 @@ export function StructureMapPage() {
       </Card>
 
       <div className="flex flex-wrap gap-3 text-[10px] text-steel-500">
-        <LegendSwatch tone="org" label="مؤسسة" />
-        <LegendSwatch tone="branch" label="فرع" />
-        <LegendSwatch tone="department" label="إدارة" />
-        <LegendSwatch tone="portfolio" label="محفظة" />
-        <LegendSwatch tone="initiative" label="مبادرة" />
-        <LegendSwatch tone="program" label="برنامج" />
-        <LegendSwatch tone="project" label="مشروع" />
+        <LegendSwatch tone="org" label={t("explorer.legend.organization")} />
+        <LegendSwatch tone="branch" label={t("explorer.legend.branch")} />
+        <LegendSwatch tone="department" label={t("explorer.legend.department")} />
+        <LegendSwatch tone="portfolio" label={t("explorer.legend.portfolio")} />
+        <LegendSwatch tone="initiative" label={t("explorer.legend.initiative")} />
+        <LegendSwatch tone="program" label={t("explorer.legend.program")} />
+        <LegendSwatch tone="project" label={t("explorer.legend.project")} />
       </div>
     </div>
   );
@@ -775,6 +799,7 @@ function TreeLeaf({
   letter?: string;
   badge?: string;
 }) {
+  const { t } = useLocale();
   return (
     <Link
       to={to}
@@ -789,7 +814,10 @@ function TreeLeaf({
       >
         <FolderKanban className="h-3.5 w-3.5" />
       </span>
-      <span className="text-[10px] font-bold text-steel-400">مشروع{letter ? ` ${letter}` : ""}:</span>
+      <span className="text-[10px] font-bold text-steel-400">
+        {t("explorer.leaf.project")}
+        {letter ? ` ${letter}` : ""}:
+      </span>
       <span className="min-w-0 truncate text-xs font-bold text-brand-700 dark:text-brand-300">
         {name}
       </span>

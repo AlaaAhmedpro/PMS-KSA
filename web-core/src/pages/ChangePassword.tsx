@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { KeyRound, Lock } from "lucide-react";
 import { useAuth } from "../store/AuthContext";
+import { useLocale } from "../store/LocaleContext";
 import { AuthShell } from "../components/auth/AuthShell";
 import { Field, Input } from "../components/ui/Input";
 
 export function ChangePassword() {
+  const { t, L } = useLocale();
   const { user, changeOwnPassword, logout } = useAuth();
   const navigate = useNavigate();
   const [current, setCurrent] = useState("");
@@ -22,12 +24,12 @@ export function ChangePassword() {
     e.preventDefault();
     setError("");
     if (next !== confirm) {
-      setError("كلمتا المرور غير متطابقتين.");
+      setError(t("changePassword.mismatch"));
       return;
     }
     const res = changeOwnPassword(current, next);
     if (!res.ok) {
-      setError(res.reason || "تعذّر تحديث كلمة المرور.");
+      setError(L(res.reason) || t("changePassword.error"));
       return;
     }
     navigate("/", { replace: true });
@@ -41,15 +43,15 @@ export function ChangePassword() {
             <Lock className="h-5 w-5" />
           </span>
           <div className="auth-card__titles">
-            <h2 className="auth-card__heading">تغيير كلمة المرور</h2>
+            <h2 className="auth-card__heading">{t("changePassword.title")}</h2>
             <p className="auth-card__sub">
-              مطلوب عند أول دخول بعد استلام كلمة مرور مؤقتة — {user.name}
+              {t("changePassword.subtitle", { name: user.name })}
             </p>
           </div>
         </header>
 
         <div className="auth-card__section auth-card__section--fields space-y-3">
-          <Field label="كلمة المرور الحالية / المؤقتة" required>
+          <Field label={t("changePassword.current")} required>
             <div className="auth-field">
               <KeyRound className="auth-field__icon" aria-hidden />
               <Input
@@ -61,7 +63,7 @@ export function ChangePassword() {
               />
             </div>
           </Field>
-          <Field label="كلمة المرور الجديدة" required>
+          <Field label={t("changePassword.new")} required>
             <Input
               type="password"
               value={next}
@@ -69,7 +71,7 @@ export function ChangePassword() {
               dir="ltr"
             />
           </Field>
-          <Field label="تأكيد كلمة المرور" required>
+          <Field label={t("changePassword.confirm")} required>
             <Input
               type="password"
               value={confirm}
@@ -89,10 +91,10 @@ export function ChangePassword() {
               navigate("/login", { replace: true });
             }}
           >
-            تسجيل الخروج
+            {t("common.logout")}
           </button>
           <button type="submit" className="auth-submit">
-            حفظ والمتابعة
+            {t("changePassword.submit")}
           </button>
         </div>
       </form>

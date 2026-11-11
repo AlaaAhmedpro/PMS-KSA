@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/cn";
 import type { Initiative, Portfolio, Program, Project } from "../../models/domain";
-import { PROJECT_PLACEMENT_LABELS } from "../../lib/orgModules";
 import { projectRelationships } from "../../lib/hierarchyLinks";
+import { useLocale } from "../../store/LocaleContext";
 
 type TabId =
   | "overview"
@@ -23,19 +23,19 @@ type TabId =
   | "documents"
   | "activity";
 
-const TABS: {
+const TAB_DEFS: {
   id: TabId;
-  label: string;
+  labelKey: string;
   icon: typeof FolderKanban;
   hash: string;
 }[] = [
-  { id: "overview", label: "نظرة عامة", icon: FolderKanban, hash: "overview" },
-  { id: "stages", label: "المراحل", icon: Flag, hash: "stages" },
-  { id: "team", label: "الفريق", icon: Users, hash: "team" },
-  { id: "expenses", label: "المصاريف", icon: Wallet, hash: "expenses" },
-  { id: "materials", label: "الأصناف والمواد", icon: Boxes, hash: "materials" },
-  { id: "documents", label: "المستندات", icon: Paperclip, hash: "documents" },
-  { id: "activity", label: "سجل النشاطات", icon: History, hash: "activity" },
+  { id: "overview", labelKey: "projectNav.tab.overview", icon: FolderKanban, hash: "overview" },
+  { id: "stages", labelKey: "projectNav.tab.stages", icon: Flag, hash: "stages" },
+  { id: "team", labelKey: "projectNav.tab.team", icon: Users, hash: "team" },
+  { id: "expenses", labelKey: "projectNav.tab.expenses", icon: Wallet, hash: "expenses" },
+  { id: "materials", labelKey: "projectNav.tab.materials", icon: Boxes, hash: "materials" },
+  { id: "documents", labelKey: "projectNav.tab.documents", icon: Paperclip, hash: "documents" },
+  { id: "activity", labelKey: "projectNav.tab.activity", icon: History, hash: "activity" },
 ];
 
 export function ProjectContextualNav({
@@ -49,10 +49,11 @@ export function ProjectContextualNav({
   programs: Program[];
   initiatives: Initiative[];
 }) {
+  const { t } = useLocale();
   const location = useLocation();
   const rawHash = (location.hash || "#overview").replace("#", "");
   const hash = (rawHash === "work" ? "stages" : rawHash) as TabId;
-  const active = TABS.some((t) => t.id === hash) ? hash : "overview";
+  const active = TAB_DEFS.some((tab) => tab.id === hash) ? hash : "overview";
   const { placement } = projectRelationships(
     project,
     portfolios,
@@ -64,20 +65,20 @@ export function ProjectContextualNav({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-md bg-steel-100 px-2 py-1 text-[10px] font-bold text-steel-600 dark:bg-steel-800 dark:text-steel-300">
-          {PROJECT_PLACEMENT_LABELS[placement]}
+          {t(`project.placement.${placement}`)}
         </span>
         {placement === "fully_independent" ? (
           <span className="text-[11px] text-steel-400">
-            مشروع مستقل — بلا محفظة أو برنامج
+            {t("projectNav.independentHint")}
           </span>
         ) : null}
       </div>
 
       <nav
         className="flex flex-wrap gap-1 rounded-md border border-steel-200 bg-white p-1 dark:border-steel-700 dark:bg-steel-900"
-        aria-label="تنقل المشروع"
+        aria-label={t("projectNav.aria")}
       >
-        {TABS.map((tab) => {
+        {TAB_DEFS.map((tab) => {
           const Icon = tab.icon;
           const isOn = active === tab.id;
           return (
@@ -92,7 +93,7 @@ export function ProjectContextualNav({
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              {tab.label}
+              {t(tab.labelKey)}
             </a>
           );
         })}
@@ -101,7 +102,7 @@ export function ProjectContextualNav({
           className="ms-auto inline-flex items-center gap-1.5 rounded px-3 py-2 text-xs font-bold text-steel-400 hover:bg-steel-50 dark:hover:bg-steel-800"
         >
           <Settings2 className="h-3.5 w-3.5" />
-          كل المشاريع
+          {t("projectNav.allProjects")}
         </Link>
       </nav>
     </div>

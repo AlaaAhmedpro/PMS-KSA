@@ -1,6 +1,7 @@
 import { STATUS_META } from "../../lib/constants";
 import { cn } from "../../lib/cn";
 import type { Status } from "../../lib/types";
+import { useLocale } from "../../store/LocaleContext";
 
 export function StatusBadge({
   status,
@@ -9,6 +10,7 @@ export function StatusBadge({
   status: Status;
   className?: string;
 }) {
+  const { L } = useLocale();
   const meta = STATUS_META[status];
   const isOverdue = status === "overdue";
   return (
@@ -21,7 +23,7 @@ export function StatusBadge({
       )}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
-      {meta.label}
+      {L(meta.label)}
     </span>
   );
 }

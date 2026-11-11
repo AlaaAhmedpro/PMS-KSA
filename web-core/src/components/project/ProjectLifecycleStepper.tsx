@@ -2,41 +2,42 @@ import { Check } from "lucide-react";
 import type { ProjectStatus } from "../../models/domain";
 import { PROJECT_STATUS_LABELS } from "../../lib/constants";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 type StepKey = "draft" | "planned" | "active" | "completed";
 
 type StepDef = {
   key: StepKey;
-  label: string;
+  labelKey: keyof typeof PROJECT_STATUS_LABELS;
   match: ProjectStatus[];
 };
 
 const STEPS: StepDef[] = [
   {
     key: "draft",
-    label: PROJECT_STATUS_LABELS.draft,
+    labelKey: "draft",
     match: ["draft"],
   },
   {
     key: "planned",
-    label: PROJECT_STATUS_LABELS.planned,
+    labelKey: "planned",
     match: ["planned"],
   },
   {
     key: "active",
-    label: PROJECT_STATUS_LABELS.active,
+    labelKey: "active",
     match: ["active", "on_hold"],
   },
   {
     key: "completed",
-    label: PROJECT_STATUS_LABELS.completed,
+    labelKey: "completed",
     match: ["completed"],
   },
 ];
 
-const SIDE_NOTE: Partial<Record<ProjectStatus, string>> = {
-  on_hold: PROJECT_STATUS_LABELS.on_hold,
-  cancelled: PROJECT_STATUS_LABELS.cancelled,
+const SIDE_NOTE_KEYS: Partial<Record<ProjectStatus, keyof typeof PROJECT_STATUS_LABELS>> = {
+  on_hold: "on_hold",
+  cancelled: "cancelled",
 };
 
 /** Brand blue — Atlantis primary */
@@ -63,8 +64,12 @@ export function ProjectLifecycleStepper({
   status: ProjectStatus;
   className?: string;
 }) {
+  const { L } = useLocale();
   const activeIndex = currentStepIndex(status);
-  const sideNote = SIDE_NOTE[status];
+  const sideNoteKey = SIDE_NOTE_KEYS[status];
+  const sideNote = sideNoteKey
+    ? L(PROJECT_STATUS_LABELS[sideNoteKey])
+    : undefined;
   const cancelled = status === "cancelled";
   const fullyDone = status === "completed";
 
@@ -172,9 +177,9 @@ export function ProjectLifecycleStepper({
                     style={
                       active && !cancelled ? { color: DONE } : undefined
                     }
-                    title={step.label}
+                    title={L(PROJECT_STATUS_LABELS[step.labelKey])}
                   >
-                    {step.label}
+                    {L(PROJECT_STATUS_LABELS[step.labelKey])}
                   </span>
                 </li>
               );

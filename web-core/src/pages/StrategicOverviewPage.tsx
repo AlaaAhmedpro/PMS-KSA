@@ -38,12 +38,10 @@ import {
 } from "../lib/strategicEntities";
 import {
   RELATIONSHIP_TYPES,
-  entityLabelAr,
   getRelationshipDef,
 } from "../lib/relationshipRules";
-import { PROJECT_STATUS_LABELS } from "../lib/constants";
+import { useLocale } from "../store/LocaleContext";
 import type {
-  ProjectStatus,
   RelationshipTypeKey,
   StrategicEntityType,
 } from "../models/domain";
@@ -66,6 +64,10 @@ const ENTITY_ICONS = {
 };
 
 export function StrategicOverviewPage() {
+  const { t, locale } = useLocale();
+  const entityLabel = (type: StrategicEntityType) => t(`entity.${type}`);
+  const projectStatusLabel = (status: string) => t(`status.project.${status}`);
+
   const {
     portfolios,
     initiatives,
@@ -183,7 +185,7 @@ export function StrategicOverviewPage() {
         sortKey === "name" ? a.name : sortKey === "type" ? a.type : a.status ?? "";
       const bv =
         sortKey === "name" ? b.name : sortKey === "type" ? b.type : b.status ?? "";
-      const cmp = String(av).localeCompare(String(bv), "ar");
+      const cmp = String(av).localeCompare(String(bv), locale);
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
@@ -224,26 +226,26 @@ export function StrategicOverviewPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="النظرة الاستراتيجية"
-        subtitle="ربط الاستراتيجية بالتنفيذ — تسلسل مرن وعلاقات صريحة دون إجبار شجرة إلزامية"
+        title={t("strategy.title")}
+        subtitle={t("strategy.subtitle")}
         icon={<Network className="h-6 w-6" />}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setRelModalOpen(true)}>
               <GitBranch className="h-4 w-4" />
-              إضافة علاقة
+              {t("strategy.addRelationship")}
             </Button>
             <div className="relative">
               <details className="group">
                 <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl bg-brand-600 px-3 py-2 text-sm font-bold text-white hover:bg-brand-700">
                   <Plus className="h-4 w-4" />
-                  إنشاء
+                  {t("common.create")}
                 </summary>
                 <div className="absolute end-0 z-20 mt-1 w-44 rounded-xl border border-steel-200 bg-white p-1 shadow-lg dark:border-steel-700 dark:bg-steel-900">
-                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/portfolios">محفظة</Link>
-                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/initiatives">مبادرة</Link>
-                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/programs">برنامج</Link>
-                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/projects">مشروع</Link>
+                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/portfolios">{t("entity.portfolio")}</Link>
+                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/initiatives">{t("entity.initiative")}</Link>
+                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/programs">{t("entity.program")}</Link>
+                  <Link className="block rounded-lg px-3 py-2 text-sm hover:bg-steel-50 dark:hover:bg-steel-800" to="/projects">{t("entity.project")}</Link>
                 </div>
               </details>
             </div>
@@ -252,12 +254,12 @@ export function StrategicOverviewPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="المحافظ" value={String(portfolios.length)} icon={<Briefcase className="h-4 w-4" />} tone="brand" />
-        <KpiCard label="المبادرات" value={String(initiatives.length)} icon={<Compass className="h-4 w-4" />} tone="sky" />
-        <KpiCard label="البرامج" value={String(programs.length)} icon={<Layers className="h-4 w-4" />} tone="steel" />
-        <KpiCard label="المشاريع" value={String(projects.length)} icon={<FolderKanban className="h-4 w-4" />} tone="amber" />
-        <KpiCard label="بلا مواءمة استراتيجية" value={String(unaligned.length)} icon={<GitBranch className="h-4 w-4" />} tone="amber" />
-        <KpiCard label="معرّضة / متأخرة" value={String(atRisk.length)} icon={<FolderKanban className="h-4 w-4" />} tone="red" />
+        <KpiCard label={t("strategy.kpi.portfolios")} value={String(portfolios.length)} icon={<Briefcase className="h-4 w-4" />} tone="brand" />
+        <KpiCard label={t("strategy.kpi.initiatives")} value={String(initiatives.length)} icon={<Compass className="h-4 w-4" />} tone="sky" />
+        <KpiCard label={t("strategy.kpi.programs")} value={String(programs.length)} icon={<Layers className="h-4 w-4" />} tone="steel" />
+        <KpiCard label={t("strategy.kpi.projects")} value={String(projects.length)} icon={<FolderKanban className="h-4 w-4" />} tone="amber" />
+        <KpiCard label={t("strategy.kpi.unaligned")} value={String(unaligned.length)} icon={<GitBranch className="h-4 w-4" />} tone="amber" />
+        <KpiCard label={t("strategy.kpi.atRisk")} value={String(atRisk.length)} icon={<FolderKanban className="h-4 w-4" />} tone="red" />
       </div>
 
       <Card className="space-y-3 p-4">
@@ -268,15 +270,15 @@ export function StrategicOverviewPage() {
               className="ps-9"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="بحث في المحافظ والمبادرات والبرامج والمشاريع…"
+              placeholder={t("strategy.searchPlaceholder")}
             />
           </div>
           <div className="flex flex-wrap gap-1 rounded-xl border border-steel-200 p-1 dark:border-steel-700">
             {(
               [
-                { id: "hierarchy", label: "التسلسل", icon: Layers },
-                { id: "relationships", label: "العلاقات", icon: Network },
-                { id: "table", label: "الجدول", icon: Table2 },
+                { id: "hierarchy", label: t("strategy.view.hierarchy"), icon: Layers },
+                { id: "relationships", label: t("strategy.view.relationships"), icon: Network },
+                { id: "table", label: t("strategy.view.table"), icon: Table2 },
               ] as const
             ).map((v) => (
               <button
@@ -301,21 +303,30 @@ export function StrategicOverviewPage() {
             value={typeFilter}
             onChange={(v) => setTypeFilter(v as StrategicEntityType | "all")}
             options={[
-              { value: "all", label: "كل الأنواع" },
-              { value: "portfolio", label: "محفظة" },
-              { value: "initiative", label: "مبادرة" },
-              { value: "program", label: "برنامج" },
-              { value: "project", label: "مشروع" },
+              { value: "all", label: t("common.allTypes") },
+              { value: "portfolio", label: t("entity.portfolio") },
+              { value: "initiative", label: t("entity.initiative") },
+              { value: "program", label: t("entity.program") },
+              { value: "project", label: t("entity.project") },
             ]}
           />
           <SearchableSelect
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: "all", label: "كل الحالات" },
-              ...Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => ({
+              { value: "all", label: t("common.allStatuses") },
+              ...(
+                [
+                  "draft",
+                  "planned",
+                  "active",
+                  "on_hold",
+                  "completed",
+                  "cancelled",
+                ] as const
+              ).map((value) => ({
                 value,
-                label,
+                label: t(`status.project.${value}`),
               })),
             ]}
           />
@@ -323,7 +334,7 @@ export function StrategicOverviewPage() {
             value={deptFilter}
             onChange={setDeptFilter}
             options={[
-              { value: "all", label: "كل الإدارات" },
+              { value: "all", label: t("common.allDepartments") },
               ...departments.map((d) => ({ value: d.id, label: d.name })),
             ]}
           />
@@ -331,7 +342,7 @@ export function StrategicOverviewPage() {
             value={ownerFilter}
             onChange={setOwnerFilter}
             options={[
-              { value: "all", label: "كل المسؤولين" },
+              { value: "all", label: t("common.allOwners") },
               ...users.map((u) => ({ value: u.id, label: u.name })),
             ]}
           />
@@ -341,10 +352,10 @@ export function StrategicOverviewPage() {
             value={relTypeFilter}
             onChange={(v) => setRelTypeFilter(v as RelationshipTypeKey | "all")}
             options={[
-              { value: "all", label: "كل أنواع العلاقات" },
-              ...RELATIONSHIP_TYPES.map((t) => ({
-                value: t.key,
-                label: t.nameAr,
+              { value: "all", label: t("common.allRelationshipTypes") },
+              ...RELATIONSHIP_TYPES.map((rel) => ({
+                value: rel.key,
+                label: t(`relationship.${rel.key}`),
               })),
             ]}
           />
@@ -361,7 +372,7 @@ export function StrategicOverviewPage() {
           {view === "hierarchy" ? (
             <Card className="overflow-hidden p-0">
               <div className="border-b border-steel-100 px-4 py-3 text-xs text-steel-500 dark:border-steel-800">
-                الاحتواء الهرمي فقط. المواءمات والاعتمادات تظهر في تبويب العلاقات ولوحة التفاصيل.
+                {t("strategy.hierarchyNote")}
               </div>
               <div className="space-y-1 p-3">
                 {portfolios
@@ -380,13 +391,17 @@ export function StrategicOverviewPage() {
                     const prgs = containsChildren("portfolio", pf.id, "program");
                     const directProjects = containsChildren("portfolio", pf.id, "project");
                     return (
-                      <HierarchyNode
+                      <HierarchyNode t={t}
                         key={pf.id}
                         open={isOpen(key)}
                         onToggle={() => toggleNode(key)}
                         type="portfolio"
                         name={pf.name}
-                        meta={`${inis.length} مبادرة · ${prgs.length} برنامج · ${directProjects.length} مشروع مباشر`}
+                        meta={t("strategy.meta.portfolio", {
+                          initiatives: inis.length,
+                          programs: prgs.length,
+                          direct: directProjects.length,
+                        })}
                         selected={selected?.type === "portfolio" && selected.id === pf.id}
                         onSelect={() => selectEntity("portfolio", pf.id)}
                         hasChildren={inis.length + prgs.length + directProjects.length > 0}
@@ -399,13 +414,15 @@ export function StrategicOverviewPage() {
                           const iniPrograms = containsChildren("initiative", ini.id, "program");
                           const iniProjects = containsChildren("initiative", ini.id, "project");
                           return (
-                            <HierarchyNode
+                            <HierarchyNode t={t}
                               key={ini.id}
                               open={isOpen(iKey, false)}
                               onToggle={() => toggleNode(iKey, false)}
                               type="initiative"
                               name={ini.name}
-                              meta={`${iniPrograms.length} برنامج`}
+                              meta={t("strategy.meta.initiativePrograms", {
+                                n: iniPrograms.length,
+                              })}
                               selected={selected?.type === "initiative" && selected.id === ini.id}
                               onSelect={() => selectEntity("initiative", ini.id)}
                               hasChildren={iniPrograms.length + iniProjects.length > 0}
@@ -416,13 +433,15 @@ export function StrategicOverviewPage() {
                                 const pKey = `${iKey}:prg:${prg.id}`;
                                 const kids = containsChildren("program", prg.id, "project");
                                 return (
-                                  <HierarchyNode
+                                  <HierarchyNode t={t}
                                     key={prg.id}
                                     open={isOpen(pKey, false)}
                                     onToggle={() => toggleNode(pKey, false)}
                                     type="program"
                                     name={prg.name}
-                                    meta={`${kids.length} مشروع`}
+                                    meta={t("strategy.meta.programProjects", {
+                                      n: kids.length,
+                                    })}
                                     selected={selected?.type === "program" && selected.id === prg.id}
                                     onSelect={() => selectEntity("program", prg.id)}
                                     hasChildren={kids.length > 0}
@@ -432,7 +451,7 @@ export function StrategicOverviewPage() {
                                       if (!proj) return null;
                                       if (term && !proj.name.toLowerCase().includes(term)) return null;
                                       return (
-                                        <HierarchyLeaf
+                                        <HierarchyLeaf t={t}
                                           key={proj.id}
                                           type="project"
                                           name={proj.name}
@@ -449,12 +468,12 @@ export function StrategicOverviewPage() {
                                 const proj = projects.find((p) => p.id === pe.targetId);
                                 if (!proj) return null;
                                 return (
-                                  <HierarchyLeaf
+                                  <HierarchyLeaf t={t}
                                     key={proj.id}
                                     type="project"
                                     name={proj.name}
                                     status={proj.status}
-                                    badge="مواءمة/ارتباط مباشر"
+                                    badge={t("strategy.badge.directAlign")}
                                     selected={selected?.type === "project" && selected.id === proj.id}
                                     onSelect={() => selectEntity("project", proj.id)}
                                   />
@@ -475,14 +494,14 @@ export function StrategicOverviewPage() {
                           const pKey = `${key}:free-prg:${prg.id}`;
                           const kids = containsChildren("program", prg.id, "project");
                           return (
-                            <HierarchyNode
+                            <HierarchyNode t={t}
                               key={prg.id}
                               open={isOpen(pKey, false)}
                               onToggle={() => toggleNode(pKey, false)}
                               type="program"
                               name={prg.name}
-                              badge="بلا مبادرة"
-                              meta={`${kids.length} مشروع`}
+                              badge={t("strategy.badge.noInitiative")}
+                              meta={t("strategy.meta.programProjects", { n: kids.length })}
                               selected={selected?.type === "program" && selected.id === prg.id}
                               onSelect={() => selectEntity("program", prg.id)}
                               hasChildren={kids.length > 0}
@@ -491,7 +510,7 @@ export function StrategicOverviewPage() {
                                 const proj = projects.find((p) => p.id === ke.targetId);
                                 if (!proj) return null;
                                 return (
-                                  <HierarchyLeaf
+                                  <HierarchyLeaf t={t}
                                     key={proj.id}
                                     type="project"
                                     name={proj.name}
@@ -507,18 +526,18 @@ export function StrategicOverviewPage() {
                         {directProjects.length > 0 ? (
                           <div className="ms-2 mt-1 space-y-0.5 rounded-lg border border-dashed border-amber-300/70 p-1.5 dark:border-amber-700/50">
                             <p className="px-1 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                              مشاريع مستقلة تحت المحفظة
+                              {t("strategy.group.standaloneUnderPortfolio")}
                             </p>
                             {directProjects.map((edge) => {
                               const proj = projects.find((p) => p.id === edge.targetId);
                               if (!proj) return null;
                               return (
-                                <HierarchyLeaf
+                                <HierarchyLeaf t={t}
                                   key={proj.id}
                                   type="project"
                                   name={proj.name}
                                   status={proj.status}
-                                  badge="مشاريع مستقلة"
+                                  badge={t("strategy.badge.standaloneUnderPortfolio")}
                                   selected={selected?.type === "project" && selected.id === proj.id}
                                   onSelect={() => selectEntity("project", proj.id)}
                                 />
@@ -530,26 +549,28 @@ export function StrategicOverviewPage() {
                     );
                   })}
 
-                <HierarchyNode
+                <HierarchyNode t={t}
                   open={isOpen("independent")}
                   onToggle={() => toggleNode("independent")}
                   type="project"
-                  name="مشاريع مستقلة تماماً"
-                  meta={`${independentProjects.length} مشروع`}
+                  name={t("strategy.node.fullyIndependent")}
+                  meta={t("strategy.meta.independentCount", {
+                    n: independentProjects.length,
+                  })}
                   selected={false}
                   onSelect={() => undefined}
                   hasChildren={independentProjects.length > 0}
                 >
                   {independentProjects.length === 0 ? (
-                    <p className="px-2 py-2 text-xs text-steel-400">لا مشاريع مستقلة بالكامل.</p>
+                    <p className="px-2 py-2 text-xs text-steel-400">{t("strategy.empty.independent")}</p>
                   ) : (
                     independentProjects.map((p) => (
-                      <HierarchyLeaf
+                      <HierarchyLeaf t={t}
                         key={p.id}
                         type="project"
                         name={p.name}
                         status={p.status}
-                        badge="مستقل"
+                        badge={t("strategy.badge.independent")}
                         selected={selected?.type === "project" && selected.id === p.id}
                         onSelect={() => selectEntity("project", p.id)}
                       />
@@ -563,23 +584,26 @@ export function StrategicOverviewPage() {
           {view === "relationships" ? (
             <Card className="space-y-3 p-4">
               <div className="flex flex-wrap gap-2 text-[10px]">
-                {RELATIONSHIP_TYPES.map((t) => (
+                {RELATIONSHIP_TYPES.map((rel) => (
                   <span
-                    key={t.key}
+                    key={rel.key}
                     className={cn(
                       "rounded-md border px-2 py-1 font-bold",
-                      t.visual === "containment" && "border-emerald-300 text-emerald-700",
-                      t.visual === "alignment" && "border-sky-300 text-sky-700",
-                      t.visual === "dependency" && "border-amber-300 text-amber-700",
-                      t.visual === "association" && "border-steel-300 text-steel-600",
+                      rel.visual === "containment" && "border-emerald-300 text-emerald-700",
+                      rel.visual === "alignment" && "border-sky-300 text-sky-700",
+                      rel.visual === "dependency" && "border-amber-300 text-amber-700",
+                      rel.visual === "association" && "border-steel-300 text-steel-600",
                     )}
                   >
-                    {t.nameAr}
+                    {t(`relationship.${rel.key}`)}
                   </span>
                 ))}
               </div>
               {filteredRels.length === 0 ? (
-                <EmptyState title="لا علاقات" subtitle="عدّل الفلاتر أو أضف علاقة جديدة." />
+                <EmptyState
+                  title={t("strategy.relationships.emptyTitle")}
+                  subtitle={t("strategy.relationships.emptySub")}
+                />
               ) : (
                 <div className="grid gap-2 md:grid-cols-2">
                   {filteredRels.map((r) => {
@@ -603,7 +627,7 @@ export function StrategicOverviewPage() {
                         )}
                       >
                         <p className="text-[10px] font-bold text-steel-400">
-                          {def.nameAr} · {def.visual}
+                          {t(`relationship.${def.key}`)} · {def.visual}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                           <button
@@ -655,9 +679,9 @@ export function StrategicOverviewPage() {
                     <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
                       {(
                         [
-                          ["name", "الاسم"],
-                          ["type", "النوع"],
-                          ["status", "الحالة"],
+                          ["name", t("strategy.table.name")],
+                          ["type", t("strategy.table.type")],
+                          ["status", t("strategy.table.status")],
                         ] as const
                       ).map(([key, label]) => (
                         <th key={key} className="px-3 py-2.5">
@@ -677,17 +701,17 @@ export function StrategicOverviewPage() {
                           </button>
                         </th>
                       ))}
-                      <th className="px-3 py-2.5 font-bold">المسؤول</th>
-                      <th className="px-3 py-2.5 font-bold">الإدارة</th>
-                      <th className="px-3 py-2.5 font-bold">الموضع</th>
-                      <th className="px-3 py-2.5 font-bold">علاقات</th>
+                      <th className="px-3 py-2.5 font-bold">{t("strategy.table.owner")}</th>
+                      <th className="px-3 py-2.5 font-bold">{t("strategy.table.department")}</th>
+                      <th className="px-3 py-2.5 font-bold">{t("strategy.table.placement")}</th>
+                      <th className="px-3 py-2.5 font-bold">{t("strategy.table.relationships")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagination.paginated.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-10 text-center text-steel-400">
-                          لا نتائج مطابقة للبحث أو الفلاتر.
+                          {t("common.searchNoResultsFilters")}
                         </td>
                       </tr>
                     ) : (
@@ -710,11 +734,10 @@ export function StrategicOverviewPage() {
                             onClick={() => selectEntity(row.type, row.id)}
                           >
                             <td className="px-3 py-2.5 font-semibold">{row.name}</td>
-                            <td className="px-3 py-2.5">{entityLabelAr(row.type)}</td>
+                            <td className="px-3 py-2.5">{entityLabel(row.type)}</td>
                             <td className="px-3 py-2.5">
                               {row.status
-                                ? PROJECT_STATUS_LABELS[row.status as ProjectStatus] ??
-                                  row.status
+                                ? projectStatusLabel(row.status)
                                 : "—"}
                             </td>
                             <td className="px-3 py-2.5">
@@ -775,6 +798,7 @@ export function StrategicOverviewPage() {
 }
 
 function HierarchyNode({
+  t,
   open,
   onToggle,
   type,
@@ -786,6 +810,7 @@ function HierarchyNode({
   hasChildren,
   children,
 }: {
+  t: (key: string) => string;
   open: boolean;
   onToggle: () => void;
   type: StrategicEntityType;
@@ -834,7 +859,7 @@ function HierarchyNode({
           <span className="min-w-0">
             <span className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-bold text-steel-400">
-                {entityLabelAr(type)}:
+                {t(`entity.${type}`)}:
               </span>
               <span className="text-xs font-extrabold text-steel-800 dark:text-steel-100">
                 {name}
@@ -859,6 +884,7 @@ function HierarchyNode({
 }
 
 function HierarchyLeaf({
+  t,
   type,
   name,
   status,
@@ -866,6 +892,7 @@ function HierarchyLeaf({
   selected,
   onSelect,
 }: {
+  t: (key: string) => string;
   type: StrategicEntityType;
   name: string;
   status?: string;
@@ -892,9 +919,7 @@ function HierarchyLeaf({
           {name}
         </span>
         <span className="text-[10px] text-steel-400">
-          {status
-            ? PROJECT_STATUS_LABELS[status as ProjectStatus] ?? status
-            : entityLabelAr(type)}
+          {status ? t(`status.project.${status}`) : t(`entity.${type}`)}
           {badge ? ` · ${badge}` : ""}
         </span>
       </span>

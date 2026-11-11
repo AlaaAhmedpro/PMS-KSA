@@ -43,8 +43,10 @@ import {
   generateTempPassword,
   pushSentMail,
 } from "../lib/demoMail";
+import { localizeDeep } from "../i18n/localizeContent";
 import { organizationsRepository, usersRepository } from "../repositories";
 import { isCoreOrgSuspended } from "../lib/billingBridge";
+import { useLocale } from "./LocaleContext";
 
 const SEED_USERS: DemoUser[] = [...SEED_DEMO_USERS, ...SEED_VENDOR_USERS].map(
   (u) => ({ ...u }),
@@ -146,6 +148,7 @@ function toPublicUser(u: DemoUser): User {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { locale } = useLocale();
   const [users, setUsersState] = useState<DemoUser[]>(() => {
     const stored = usersRepository.read();
     return stored.length ? stored : SEED_USERS;
@@ -776,14 +779,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
+  const displayUser = useMemo(
+    () => localizeDeep(user, locale),
+    [user, locale],
+  );
+  const displayUsers = useMemo(
+    () => localizeDeep(users.map(toPublicUser), locale),
+    [users, locale],
+  );
+  const displayOrganization = useMemo(
+    () => localizeDeep(organization, locale),
+    [organization, locale],
+  );
+  const displayOrganizations = useMemo(
+    () => localizeDeep(organizations, locale),
+    [organizations, locale],
+  );
+
   return (
     <Ctx.Provider
       value={{
-        user,
-        users: users.map(toPublicUser),
+        user: displayUser,
+        users: displayUsers,
         session,
-        organization,
-        organizations,
+        organization: displayOrganization,
+        organizations: displayOrganizations,
         permissions,
         login,
         completeMfa,

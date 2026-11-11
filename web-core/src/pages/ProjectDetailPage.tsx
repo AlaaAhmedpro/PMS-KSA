@@ -15,7 +15,8 @@ import { useHierarchy } from "../store/HierarchyStore";
 import { useAuth } from "../store/AuthContext";
 import { useCan } from "../store/RbacContext";
 import { useConfirm } from "../store/ConfirmContext";
-import { PROJECT_STATUS_LABELS } from "../lib/constants";
+import { useLocale } from "../store/LocaleContext";
+import { priorityLabel, projectStatusLabel } from "../i18n/label";
 import { projectRelationships } from "../lib/hierarchyLinks";
 import { cn } from "../lib/cn";
 
@@ -34,35 +35,11 @@ const PROJECT_STATUS_BADGE: Record<string, string> = {
     "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
 };
 
-const PROJECT_PRIORITY_LABELS: Record<string, string> = {
-  low: "منخفضة",
-  normal: "عادية",
-  high: "عالية",
-  critical: "حرجة",
-};
-
-function formatSar(amount: number): string {
-  return `${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ر.س`;
-}
-
-function Meta({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="text-[11px] font-bold text-steel-400">{label}</p>
-      <div className="mt-0.5 text-sm font-semibold text-steel-800 dark:text-steel-100">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLocale();
   const {
     projects,
     portfolios,
@@ -73,6 +50,12 @@ export function ProjectDetailPage() {
   const { user, users } = useAuth();
   const can = useCan();
   const confirm = useConfirm();
+
+  const formatSar = (amount: number) =>
+    `${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${t("common.currencySar")}`;
 
   const project = projects.find((p) => p.id === id);
   const hash = (location.hash || "#overview").replace("#", "");
@@ -87,9 +70,9 @@ export function ProjectDetailPage() {
   if (!project) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">المشروع غير موجود.</p>
+        <p className="text-sm text-steel-500">{t("projectDetail.notFound")}</p>
         <Button className="mt-3" onClick={() => navigate("/projects")}>
-          العودة للقائمة
+          {t("projectDetail.backToList")}
         </Button>
       </Card>
     );
@@ -113,24 +96,28 @@ export function ProjectDetailPage() {
     <div className="space-y-4">
       <PageHeader
         title={project.name}
-        subtitle={`${project.code} · ${PROJECT_STATUS_LABELS[project.status]} · تقدم ${project.progress}%`}
+        subtitle={t("projectDetail.subtitle", {
+          code: project.code,
+          status: projectStatusLabel(t, project.status),
+          progress: project.progress,
+        })}
         actions={
           can.manageRecords(user?.role) ? (
             <Button
               variant="outline"
               onClick={async () => {
                 const ok = await confirm({
-                  title: "تأكيد الحذف",
-                  message: "حذف المشروع وكل مهامه؟",
+                  title: t("common.confirmDeleteTitle"),
+                  message: t("projectDetail.deleteConfirm"),
                   danger: true,
-                  confirmLabel: "حذف",
+                  confirmLabel: t("common.delete"),
                 });
                 if (!ok) return;
                 removeProject(project.id);
                 navigate("/projects");
               }}
             >
-              حذف
+              {t("common.delete")}
             </Button>
           ) : undefined
         }
@@ -146,7 +133,7 @@ export function ProjectDetailPage() {
       {showOverview ? (
         <div className="space-y-3">
           <Card className="space-y-3 p-4">
-            <h3 className="text-sm font-extrabold">مسار المشروع</h3>
+            <h3 className="text-sm font-extrabold">{t("projectDetail.lifecycle")}</h3>
             <ProjectLifecycleStepper status={project.status} />
           </Card>
 
@@ -159,15 +146,15 @@ export function ProjectDetailPage() {
                     PROJECT_STATUS_BADGE.draft,
                 )}
               >
-                {PROJECT_STATUS_LABELS[project.status] ?? project.status}
+                {projectStatusLabel(t, project.status)}
               </span>
               <span className="inline-flex rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-800/60 dark:text-steel-300">
-                {PROJECT_PRIORITY_LABELS[project.priority] ?? project.priority}
+                {priorityLabel(t, project.priority)}
               </span>
             </div>
             <div>
               <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-steel-400">
-                <span>التقدم</span>
+                <span>{t("common.progress")}</span>
                 <span className="tabular-nums font-bold text-steel-600">
                   {project.progress}%
                 </span>
@@ -184,15 +171,15 @@ export function ProjectDetailPage() {
             <p className="text-sm text-steel-600 dark:text-steel-300">
               {project.description?.trim()
                 ? project.description
-                : "لا وصف مسجّل."}
+                : t("projectDetail.noDescription")}
             </p>
           </Card>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <Card className="space-y-3 p-4">
-              <h3 className="text-sm font-extrabold">الارتباط والتنفيذ</h3>
+              <h3 className="text-sm font-extrabold">{t("projectDetail.links")}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Meta label="البرنامج">
+                <Meta label={t("projectDetail.program")}>
                   {program ? (
                     <Link
                       to="/programs"
@@ -201,10 +188,12 @@ export function ProjectDetailPage() {
                       {program.name}
                     </Link>
                   ) : (
-                    <span className="font-normal text-steel-400">مستقل</span>
+                    <span className="font-normal text-steel-400">
+                      {t("projectDetail.standalone")}
+                    </span>
                   )}
                 </Meta>
-                <Meta label="المحفظة">
+                <Meta label={t("projectDetail.portfolio")}>
                   {portfolio ? (
                     <Link
                       to={`/portfolios/${portfolio.id}`}
@@ -216,7 +205,7 @@ export function ProjectDetailPage() {
                     <span className="font-normal text-steel-400">—</span>
                   )}
                 </Meta>
-                <Meta label="المبادرة">
+                <Meta label={t("projectDetail.initiative")}>
                   {linkedInitiatives[0] ? (
                     <Link
                       to={`/initiatives?id=${linkedInitiatives[0].id}`}
@@ -228,8 +217,8 @@ export function ProjectDetailPage() {
                     <span className="font-normal text-steel-400">—</span>
                   )}
                 </Meta>
-                <Meta label="المدير">{manager}</Meta>
-                <Meta label="الفترة">
+                <Meta label={t("projectDetail.manager")}>{manager}</Meta>
+                <Meta label={t("projectDetail.period")}>
                   <span className="tabular-nums font-normal">
                     {project.startDate} → {project.endDate}
                   </span>
@@ -238,19 +227,19 @@ export function ProjectDetailPage() {
             </Card>
 
             <Card className="space-y-3 p-4">
-              <h3 className="text-sm font-extrabold">المالية</h3>
+              <h3 className="text-sm font-extrabold">{t("projectDetail.finance")}</h3>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Meta label="الميزانية">
+                <Meta label={t("common.budget")}>
                   <span className="tabular-nums text-[13px]">
                     {formatSar(project.budgetSar || 0)}
                   </span>
                 </Meta>
-                <Meta label="المنصرف">
+                <Meta label={t("common.spent")}>
                   <span className="tabular-nums text-[13px]">
                     {formatSar(project.spentSar || 0)}
                   </span>
                 </Meta>
-                <Meta label="المتبقي">
+                <Meta label={t("projectDetail.remaining")}>
                   <span
                     className={cn(
                       "tabular-nums text-[13px]",
@@ -263,7 +252,7 @@ export function ProjectDetailPage() {
               </div>
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-steel-400">
-                  <span>استهلاك الميزانية</span>
+                  <span>{t("projectDetail.budgetBurn")}</span>
                   <span className="tabular-nums">{spendPct}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-steel-100 dark:bg-steel-800">
@@ -287,6 +276,17 @@ export function ProjectDetailPage() {
       {showMaterials ? <ProjectMaterialsPanel project={project} /> : null}
       {showDocuments ? <ProjectDocumentsPanel project={project} /> : null}
       {showActivity ? <ProjectActivityPanel project={project} /> : null}
+    </div>
+  );
+}
+
+function Meta({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold text-steel-400">{label}</p>
+      <div className="mt-0.5 text-sm font-semibold text-steel-800 dark:text-steel-100">
+        {children}
+      </div>
     </div>
   );
 }

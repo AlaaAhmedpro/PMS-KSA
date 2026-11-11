@@ -7,6 +7,7 @@ import { useAuth } from "../../store/AuthContext";
 import { useHierarchy } from "../../store/HierarchyStore";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
+import { useLocale } from "../../store/LocaleContext";
 import type { WorkEntityType } from "../../models/domain";
 
 export function WorkCommentsBlock({
@@ -18,6 +19,7 @@ export function WorkCommentsBlock({
   entityType: Exclude<WorkEntityType, "project">;
   entityId: string;
 }) {
+  const { t } = useLocale();
   const { workComments, addWorkComment, removeWorkComment } = useHierarchy();
   const { user, users } = useAuth();
   const can = useCan();
@@ -35,9 +37,11 @@ export function WorkCommentsBlock({
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-extrabold text-steel-600">التعليقات</h4>
+      <h4 className="text-xs font-extrabold text-steel-600">
+        {t("workComments.sectionTitle")}
+      </h4>
       {rows.length === 0 ? (
-        <p className="text-[11px] text-steel-400">لا تعليقات بعد.</p>
+        <p className="text-[11px] text-steel-400">{t("workComments.empty")}</p>
       ) : (
         <ul className="space-y-2">
           {rows.map((c) => {
@@ -65,13 +69,13 @@ export function WorkCommentsBlock({
                     <button
                       type="button"
                       className="shrink-0 rounded p-1 text-steel-400 hover:bg-red-50 hover:text-red-600"
-                      aria-label="حذف التعليق"
+                      aria-label={t("workComments.deleteAria")}
                       onClick={async () => {
                         const ok = await confirm({
-                          title: "تأكيد الحذف",
-                          message: "حذف هذا التعليق؟",
+                          title: t("common.confirmDeleteTitle"),
+                          message: t("workComments.deleteMessage"),
                           danger: true,
-                          confirmLabel: "حذف",
+                          confirmLabel: t("common.delete"),
                         });
                         if (ok) removeWorkComment(c.id);
                       }}
@@ -87,11 +91,14 @@ export function WorkCommentsBlock({
       )}
       {canManage && user ? (
         <div className="flex flex-wrap items-end gap-2">
-          <Field label="تعليق جديد" className="min-w-[12rem] flex-1">
+          <Field
+            label={t("workComments.newComment")}
+            className="min-w-[12rem] flex-1"
+          >
             <Input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="اكتب تعليقاً مختصراً"
+              placeholder={t("workComments.placeholder")}
             />
           </Field>
           <Button
@@ -108,7 +115,7 @@ export function WorkCommentsBlock({
               setText("");
             }}
           >
-            إضافة
+            {t("common.add")}
           </Button>
         </div>
       ) : null}
@@ -125,6 +132,7 @@ export function WorkAttachmentsBlock({
   entityType: WorkEntityType;
   entityId: string;
 }) {
+  const { t } = useLocale();
   const { workAttachments, addWorkAttachment, removeWorkAttachment } =
     useHierarchy();
   const { user, users } = useAuth();
@@ -183,7 +191,7 @@ export function WorkAttachmentsBlock({
       });
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "تعذّر رفع الملف. حاول مرة أخرى.",
+        e instanceof Error ? e.message : t("workAttachments.uploadFailed"),
       );
     } finally {
       setUploading(false);
@@ -197,7 +205,7 @@ export function WorkAttachmentsBlock({
     try {
       const blob = await loadBlob(a.id);
       if (!blob) {
-        setError("ملف المرفق غير متوفر في التخزين المحلي.");
+        setError(t("workAttachments.fileUnavailable"));
         return;
       }
       const {
@@ -213,7 +221,7 @@ export function WorkAttachmentsBlock({
       const url = URL.createObjectURL(blob);
       setPreview({ name: a.name, mimeType: mime, url });
     } catch {
-      setError("تعذّر عرض المرفق.");
+      setError(t("workAttachments.previewFailed"));
     } finally {
       setBusyId(null);
     }
@@ -225,13 +233,13 @@ export function WorkAttachmentsBlock({
     try {
       const blob = await loadBlob(a.id);
       if (!blob) {
-        setError("ملف المرفق غير متوفر في التخزين المحلي.");
+        setError(t("workAttachments.fileUnavailable"));
         return;
       }
       const { downloadBlob } = await import("../../lib/attachmentFiles");
       downloadBlob(blob, a.name);
     } catch {
-      setError("تعذّر تحميل المرفق.");
+      setError(t("workAttachments.downloadFailed"));
     } finally {
       setBusyId(null);
     }
@@ -240,7 +248,9 @@ export function WorkAttachmentsBlock({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-xs font-extrabold text-steel-600">المرفقات</h4>
+        <h4 className="text-xs font-extrabold text-steel-600">
+          {t("workAttachments.sectionTitle")}
+        </h4>
         {canManage && user ? (
           <>
             <input
@@ -256,18 +266,17 @@ export function WorkAttachmentsBlock({
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-3.5 w-3.5" />
-              {uploading ? "جاري الرفع…" : "رفع مرفق"}
+              {uploading
+                ? t("workAttachments.uploading")
+                : t("workAttachments.upload")}
             </Button>
           </>
         ) : null}
       </div>
-      <p className="text-[11px] text-steel-400">
-        الحد الأقصى 8 م.ب لكل ملف. يمكن العرض للصور وPDF والنصوص، والتحميل لجميع
-        الأنواع.
-      </p>
+      <p className="text-[11px] text-steel-400">{t("workAttachments.hint")}</p>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {rows.length === 0 ? (
-        <p className="text-[11px] text-steel-400">لا مرفقات بعد.</p>
+        <p className="text-[11px] text-steel-400">{t("workAttachments.empty")}</p>
       ) : (
         <ul className="divide-y divide-steel-100 dark:divide-steel-800">
           {rows.map((a) => {
@@ -298,8 +307,8 @@ export function WorkAttachmentsBlock({
                   <button
                     type="button"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600 disabled:opacity-40"
-                    aria-label="عرض"
-                    title="عرض"
+                    aria-label={t("common.view")}
+                    title={t("common.view")}
                     disabled={busy}
                     onClick={() => void onView(a)}
                   >
@@ -308,8 +317,8 @@ export function WorkAttachmentsBlock({
                   <button
                     type="button"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600 disabled:opacity-40"
-                    aria-label="تحميل"
-                    title="تحميل"
+                    aria-label={t("workAttachments.download")}
+                    title={t("workAttachments.download")}
                     disabled={busy}
                     onClick={() => void onDownload(a)}
                   >
@@ -319,14 +328,14 @@ export function WorkAttachmentsBlock({
                     <button
                       type="button"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                      aria-label="حذف المرفق"
-                      title="حذف"
+                      aria-label={t("workAttachments.deleteAria")}
+                      title={t("common.delete")}
                       onClick={async () => {
                         const ok = await confirm({
-                          title: "تأكيد الحذف",
-                          message: "حذف هذا المرفق؟",
+                          title: t("common.confirmDeleteTitle"),
+                          message: t("workAttachments.deleteMessage"),
                           danger: true,
-                          confirmLabel: "حذف",
+                          confirmLabel: t("common.delete"),
                         });
                         if (ok) removeWorkAttachment(a.id);
                       }}
@@ -344,11 +353,15 @@ export function WorkAttachmentsBlock({
       <Modal
         open={Boolean(preview)}
         onClose={closePreview}
-        title={preview ? `عرض — ${preview.name}` : "عرض المرفق"}
+        title={
+          preview
+            ? t("workAttachments.previewTitle", { name: preview.name })
+            : t("workAttachments.previewDefaultTitle")
+        }
         size="xl"
         footer={
           <Button variant="outline" onClick={closePreview}>
-            إغلاق
+            {t("common.close")}
           </Button>
         }
       >

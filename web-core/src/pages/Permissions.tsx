@@ -27,35 +27,37 @@ import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
 import { useRbac } from "../store/RbacContext";
 import { useAuth } from "../store/AuthContext";
 import { useConfirm } from "../store/ConfirmContext";
-import { DEFAULT_MATRIX, PERMISSION_DEFS } from "../lib/constants";
+import { DEFAULT_MATRIX } from "../lib/constants";
 import { cn } from "../lib/cn";
 import type { AnyRoleId, PermissionKey, Role } from "../lib/types";
+import { useLocale } from "../store/LocaleContext";
+import {
+  permissionLabel,
+  roleDescriptionDisplay,
+  roleDisplayName,
+} from "../lib/i18nDisplay";
+import type { TFn } from "../lib/i18nDisplay";
 
 type TabId = "roles" | "users";
 
 const PERMISSION_GROUPS: {
   id: string;
-  label: string;
   keys: PermissionKey[];
 }[] = [
   {
     id: "workspace",
-    label: "مساحة العمل",
     keys: ["dashboard", "viewStrategic"],
   },
   {
     id: "execution",
-    label: "التنفيذ",
     keys: ["manageRecords", "execute", "close", "urgent"],
   },
   {
     id: "strategic",
-    label: "التخطيط الاستراتيجي",
     keys: ["managePortfolio", "manageProgram", "manageInitiative"],
   },
   {
     id: "admin",
-    label: "الإدارة",
     keys: ["managePeople", "settings"],
   },
 ];
@@ -69,10 +71,12 @@ function StatusToggle({
   active,
   disabled,
   onToggle,
+  t,
 }: {
   active: boolean;
   disabled?: boolean;
   onToggle: () => void;
+  t: TFn;
 }) {
   return (
     <button
@@ -81,7 +85,9 @@ function StatusToggle({
       aria-checked={active}
       disabled={disabled}
       onClick={onToggle}
-      title={active ? "تعطيل الحساب" : "تفعيل الحساب"}
+      title={
+        active ? t("people.toggle.disableAccount") : t("people.toggle.enableAccount")
+      }
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
         active
@@ -100,11 +106,8 @@ function StatusToggle({
   );
 }
 
-function permLabel(key: PermissionKey): string {
-  return PERMISSION_DEFS.find((p) => p.key === key)?.label ?? key;
-}
-
 export function Permissions() {
+  const { t } = useLocale();
   const confirm = useConfirm();
   const {
     roles,
@@ -212,7 +215,7 @@ export function Permissions() {
     setFormError("");
     const name = roleName.trim();
     if (!name) {
-      setFormError("اسم الدور مطلوب.");
+      setFormError(t("permissions.error.roleName"));
       return;
     }
     if (editingRoleId) {
@@ -221,7 +224,7 @@ export function Permissions() {
         description: roleDescription,
       });
       if (!res.ok) {
-        setFormError(res.reason || "تعذّر تحديث الدور.");
+        setFormError(res.reason || t("permissions.error.updateRole"));
         return;
       }
     } else {
@@ -236,28 +239,31 @@ export function Permissions() {
     const assigned = usersByRole.get(String(role.id)) || 0;
     if (assigned > 0) {
       await confirm({
-        title: "تعذّر الحذف",
-        message: `الدور «${role.name}» معيّن لـ ${assigned} مستخدم. أعد تعيينهم أولاً ثم احذف الدور.`,
-        confirmLabel: "حسناً",
-        cancelLabel: "إغلاق",
+        title: t("permissions.delete.blockedTitle"),
+        message: t("permissions.delete.blockedMsg", {
+          name: role.name,
+          n: assigned,
+        }),
+        confirmLabel: t("common.ok"),
+        cancelLabel: t("common.close"),
       });
       return;
     }
     const ok = await confirm({
-      title: "حذف الدور",
-      message: `هل تريد حذف الدور المخصص «${role.name}»؟`,
-      confirmLabel: "حذف",
-      cancelLabel: "إلغاء",
+      title: t("permissions.delete.title"),
+      message: t("permissions.delete.message", { name: role.name }),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
     if (!ok) return;
     const res = removeRole(role.id);
     if (!res.ok) {
       await confirm({
-        title: "تعذّر الحذف",
-        message: res.reason || "تعذّر حذف الدور.",
-        confirmLabel: "حسناً",
-        cancelLabel: "إغلاق",
+        title: t("permissions.delete.blockedTitle"),
+        message: res.reason || t("permissions.delete.failed"),
+        confirmLabel: t("common.ok"),
+        cancelLabel: t("common.close"),
       });
       return;
     }
@@ -274,10 +280,10 @@ export function Permissions() {
   const handleResetRolePerms = async (role: Role) => {
     if (!DEFAULT_MATRIX[role.id]) return;
     const ok = await confirm({
-      title: "استعادة الصلاحيات الافتراضية",
-      message: `استعادة صلاحيات الدور «${role.name}» إلى الإعداد الافتراضي؟`,
-      confirmLabel: "استعادة",
-      cancelLabel: "إلغاء",
+      title: t("permissions.resetRole.title"),
+      message: t("permissions.resetRole.message", { name: role.name }),
+      confirmLabel: t("permissions.resetRole.confirm"),
+      cancelLabel: t("common.cancel"),
     });
     if (!ok) return;
     resetRolePermissions(role.id);
@@ -285,11 +291,10 @@ export function Permissions() {
 
   const handleResetAll = async () => {
     const ok = await confirm({
-      title: "إعادة ضبط الأدوار والصلاحيات",
-      message:
-        "سيتم استعادة قائمة الأدوار ومصفوفة الصلاحيات الافتراضية. لن يُعاد ضبط بيانات المشاريع أو المستخدمين.",
-      confirmLabel: "إعادة الضبط",
-      cancelLabel: "إلغاء",
+      title: t("permissions.resetAll.title"),
+      message: t("permissions.resetAll.message"),
+      confirmLabel: t("permissions.resetAll.confirm"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
     if (!ok) return;
@@ -313,13 +318,13 @@ export function Permissions() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="الأدوار والصلاحيات"
-        subtitle="إدارة أدوار النظام وصلاحياتها وتعيينها للمستخدمين"
+        title={t("permissions.title")}
+        subtitle={t("permissions.subtitle")}
         icon={<ShieldCheck className="h-6 w-6" />}
         actions={
           <Button variant="outline" onClick={() => void handleResetAll()}>
             <RotateCcw className="h-4 w-4" />
-            إعادة ضبط الأدوار
+            {t("permissions.resetRoles")}
           </Button>
         }
       />
@@ -336,7 +341,7 @@ export function Permissions() {
           )}
         >
           <ShieldCheck className="h-4 w-4" />
-          الأدوار والصلاحيات
+          {t("permissions.tab.roles")}
         </button>
         <button
           type="button"
@@ -349,7 +354,7 @@ export function Permissions() {
           )}
         >
           <Users className="h-4 w-4" />
-          تعيين الأدوار
+          {t("permissions.tab.users")}
         </button>
       </div>
 
@@ -363,18 +368,18 @@ export function Permissions() {
                   className="ps-9"
                   value={roleQuery}
                   onChange={(e) => setRoleQuery(e.target.value)}
-                  placeholder="بحث في الأدوار…"
+                  placeholder={t("permissions.searchRoles")}
                 />
               </div>
               <Button className="w-full" size="sm" onClick={openCreateRole}>
                 <Plus className="h-4 w-4" />
-                إضافة دور
+                {t("permissions.addRole")}
               </Button>
             </div>
             <div className="max-h-[34rem] overflow-y-auto">
               {filteredRoles.length === 0 ? (
                 <p className="px-4 py-8 text-center text-sm text-steel-500">
-                  لا أدوار مطابقة.
+                  {t("permissions.noRoles")}
                 </p>
               ) : (
                 filteredRoles.map((role) => {
@@ -395,23 +400,23 @@ export function Permissions() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-bold text-steel-800 dark:text-steel-100">
-                          {role.name}
+                          {roleDisplayName(t, role)}
                         </span>
                         {role.custom ? (
                           <span className="shrink-0 rounded border border-brand-200 bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-700 dark:border-brand-800 dark:text-brand-300">
-                            مخصص
+                            {t("common.customRole")}
                           </span>
                         ) : (
                           <span className="shrink-0 rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[10px] font-bold text-steel-500 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
-                            نظام
+                            {t("common.systemRole")}
                           </span>
                         )}
                       </div>
                       <p className="line-clamp-2 text-[11px] text-steel-500">
-                        {role.description || "بدون وصف"}
+                        {roleDescriptionDisplay(t, role) || t("common.noDescription")}
                       </p>
                       <p className="text-[11px] font-bold text-steel-400">
-                        {permCount} صلاحية · {count} مستخدم
+                        {t("permissions.permCount", { n: permCount, count })}
                       </p>
                     </button>
                   );
@@ -427,32 +432,35 @@ export function Permissions() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-bold text-steel-800 dark:text-steel-100">
-                        {selectedRole.name}
+                        {roleDisplayName(t, selectedRole)}
                       </h3>
                       {selectedRole.custom ? (
                         <span className="rounded border border-brand-200 bg-brand-500/10 px-1.5 py-0.5 text-[11px] font-bold text-brand-700">
-                          مخصص
+                          {t("common.customRole")}
                         </span>
                       ) : (
                         <span className="rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-500 dark:border-steel-700 dark:bg-steel-800">
-                          دور نظام
+                          {t("common.systemRoleFull")}
                         </span>
                       )}
                     </div>
                     <p className="mt-1 text-xs text-steel-500">
-                      {selectedRole.description || "بدون وصف"}
+                      {roleDescriptionDisplay(t, selectedRole) ||
+                        t("common.noDescription")}
                     </p>
                     <p className="mt-1 text-[11px] font-bold text-steel-400">
-                      {selectedPerms.length} صلاحية مفعّلة ·{" "}
-                      {usersByRole.get(String(selectedRole.id)) || 0} مستخدم
+                      {t("permissions.permActiveCount", {
+                        n: selectedPerms.length,
+                        count: usersByRole.get(String(selectedRole.id)) || 0,
+                      })}
                     </p>
                   </div>
                   <div className="inline-flex flex-nowrap items-center gap-0.5">
                     <button
                       type="button"
                       className={iconBtnEdit}
-                      title="تعديل"
-                      aria-label="تعديل"
+                      title={t("common.edit")}
+                      aria-label={t("common.edit")}
                       onClick={() => openEditRole(selectedRole)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -460,8 +468,8 @@ export function Permissions() {
                     <button
                       type="button"
                       className={iconBtnEdit}
-                      title="نسخ الدور"
-                      aria-label="نسخ الدور"
+                      title={t("permissions.duplicate")}
+                      aria-label={t("permissions.duplicate")}
                       onClick={() => handleDuplicateRole(selectedRole)}
                     >
                       <Copy className="h-4 w-4" />
@@ -470,8 +478,8 @@ export function Permissions() {
                       <button
                         type="button"
                         className={iconBtnEdit}
-                        title="استعادة الافتراضي"
-                        aria-label="استعادة الافتراضي"
+                        title={t("permissions.resetDefault")}
+                        aria-label={t("permissions.resetDefault")}
                         onClick={() => void handleResetRolePerms(selectedRole)}
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -481,8 +489,8 @@ export function Permissions() {
                       <button
                         type="button"
                         className={iconBtnDelete}
-                        title="حذف"
-                        aria-label="حذف"
+                        title={t("common.delete")}
+                        aria-label={t("common.delete")}
                         onClick={() => void handleDeleteRole(selectedRole)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -495,7 +503,7 @@ export function Permissions() {
                   {PERMISSION_GROUPS.map((group) => (
                     <div key={group.id}>
                       <p className="mb-2 text-xs font-bold text-steel-500">
-                        {group.label}
+                        {t(`permissionGroup.${group.id}`)}
                       </p>
                       <div className="space-y-2">
                         {group.keys.map((key) => {
@@ -511,7 +519,7 @@ export function Permissions() {
                             >
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-steel-800 dark:text-steel-100">
-                                  {permLabel(key)}
+                                  {permissionLabel(t, key)}
                                 </p>
                                 <p className="text-[11px] text-steel-400">
                                   {key}
@@ -524,10 +532,10 @@ export function Permissions() {
                                 disabled={lockSettings}
                                 title={
                                   lockSettings
-                                    ? "صلاحية الإعدادات مطلوبة لمسؤول المنشأة"
+                                    ? t("permissions.settingsLockHint")
                                     : enabled
-                                      ? "إلغاء الصلاحية"
-                                      : "تفعيل الصلاحية"
+                                      ? t("permissions.toggle.revoke")
+                                      : t("permissions.toggle.grant")
                                 }
                                 onClick={() =>
                                   togglePermission(selectedRole.id, key)
@@ -559,7 +567,7 @@ export function Permissions() {
                 </div>
               </>
             ) : (
-              <ModalEmpty>اختر دوراً من القائمة.</ModalEmpty>
+              <ModalEmpty>{t("permissions.selectRole")}</ModalEmpty>
             )}
           </Card>
         </div>
@@ -572,7 +580,7 @@ export function Permissions() {
                 className="ps-9"
                 value={userQuery}
                 onChange={(e) => setUserQuery(e.target.value)}
-                placeholder="بحث بالاسم أو البريد…"
+                placeholder={t("permissions.searchUsers")}
               />
             </div>
             <SearchableSelect
@@ -580,8 +588,11 @@ export function Permissions() {
               value={roleFilter}
               onChange={setRoleFilter}
               options={[
-                { value: "all", label: "كل الأدوار" },
-                ...roles.map((r) => ({ value: String(r.id), label: r.name })),
+                { value: "all", label: t("common.allRoles") },
+                ...roles.map((r) => ({
+                  value: String(r.id),
+                  label: roleDisplayName(t, r),
+                })),
               ]}
             />
             <SearchableSelect
@@ -591,9 +602,9 @@ export function Permissions() {
                 setStatusFilter(v as "all" | "active" | "disabled")
               }
               options={[
-                { value: "all", label: "كل الحالات" },
-                { value: "active", label: "مفعّل" },
-                { value: "disabled", label: "معطّل" },
+                { value: "all", label: t("common.allStatuses") },
+                { value: "active", label: t("common.active") },
+                { value: "disabled", label: t("common.disabled") },
               ]}
             />
           </ModalToolbar>
@@ -615,16 +626,16 @@ export function Permissions() {
                   <thead>
                     <tr className="border-b border-steel-200 bg-steel-50/90 dark:border-steel-700 dark:bg-steel-800/60">
                       <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
-                        المستخدم
+                        {t("common.user")}
                       </th>
                       <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
-                        البريد
+                        {t("common.email")}
                       </th>
                       <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
-                        الدور
+                        {t("common.role")}
                       </th>
                       <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
-                        الحالة
+                        {t("common.status")}
                       </th>
                       <th className="px-4 py-3 text-start text-xs font-bold text-steel-500">
                         {" "}
@@ -638,7 +649,7 @@ export function Permissions() {
                           colSpan={5}
                           className="px-4 py-10 text-center text-sm text-steel-500"
                         >
-                          لا مستخدمين مطابقين.
+                          {t("permissions.noUsers")}
                         </td>
                       </tr>
                     ) : (
@@ -663,7 +674,7 @@ export function Permissions() {
                                   {isSelf ? (
                                     <span className="mt-0.5 inline-flex items-center gap-1 rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
                                       <UserRound className="h-3 w-3" />
-                                      أنت
+                                      {t("common.you")}
                                     </span>
                                   ) : null}
                                 </div>
@@ -682,9 +693,7 @@ export function Permissions() {
                                 value={String(u.role)}
                                 onChange={(roleId) => {
                                   if (!canChangeRole(u.id, roleId)) {
-                                    setUsersMsg(
-                                      "لا يمكن تخفيض دورك وأنت مسؤول المنشأة الوحيد النشط.",
-                                    );
+                                    setUsersMsg(t("permissions.cannotDemoteSelf"));
                                     return;
                                   }
                                   setUsersMsg("");
@@ -692,10 +701,10 @@ export function Permissions() {
                                 }}
                                 options={roles.map((r) => ({
                                   value: String(r.id),
-                                  label: r.name,
+                                  label: roleDisplayName(t, r),
                                 }))}
                                 className="min-w-[10rem]"
-                                searchPlaceholder="بحث في الأدوار…"
+                                searchPlaceholder={t("permissions.searchRoles")}
                               />
                             </td>
                             <td className="px-4 py-3 align-middle">
@@ -704,16 +713,17 @@ export function Permissions() {
                                   active={active}
                                   disabled={disableToggle}
                                   onToggle={() => toggleActive(u.id)}
+                                  t={t}
                                 />
                                 <span className="text-[11px] font-bold text-steel-500">
-                                  {active ? "مفعّل" : "معطّل"}
+                                  {active ? t("common.active") : t("common.disabled")}
                                 </span>
                               </div>
                             </td>
                             <td className="px-2 py-3 align-middle">
                               {isSelf ? (
                                 <span className="text-[11px] font-bold text-steel-400">
-                                  حسابك
+                                  {t("common.yourAccount")}
                                 </span>
                               ) : (
                                 <span className="text-steel-300">—</span>
@@ -742,38 +752,42 @@ export function Permissions() {
       <Modal
         open={roleFormOpen}
         onClose={() => setRoleFormOpen(false)}
-        title={editingRoleId ? "تعديل دور" : "إضافة دور"}
+        title={
+          editingRoleId
+            ? t("permissions.roleForm.edit")
+            : t("permissions.roleForm.add")
+        }
         subtitle={
           editingRoleId
-            ? "تحديث اسم الدور ووصفه"
-            : "إنشاء دور مخصص بصلاحية لوحة المؤشرات افتراضياً"
+            ? t("permissions.roleForm.editSub")
+            : t("permissions.roleForm.addSub")
         }
         size="md"
         footer={
           <>
             <Button variant="outline" onClick={() => setRoleFormOpen(false)}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button onClick={submitRoleForm}>
               <Check className="h-4 w-4" />
-              حفظ
+              {t("common.save")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="اسم الدور" required>
+          <Field label={t("permissions.roleForm.name")} required>
             <Input
               value={roleName}
               onChange={(e) => setRoleName(e.target.value)}
-              placeholder="مثال: منسق مشاريع"
+              placeholder={t("permissions.roleForm.namePlaceholder")}
             />
           </Field>
-          <Field label="الوصف">
+          <Field label={t("permissions.roleForm.desc")}>
             <Input
               value={roleDescription}
               onChange={(e) => setRoleDescription(e.target.value)}
-              placeholder="وصف مختصر لمسؤوليات الدور"
+              placeholder={t("permissions.roleForm.descPlaceholder")}
             />
           </Field>
           {formError ? (

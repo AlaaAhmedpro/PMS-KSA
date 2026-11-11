@@ -15,7 +15,7 @@ import { useConfirm } from "../store/ConfirmContext";
 import { useOrgModules } from "../hooks/useOrgModules";
 import { usePagination } from "../hooks/usePagination";
 import { getProjectPlacement } from "../lib/orgModules";
-import { PROJECT_STATUS_LABELS } from "../lib/constants";
+import { useLocale } from "../store/LocaleContext";
 import {
   filterProjectsForUser,
   saveProjectSimulated,
@@ -27,11 +27,7 @@ import { cn } from "../lib/cn";
 
 type ScopeTab = "all" | "under_program" | "standalone";
 
-const TABS: { id: ScopeTab; label: string }[] = [
-  { id: "all", label: "الكل" },
-  { id: "under_program", label: "تحت برنامج" },
-  { id: "standalone", label: "مستقلة" },
-];
+const TAB_IDS: ScopeTab[] = ["all", "under_program", "standalone"];
 
 const PROJECT_STATUS_BADGE: Record<string, string> = {
   draft:
@@ -48,21 +44,26 @@ const PROJECT_STATUS_BADGE: Record<string, string> = {
     "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
 };
 
-const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
-  { value: "low", label: "منخفضة" },
-  { value: "normal", label: "عادية" },
-  { value: "high", label: "عالية" },
-  { value: "critical", label: "حرجة" },
-];
+const PRIORITY_VALUES: Priority[] = ["low", "normal", "high", "critical"];
 
-function formatSar(amount: number): string {
+const PROJECT_STATUS_IDS = [
+  "draft",
+  "planned",
+  "active",
+  "on_hold",
+  "completed",
+  "cancelled",
+] as const;
+
+function formatSar(amount: number, currency: string): string {
   return `${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} ر.س`;
+  })} ${currency}`;
 }
 
 export function ProjectsPage() {
+  const { t } = useLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const scopeParam = searchParams.get("scope");
   const scope: ScopeTab =
@@ -214,7 +215,7 @@ export function ProjectsPage() {
         budgetSar: budget,
       });
       if (!managerUserId) {
-        throw new ProjectServiceError("مدير المشروع مطلوب.");
+        throw new ProjectServiceError(t("projects.error.managerRequired"));
       }
       setBusy(true);
       await saveProjectSimulated();
@@ -259,7 +260,7 @@ export function ProjectsPage() {
       }
       closeModal();
     } catch (e) {
-      setError(e instanceof ProjectServiceError ? e.message : "تعذّر الحفظ.");
+      setError(e instanceof ProjectServiceError ? e.message : t("common.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -267,10 +268,10 @@ export function ProjectsPage() {
 
   const onDelete = async (p: Project) => {
     const ok = await confirm({
-      title: "تأكيد الحذف",
-      message: `حذف المشروع «${p.name}» وكل مهامه؟`,
+      title: t("common.confirmDeleteTitle"),
+      message: t("projects.delete.message", { name: p.name }),
       danger: true,
-      confirmLabel: "حذف",
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     removeProject(p.id);
@@ -281,30 +282,34 @@ export function ProjectsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="المشاريع"
-        subtitle="تحت برنامج أو مستقلة — فلتر النطاق من التبويبات أدناه."
+        title={t("projects.title")}
+        subtitle={t("projects.subtitle")}
         actions={
           canManage ? (
-            <Button onClick={openCreate}>إضافة مشروع</Button>
+            <Button onClick={openCreate}>{t("projects.add")}</Button>
           ) : undefined
         }
       />
 
       {(modules.portfolio || modules.program) && (
         <div className="flex flex-wrap gap-2">
-          {TABS.map((t) => (
+          {TAB_IDS.map((tabId) => (
             <button
-              key={t.id}
+              key={tabId}
               type="button"
-              onClick={() => setScope(t.id)}
+              onClick={() => setScope(tabId)}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
-                scope === t.id
+                scope === tabId
                   ? "border-brand-500 bg-brand-500 text-white"
                   : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
               )}
             >
-              {t.label}
+              {tabId === "all"
+                ? t("projects.tab.all")
+                : tabId === "under_program"
+                  ? t("projects.tab.underProgram")
+                  : t("projects.tab.standalone")}
             </button>
           ))}
         </div>
@@ -317,8 +322,8 @@ export function ProjectsPage() {
             setQ(e.target.value);
             setPage(1);
           }}
-          placeholder="بحث بالاسم أو الرمز أو البرنامج أو المدير"
-          aria-label="بحث في المشاريع"
+          placeholder={t("projects.searchPlaceholder")}
+          aria-label={t("projects.searchAria")}
         />
         <SearchableSelect
           value={statusFilter}
@@ -327,10 +332,10 @@ export function ProjectsPage() {
             setPage(1);
           }}
           options={[
-            { value: "all", label: "كل الحالات" },
-            ...Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => ({
+            { value: "all", label: t("common.allStatuses") },
+            ...PROJECT_STATUS_IDS.map((value) => ({
               value,
-              label,
+              label: t(`status.project.${value}`),
             })),
           ]}
         />
@@ -350,13 +355,13 @@ export function ProjectsPage() {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">المشروع</th>
-              <th className="px-4 py-3 text-start font-bold">الحالة</th>
-              <th className="px-4 py-3 text-start font-bold">البرنامج</th>
-              <th className="px-4 py-3 text-start font-bold">المحفظة</th>
-              <th className="px-4 py-3 text-start font-bold">المدير</th>
-              <th className="px-4 py-3 text-start font-bold">التقدم</th>
-              <th className="px-4 py-3 text-start font-bold">الميزانية</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.project")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.status")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.program")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.portfolio")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.manager")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.progress")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("projects.col.budget")}</th>
               {canManage ? (
                 <th className="px-4 py-3 text-start font-bold"> </th>
               ) : null}
@@ -369,7 +374,7 @@ export function ProjectsPage() {
                   colSpan={colSpan}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا توجد مشاريع مطابقة.
+                  {t("projects.empty")}
                 </td>
               </tr>
             ) : (
@@ -405,7 +410,7 @@ export function ProjectsPage() {
                             PROJECT_STATUS_BADGE.draft,
                         )}
                       >
-                        {PROJECT_STATUS_LABELS[p.status] ?? p.status}
+                        {t(`status.project.${p.status}`)}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -418,7 +423,7 @@ export function ProjectsPage() {
                           {program.name}
                         </Link>
                       ) : (
-                        <span className="text-[12px] text-steel-400">مستقل</span>
+                        <span className="text-[12px] text-steel-400">{t("projects.standalone")}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -456,7 +461,7 @@ export function ProjectsPage() {
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <span className="whitespace-nowrap tabular-nums text-[12px] text-steel-700 dark:text-steel-200">
-                        {formatSar(p.budgetSar || 0)}
+                        {formatSar(p.budgetSar || 0, t("common.currencySar"))}
                       </span>
                     </td>
                     {canManage ? (
@@ -466,8 +471,8 @@ export function ProjectsPage() {
                             type="button"
                             onClick={() => openEdit(p)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-brand-500/10 hover:text-brand-600"
-                            title="تعديل"
-                            aria-label="تعديل"
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -475,8 +480,8 @@ export function ProjectsPage() {
                             type="button"
                             onClick={() => onDelete(p)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-400 transition-colors hover:bg-red-500/10 hover:text-red-500"
-                            title="حذف"
-                            aria-label="حذف"
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -502,30 +507,30 @@ export function ProjectsPage() {
       <Modal
         open={open}
         onClose={closeModal}
-        title={editingId ? "تعديل مشروع" : "إضافة مشروع"}
-        subtitle={editingId ? name || undefined : "إنشاء مشروع جديد ضمن المنشأة"}
+        title={editingId ? t("projects.modal.edit") : t("projects.modal.add")}
+        subtitle={editingId ? name || undefined : t("projects.modal.addSub")}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={closeModal} disabled={busy}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button onClick={save} disabled={busy}>
-              {busy ? "جارٍ الحفظ…" : "حفظ"}
+              {busy ? t("common.saving") : t("common.save")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="اسم المشروع" required>
+            <Field label={t("projects.field.name")} required>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="الرمز" required>
+            <Field label={t("projects.field.code")} required>
               <Input value={code} onChange={(e) => setCode(e.target.value)} />
             </Field>
           </div>
-          <Field label="الوصف" hint="جملة واحدة تكفي.">
+          <Field label={t("common.description")} hint={t("common.fieldHintOneSentence")}>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -534,7 +539,7 @@ export function ProjectsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {modules.program ? (
               <Field
-                label="البرنامج"
+                label={t("projects.field.program")}
                 className={
                   modules.portfolio && !programId ? undefined : "sm:col-span-2"
                 }
@@ -548,22 +553,22 @@ export function ProjectsPage() {
                       setPortfolioId(prg?.portfolioId ?? "");
                     }
                   }}
-                  placeholder="مستقل — بدون برنامج"
+                  placeholder={t("projects.programPlaceholder")}
                   options={[
-                    { value: "", label: "مستقل — بدون برنامج" },
+                    { value: "", label: t("projects.programPlaceholder") },
                     ...programs.map((p) => ({ value: p.id, label: p.name })),
                   ]}
                 />
               </Field>
             ) : null}
             {modules.portfolio && !programId ? (
-              <Field label="المحفظة">
+              <Field label={t("projects.field.portfolio")}>
                 <SearchableSelect
                   value={portfolioId}
                   onChange={setPortfolioId}
-                  placeholder="بدون محفظة"
+                  placeholder={t("projects.portfolioPlaceholder")}
                   options={[
-                    { value: "", label: "بدون محفظة" },
+                    { value: "", label: t("projects.portfolioPlaceholder") },
                     ...portfolios.map((p) => ({ value: p.id, label: p.name })),
                   ]}
                 />
@@ -572,45 +577,45 @@ export function ProjectsPage() {
           </div>
           {derivedPortfolio && programId ? (
             <p className="text-[11px] text-steel-400">
-              ضمن المحفظة: {derivedPortfolio.name}
+              {t("common.underPortfolio", { name: derivedPortfolio.name })}
             </p>
           ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="مدير المشروع" required>
+            <Field label={t("projects.field.manager")} required>
               <SearchableSelect
                 value={managerUserId}
                 onChange={setManagerUserId}
-                placeholder="اختر المدير"
+                placeholder={t("common.chooseManager")}
                 options={users.map((u) => ({ value: u.id, label: u.name }))}
               />
             </Field>
-            <Field label="الأولوية">
+            <Field label={t("projects.field.priority")}>
               <SearchableSelect
                 value={priority}
                 onChange={(v) => setPriority(v as Priority)}
-                options={PRIORITY_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: o.label,
+                options={PRIORITY_VALUES.map((value) => ({
+                  value,
+                  label: t(`priority.${value}`),
                 }))}
               />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="البداية" required>
+            <Field label={t("projects.field.start")} required>
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </Field>
-            <Field label="النهاية" required>
+            <Field label={t("projects.field.end")} required>
               <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </Field>
-            <Field label="الميزانية (ر.س)">
+            <Field label={t("projects.field.budget")}>
               <Input
                 type="number"
                 value={budgetSar}

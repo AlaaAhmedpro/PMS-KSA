@@ -1,10 +1,9 @@
 import type { OrgPortfolioPolicy } from "../../models/domain";
-import {
-  PORTFOLIO_STATUS_LABELS,
-  type PortfolioStatus,
-} from "../../lib/portfolioDomain";
+import type { PortfolioStatus } from "../../lib/portfolioDomain";
 import { cn } from "../../lib/cn";
 import { Check } from "lucide-react";
+import { useLocale } from "../../store/LocaleContext";
+import { labelOf } from "../../i18n/label";
 
 type StepKey =
   | "draft"
@@ -17,7 +16,7 @@ type StepKey =
 
 type StepDef = {
   key: StepKey;
-  label: string;
+  statusKey: PortfolioStatus;
   match: PortfolioStatus[];
 };
 
@@ -28,70 +27,30 @@ function stepsForPolicy(policy: OrgPortfolioPolicy): StepDef[] {
 
   if (!hasReview) {
     return [
-      {
-        key: "draft",
-        label: PORTFOLIO_STATUS_LABELS.draft,
-        match: ["draft", "returned"],
-      },
-      {
-        key: "submitted",
-        label: PORTFOLIO_STATUS_LABELS.submitted,
-        match: ["submitted"],
-      },
+      { key: "draft", statusKey: "draft", match: ["draft", "returned"] },
+      { key: "submitted", statusKey: "submitted", match: ["submitted"] },
       {
         key: "approved",
-        label: PORTFOLIO_STATUS_LABELS.approved,
+        statusKey: "approved",
         match: ["approved", "pending_approval", "under_review"],
       },
-      {
-        key: "active",
-        label: PORTFOLIO_STATUS_LABELS.active,
-        match: ["active", "on_hold"],
-      },
-      {
-        key: "closed",
-        label: PORTFOLIO_STATUS_LABELS.closed,
-        match: ["closed", "archived"],
-      },
+      { key: "active", statusKey: "active", match: ["active", "on_hold"] },
+      { key: "closed", statusKey: "closed", match: ["closed", "archived"] },
     ];
   }
 
   return [
-    {
-      key: "draft",
-      label: PORTFOLIO_STATUS_LABELS.draft,
-      match: ["draft", "returned"],
-    },
-    {
-      key: "submitted",
-      label: PORTFOLIO_STATUS_LABELS.submitted,
-      match: ["submitted"],
-    },
-    {
-      key: "review",
-      label: PORTFOLIO_STATUS_LABELS.under_review,
-      match: ["under_review"],
-    },
+    { key: "draft", statusKey: "draft", match: ["draft", "returned"] },
+    { key: "submitted", statusKey: "submitted", match: ["submitted"] },
+    { key: "review", statusKey: "under_review", match: ["under_review"] },
     {
       key: "approval",
-      label: PORTFOLIO_STATUS_LABELS.pending_approval,
+      statusKey: "pending_approval",
       match: ["pending_approval"],
     },
-    {
-      key: "approved",
-      label: PORTFOLIO_STATUS_LABELS.approved,
-      match: ["approved"],
-    },
-    {
-      key: "active",
-      label: PORTFOLIO_STATUS_LABELS.active,
-      match: ["active", "on_hold"],
-    },
-    {
-      key: "closed",
-      label: PORTFOLIO_STATUS_LABELS.closed,
-      match: ["closed", "archived"],
-    },
+    { key: "approved", statusKey: "approved", match: ["approved"] },
+    { key: "active", statusKey: "active", match: ["active", "on_hold"] },
+    { key: "closed", statusKey: "closed", match: ["closed", "archived"] },
   ];
 }
 
@@ -109,11 +68,11 @@ function currentStepIndex(
   return idx < 0 ? 0 : idx;
 }
 
-const SIDE_NOTE: Partial<Record<PortfolioStatus, string>> = {
-  returned: PORTFOLIO_STATUS_LABELS.returned,
-  rejected: PORTFOLIO_STATUS_LABELS.rejected,
-  on_hold: PORTFOLIO_STATUS_LABELS.on_hold,
-  archived: PORTFOLIO_STATUS_LABELS.archived,
+const SIDE_NOTE_KEYS: Partial<Record<PortfolioStatus, PortfolioStatus>> = {
+  returned: "returned",
+  rejected: "rejected",
+  on_hold: "on_hold",
+  archived: "archived",
 };
 
 /** Olive green matching the reference stepper */
@@ -131,10 +90,14 @@ export function PortfolioLifecycleStepper({
   policy: OrgPortfolioPolicy;
   className?: string;
 }) {
+  const { t } = useLocale();
   const current = (status || "draft") as PortfolioStatus;
   const steps = stepsForPolicy(policy);
   const activeIndex = currentStepIndex(current, steps);
-  const sideNote = SIDE_NOTE[current];
+  const sideNoteKey = SIDE_NOTE_KEYS[current];
+  const sideNote = sideNoteKey
+    ? labelOf(t, "portfolio.status", sideNoteKey)
+    : undefined;
   const rejected = current === "rejected";
   const fullyDone = current === "closed" || current === "archived";
 
@@ -160,12 +123,10 @@ export function PortfolioLifecycleStepper({
 
       <div className="overflow-x-auto">
         <div className="relative mx-auto min-w-[40rem] max-w-4xl">
-          {/* Base line */}
           <div
             className="pointer-events-none absolute inset-x-7 top-[16px] h-[2px] rounded-full"
             style={{ backgroundColor: LINE_MUTED }}
           />
-          {/* Progress line */}
           <div
             className="pointer-events-none absolute top-[16px] h-[2px] rounded-full transition-[width] duration-150 ease-out"
             style={{
@@ -181,6 +142,7 @@ export function PortfolioLifecycleStepper({
                 !rejected &&
                 (i < activeIndex || (i === activeIndex && fullyDone));
               const active = i === activeIndex && !fullyDone;
+              const label = labelOf(t, "portfolio.status", step.statusKey);
 
               return (
                 <li
@@ -244,9 +206,9 @@ export function PortfolioLifecycleStepper({
                     style={
                       active && !rejected ? { color: DONE } : undefined
                     }
-                    title={step.label}
+                    title={label}
                   >
-                    {step.label}
+                    {label}
                   </span>
                 </li>
               );

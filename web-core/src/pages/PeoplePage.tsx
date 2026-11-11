@@ -11,6 +11,9 @@ import { useCan, useRbac } from "../store/RbacContext";
 import type { CoreRoleId, UserProvisionMethod } from "../models/domain";
 import type { User } from "../lib/types";
 import { cn } from "../lib/cn";
+import { useLocale } from "../store/LocaleContext";
+import { roleDisplayName } from "../lib/i18nDisplay";
+import type { TFn } from "../lib/i18nDisplay";
 import { listSentMail, type DemoMailMessage } from "../lib/demoMail";
 
 type StatusFilter = "all" | "active" | "pending" | "must_change" | "disabled";
@@ -24,30 +27,30 @@ function provisionMethodOf(u: User): UserProvisionMethod | null {
   return null;
 }
 
-function activationLabel(u: User): { label: string; className: string } {
+function activationLabel(u: User, t: TFn): { label: string; className: string } {
   if (u.active === false) {
     return {
-      label: "معطّل",
+      label: t("people.status.disabled"),
       className:
         "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:text-red-300",
     };
   }
   if (u.emailVerified === false) {
     return {
-      label: "لم يُفعَّل",
+      label: t("people.status.notActivated"),
       className:
         "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:text-amber-200",
     };
   }
   if (u.mustChangePassword) {
     return {
-      label: "مفعّل — بانتظار تغيير كلمة المرور",
+      label: t("people.status.pendingPassword"),
       className:
         "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:text-sky-300",
     };
   }
   return {
-    label: "مفعّل",
+    label: t("people.status.active"),
     className:
       "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:text-emerald-300",
   };
@@ -60,25 +63,27 @@ function statusBucket(u: User): StatusFilter {
   return "active";
 }
 
-function methodLabel(method: UserProvisionMethod | null): string {
-  if (method === "temp_password") return "كلمة مرور مؤقتة";
-  if (method === "activation_link") return "رابط تفعيل";
-  return "—";
+function methodLabel(method: UserProvisionMethod | null, t: TFn): string {
+  if (method === "temp_password") return t("people.method.tempPassword");
+  if (method === "activation_link") return t("people.method.activationLink");
+  return t("common.emDash");
 }
 
-function resendActionLabel(method: UserProvisionMethod | null, u: User): string {
+function resendActionLabel(method: UserProvisionMethod | null, u: User, t: TFn): string {
   const m = method ?? (u.emailVerified === false ? "activation_link" : "temp_password");
-  return m === "activation_link" ? "إعادة إرسال الرابط" : "إعادة كلمة المرور";
+  return m === "activation_link" ? t("people.resend.link") : t("people.resend.password");
 }
 
 function ActiveToggle({
   active,
   disabled,
   onToggle,
+  t,
 }: {
   active: boolean;
   disabled?: boolean;
   onToggle: () => void;
+  t: TFn;
 }) {
   return (
     <button
@@ -87,7 +92,7 @@ function ActiveToggle({
       aria-checked={active}
       disabled={disabled}
       onClick={onToggle}
-      title={active ? "تعطيل الحساب" : "تفعيل الحساب"}
+      title={active ? t("people.toggle.disableAccount") : t("people.toggle.enableAccount")}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors duration-150",
         active
@@ -107,6 +112,7 @@ function ActiveToggle({
 }
 
 export function PeoplePage() {
+  const { t, L } = useLocale();
   const {
     users,
     setUserRole,
@@ -171,7 +177,7 @@ export function PeoplePage() {
   if (!can.managePeople(user?.role)) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-steel-500">ليس لديك صلاحية إدارة الأعضاء.</p>
+        <p className="text-sm text-steel-500">{t("people.noAccess")}</p>
       </Card>
     );
   }
@@ -187,14 +193,14 @@ export function PeoplePage() {
       method,
     });
     if (!res.ok || !res.user) {
-      setMsg(res.reason || "تعذّر إنشاء المستخدم.");
+      setMsg(L(res.reason) || t("people.error.createUser"));
       return;
     }
     if (projectId) addProjectMember(projectId, res.user.id);
     setMsg(
       method === "temp_password"
-        ? "تم إنشاء الحساب وإرسال كلمة مرور مؤقتة (محاكاة Demo)."
-        : "تم إنشاء الحساب وإرسال رابط التفعيل (محاكاة Demo).",
+        ? t("people.msg.createdTemp")
+        : t("people.msg.createdActivation"),
     );
     setMailPreview(res.mailPreview || "");
     setMailTick((n) => n + 1);
@@ -204,11 +210,11 @@ export function PeoplePage() {
   };
 
   const statusTabs: { id: StatusFilter; label: string }[] = [
-    { id: "all", label: "الكل" },
-    { id: "active", label: "مفعّل" },
-    { id: "pending", label: "لم يُفعَّل" },
-    { id: "must_change", label: "تغيير كلمة المرور" },
-    { id: "disabled", label: "معطّل" },
+    { id: "all", label: t("common.all") },
+    { id: "active", label: t("people.status.active") },
+    { id: "pending", label: t("people.status.notActivated") },
+    { id: "must_change", label: t("people.filter.mustChange") },
+    { id: "disabled", label: t("people.status.disabled") },
   ];
 
   const previewUser = previewUserId
@@ -222,21 +228,21 @@ export function PeoplePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="الأعضاء والحسابات"
-        subtitle="إنشاء مستخدمين بكلمة مرور مؤقتة أو رابط تفعيل البريد"
+        title={t("people.title")}
+        subtitle={t("people.subtitle")}
         icon={<Users className="h-6 w-6" />}
       />
 
       <Card className="space-y-3 p-4">
         <p className="flex items-center gap-2 text-sm font-bold">
           <UserPlus className="h-4 w-4" />
-          إضافة مستخدم
+          {t("people.addUser")}
         </p>
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label="الاسم" required>
+          <Field label={t("people.field.name")} required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="البريد" required>
+          <Field label={t("people.field.email")} required>
             <Input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -244,7 +250,7 @@ export function PeoplePage() {
               placeholder="name@company.sa"
             />
           </Field>
-          <Field label="الدور">
+          <Field label={t("people.field.role")}>
             <SearchableSelect
               value={role}
               onChange={(v) => setRole(v as CoreRoleId)}
@@ -254,15 +260,18 @@ export function PeoplePage() {
                     String(r.id),
                   ),
                 )
-                .map((r) => ({ value: String(r.id), label: r.name }))}
+                .map((r) => ({
+                  value: String(r.id),
+                  label: roleDisplayName(t, r),
+                }))}
             />
           </Field>
-          <Field label="مشروع (اختياري)">
+          <Field label={t("people.field.projectOptional")}>
             <SearchableSelect
               value={projectId}
               onChange={setProjectId}
               options={[
-                { value: "", label: "بدون مشروع محدد" },
+                { value: "", label: t("people.projectNone") },
                 ...projects.map((p) => ({ value: p.id, label: p.name })),
               ]}
             />
@@ -270,7 +279,9 @@ export function PeoplePage() {
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-bold text-steel-500">طريقة الإنشاء</p>
+          <p className="mb-2 text-xs font-bold text-steel-500">
+            {t("people.provisionMethod")}
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -282,7 +293,7 @@ export function PeoplePage() {
                   : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
               )}
             >
-              كلمة مرور مؤقتة
+              {t("people.method.tempPassword")}
             </button>
             <button
               type="button"
@@ -294,7 +305,7 @@ export function PeoplePage() {
                   : "border-steel-200 text-steel-600 hover:bg-steel-50 dark:border-steel-700 dark:text-steel-300",
               )}
             >
-              رابط تفعيل البريد
+              {t("people.method.activationLink")}
             </button>
           </div>
         </div>
@@ -304,7 +315,7 @@ export function PeoplePage() {
           <div className="rounded-md border border-steel-200 bg-steel-50 p-3 dark:border-steel-700 dark:bg-steel-800/50">
             <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-steel-500">
               <Mail className="h-3.5 w-3.5" />
-              معاينة الميل (Demo)
+              {t("common.mailPreview")}
             </p>
             <pre className="whitespace-pre-wrap text-xs text-steel-700 dark:text-steel-200">
               {mailPreview}
@@ -312,7 +323,7 @@ export function PeoplePage() {
           </div>
         ) : null}
 
-        <Button onClick={createUser}>إنشاء وإرسال</Button>
+        <Button onClick={createUser}>{t("common.createAndSend")}</Button>
       </Card>
 
       <div className="flex flex-wrap gap-2">
@@ -336,8 +347,8 @@ export function PeoplePage() {
       <Input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="بحث بالاسم أو البريد"
-        aria-label="بحث في المستخدمين"
+        placeholder={t("people.searchPlaceholder")}
+        aria-label={t("people.searchAria")}
       />
 
       <Card className="overflow-hidden p-0">
@@ -352,12 +363,12 @@ export function PeoplePage() {
           </colgroup>
           <thead>
             <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-              <th className="px-4 py-3 text-start font-bold">المستخدم</th>
-              <th className="px-4 py-3 text-start font-bold">الدور</th>
-              <th className="px-4 py-3 text-start font-bold">طريقة الإنشاء</th>
-              <th className="px-4 py-3 text-start font-bold">حالة التفعيل</th>
-              <th className="px-4 py-3 text-start font-bold">الحساب</th>
-              <th className="px-4 py-3 text-start font-bold">إجراءات</th>
+              <th className="px-4 py-3 text-start font-bold">{t("people.col.user")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("people.col.role")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("people.col.provision")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("people.col.activation")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("people.col.account")}</th>
+              <th className="px-4 py-3 text-start font-bold">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -367,13 +378,13 @@ export function PeoplePage() {
                   colSpan={6}
                   className="px-4 py-8 text-center text-sm text-steel-500"
                 >
-                  لا مستخدمين مطابقين للبحث أو التصفية.
+                  {t("people.empty")}
                 </td>
               </tr>
             ) : (
               filteredUsers.map((u) => {
                 const methodOf = provisionMethodOf(u);
-                const act = activationLabel(u);
+                const act = activationLabel(u, t);
                 const isSelf = user?.id === u.id;
                 return (
                   <tr
@@ -396,18 +407,18 @@ export function PeoplePage() {
                         value={String(u.role)}
                         onChange={(e) => setUserRole(u.id, e.target.value)}
                         className="min-w-[8rem]"
-                        aria-label={`دور ${u.name}`}
+                        aria-label={t("people.roleAria", { name: u.name })}
                       >
                         {roles.map((r) => (
                           <option key={r.id} value={String(r.id)}>
-                            {r.name}
+                            {roleDisplayName(t, r)}
                           </option>
                         ))}
                       </NativeSelect>
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <span className="inline-flex rounded border border-steel-200 bg-steel-50 px-1.5 py-0.5 text-[11px] font-bold text-steel-600 dark:border-steel-700 dark:bg-steel-800 dark:text-steel-300">
-                        {methodLabel(methodOf)}
+                        {methodLabel(methodOf, t)}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -426,9 +437,12 @@ export function PeoplePage() {
                           active={u.active !== false}
                           disabled={isSelf}
                           onToggle={() => toggleActive(u.id)}
+                          t={t}
                         />
                         <span className="text-[11px] font-bold text-steel-500">
-                          {u.active === false ? "معطّل" : "مفعّل"}
+                          {u.active === false
+                            ? t("people.status.disabled")
+                            : t("people.status.active")}
                         </span>
                       </div>
                     </td>
@@ -440,21 +454,23 @@ export function PeoplePage() {
                           onClick={() => {
                             const res = resendProvisionMail(u.id);
                             if (!res.ok) {
-                              setMsg(res.reason || "تعذّر إعادة الإرسال.");
+                              setMsg(
+                                L(res.reason) || t("people.msg.resendFailed"),
+                              );
                               return;
                             }
                             setMsg(
                               methodOf === "activation_link" ||
                                 u.emailVerified === false
-                                ? "أُعيد إرسال رابط التفعيل (Demo)."
-                                : "أُعيدت كلمة مرور مؤقتة (Demo).",
+                                ? t("people.msg.resendActivation")
+                                : t("people.msg.resendPassword"),
                             );
                             setMailPreview(res.mailPreview || "");
                             setMailTick((n) => n + 1);
                             setPreviewUserId(u.id);
                           }}
                         >
-                          {resendActionLabel(methodOf, u)}
+                          {resendActionLabel(methodOf, u, t)}
                         </Button>
                         {lastMailByEmail.has(u.email.toLowerCase()) ? (
                           <Button
@@ -466,7 +482,9 @@ export function PeoplePage() {
                               )
                             }
                           >
-                            {previewUserId === u.id ? "إخفاء الميل" : "معاينة"}
+                            {previewUserId === u.id
+                              ? t("common.hideMail")
+                              : t("common.preview")}
                           </Button>
                         ) : null}
                       </div>
@@ -483,7 +501,9 @@ export function PeoplePage() {
         <Card className="space-y-2 p-4">
           <p className="flex items-center gap-1.5 text-xs font-bold text-steel-500">
             <Mail className="h-3.5 w-3.5" />
-            معاينة الميل — {previewUser?.email ?? ""}
+            {t("people.mailPreviewFor", {
+              email: previewUser?.email ?? "",
+            })}
           </p>
           <pre className="whitespace-pre-wrap rounded-md border border-steel-200 bg-steel-50 p-3 text-xs text-steel-700 dark:border-steel-700 dark:bg-steel-800/50 dark:text-steel-200">
             {mailPreview || previewMail?.body || ""}

@@ -7,7 +7,8 @@ import { useHierarchy } from "../../store/HierarchyStore";
 import { useAuth } from "../../store/AuthContext";
 import { useCan } from "../../store/RbacContext";
 import { useConfirm } from "../../store/ConfirmContext";
-import { PROJECT_ACTIVITY_KIND_LABELS } from "../../lib/constants";
+import { activityKindLabel } from "../../i18n/label";
+import { useLocale } from "../../store/LocaleContext";
 import type { Project, ProjectActivityKind } from "../../models/domain";
 import { cn } from "../../lib/cn";
 
@@ -35,6 +36,7 @@ const KIND_TONE: Record<string, string> = {
 };
 
 export function ProjectActivityPanel({ project }: { project: Project }) {
+  const { t } = useLocale();
   const { projectActivities, addProjectActivity, removeProjectActivity } =
     useHierarchy();
   const { user, users } = useAuth();
@@ -58,9 +60,7 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-steel-500">
-          سجل زمني لأحداث المشروع: حالات، مراحل، فريق، مصاريف، مواد، وملاحظات.
-        </p>
+        <p className="text-xs text-steel-500">{t("projectActivity.intro")}</p>
         {canManage ? (
           <Button
             size="sm"
@@ -71,7 +71,7 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
               setOpen(true);
             }}
           >
-            إضافة ملاحظة
+            {t("projectActivity.addNote")}
           </Button>
         ) : null}
       </div>
@@ -79,7 +79,7 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
       <Card className="p-4">
         {rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-steel-500">
-            لا نشاطات مسجّلة على هذا المشروع.
+            {t("projectActivity.empty")}
           </p>
         ) : (
           <ol className="relative space-y-0 ps-2">
@@ -110,7 +110,7 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
                               KIND_TONE[kind] ?? KIND_TONE.note,
                             )}
                           >
-                            {PROJECT_ACTIVITY_KIND_LABELS[kind] ?? kind}
+                            {activityKindLabel(t, kind)}
                           </span>
                           <p className="text-sm font-semibold text-steel-800 dark:text-steel-100">
                             {a.title}
@@ -137,15 +137,15 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
                           variant="outline"
                           onClick={async () => {
                             const ok = await confirm({
-                              title: "تأكيد الحذف",
-                              message: "حذف هذه الملاحظة من السجل؟",
+                              title: t("projectActivity.deleteTitle"),
+                              message: t("projectActivity.deleteMessage"),
                               danger: true,
-                              confirmLabel: "حذف",
+                              confirmLabel: t("common.delete"),
                             });
                             if (ok) removeProjectActivity(a.id);
                           }}
                         >
-                          حذف
+                          {t("common.delete")}
                         </Button>
                       ) : null}
                     </div>
@@ -160,17 +160,17 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="إضافة ملاحظة للسجل"
+        title={t("projectActivity.modalTitle")}
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              إلغاء
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={() => {
                 if (!title.trim()) {
-                  setError("العنوان مطلوب.");
+                  setError(t("projectActivity.titleRequired"));
                   return;
                 }
                 if (!user) return;
@@ -184,16 +184,16 @@ export function ProjectActivityPanel({ project }: { project: Project }) {
                 setOpen(false);
               }}
             >
-              حفظ
+              {t("common.save")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="العنوان" required>
+          <Field label={t("projectActivity.field.title")} required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
-          <Field label="التفاصيل">
+          <Field label={t("projectActivity.field.detail")}>
             <Textarea
               rows={3}
               value={detail}

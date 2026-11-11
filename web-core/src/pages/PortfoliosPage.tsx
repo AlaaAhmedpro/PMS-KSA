@@ -14,19 +14,42 @@ import { useData } from "../store/DataStore";
 import { useCan } from "../store/RbacContext";
 import { usePagination, PAGE_SIZE_DEFAULT } from "../hooks/usePagination";
 import {
-  PORTFOLIO_HEALTH_LABELS,
-  PORTFOLIO_PRIORITY_LABELS,
-  PORTFOLIO_STATUS_LABELS,
-  PORTFOLIO_TYPE_LABELS,
+  type PortfolioHealth,
+  type PortfolioPriority,
+  type PortfolioStatus,
+  type PortfolioType,
   remainingBudget,
 } from "../lib/portfolioDomain";
+import { useLocale } from "../store/LocaleContext";
 import { PortfolioStatusBadge } from "../components/portfolio/PortfolioStatusBadge";
 import { canCreatePortfolio } from "../lib/portfolioPermissions";
 import { cn } from "../lib/cn";
 
 type TabId = "dashboard" | "manage";
 
+const PORTFOLIO_STATUS_IDS: PortfolioStatus[] = [
+  "draft",
+  "submitted",
+  "under_review",
+  "returned",
+  "pending_approval",
+  "approved",
+  "active",
+  "on_hold",
+  "rejected",
+  "closed",
+  "archived",
+];
+
+const PORTFOLIO_PRIORITY_IDS: PortfolioPriority[] = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+];
+
 export function PortfoliosPage() {
+  const { t } = useLocale();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { portfolios, objectives } = useHierarchy();
@@ -90,14 +113,14 @@ export function PortfoliosPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="المحافظ"
-        subtitle="لوحة مؤشرات وإدارة دورة حياة المحافظ"
+        title={t("portfolios.title")}
+        subtitle={t("portfolios.subtitle")}
         icon={<Briefcase className="h-6 w-6" />}
         actions={
           allowCreate ? (
             <Button onClick={() => navigate("/portfolios/new")}>
               <Plus className="h-4 w-4" />
-              إنشاء محفظة
+              {t("portfolios.create")}
             </Button>
           ) : undefined
         }
@@ -115,7 +138,7 @@ export function PortfoliosPage() {
           )}
         >
           <LayoutDashboard className="h-4 w-4" />
-          لوحة المحافظ
+          {t("portfolios.tab.dashboard")}
         </button>
         <button
           type="button"
@@ -128,7 +151,7 @@ export function PortfoliosPage() {
           )}
         >
           <Briefcase className="h-4 w-4" />
-          إدارة المحافظ
+          {t("portfolios.tab.manage")}
         </button>
       </div>
 
@@ -145,7 +168,7 @@ export function PortfoliosPage() {
                 className="ps-9"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="بحث بالاسم أو الرمز…"
+                placeholder={t("portfolios.searchPlaceholder")}
               />
             </div>
             <SearchableSelect
@@ -161,13 +184,11 @@ export function PortfoliosPage() {
                 setParams(p, { replace: true });
               }}
               options={[
-                { value: "all", label: "كل الحالات" },
-                ...Object.entries(PORTFOLIO_STATUS_LABELS).map(
-                  ([value, label]) => ({
-                    value,
-                    label,
-                  }),
-                ),
+                { value: "all", label: t("common.allStatuses") },
+                ...PORTFOLIO_STATUS_IDS.map((value) => ({
+                  value,
+                  label: t(`portfolio.status.${value}`),
+                })),
               ]}
             />
             <SearchableSelect
@@ -175,13 +196,11 @@ export function PortfoliosPage() {
               value={priority}
               onChange={setPriority}
               options={[
-                { value: "all", label: "كل الأولويات" },
-                ...Object.entries(PORTFOLIO_PRIORITY_LABELS).map(
-                  ([value, label]) => ({
-                    value,
-                    label,
-                  }),
-                ),
+                { value: "all", label: t("common.allPriorities") },
+                ...PORTFOLIO_PRIORITY_IDS.map((value) => ({
+                  value,
+                  label: t(`portfolio.priority.${value}`),
+                })),
               ]}
             />
             <div className="flex gap-1 rounded-xl border border-steel-200 p-1 dark:border-steel-700">
@@ -195,7 +214,7 @@ export function PortfoliosPage() {
                 )}
                 onClick={() => setView("table")}
               >
-                جدول
+                {t("common.table")}
               </button>
               <button
                 type="button"
@@ -207,7 +226,7 @@ export function PortfoliosPage() {
                 )}
                 onClick={() => setView("cards")}
               >
-                بطاقات
+                {t("common.cards")}
               </button>
             </div>
           </Card>
@@ -218,17 +237,17 @@ export function PortfoliosPage() {
                 <table className="w-full min-w-[960px] text-sm">
                   <thead>
                     <tr className="border-b border-steel-200 bg-steel-50 text-start dark:border-steel-700 dark:bg-steel-800/60">
-                      <th className="px-3 py-3 font-bold">المحفظة</th>
-                      <th className="px-3 py-3 font-bold">النوع</th>
-                      <th className="px-3 py-3 font-bold">المالك</th>
-                      <th className="px-3 py-3 font-bold">الراعي</th>
-                      <th className="px-3 py-3 font-bold">الإدارة</th>
-                      <th className="px-3 py-3 font-bold">الحالة</th>
-                      <th className="px-3 py-3 font-bold">الأولوية</th>
-                      <th className="px-3 py-3 font-bold">معتمد</th>
-                      <th className="px-3 py-3 font-bold">منصرف</th>
-                      <th className="px-3 py-3 font-bold">الصحة</th>
-                      <th className="px-3 py-3 font-bold">هدف</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.portfolio")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.type")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.owner")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.sponsor")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.department")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.status")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.priority")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.approved")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.spent")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.health")}</th>
+                      <th className="px-3 py-3 font-bold">{t("portfolios.col.objective")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -238,8 +257,7 @@ export function PortfoliosPage() {
                           colSpan={11}
                           className="px-4 py-10 text-center text-steel-500"
                         >
-                          لا محافظ مطابقة. يمكن إنشاء محفظة دون ربط برامج أو مشاريع
-                          فوراً.
+                          {t("portfolios.empty.manage")}
                         </td>
                       </tr>
                     ) : (
@@ -254,7 +272,9 @@ export function PortfoliosPage() {
                             <p className="text-[11px] text-steel-400">{p.code}</p>
                           </td>
                           <td className="px-3 py-3">
-                            {PORTFOLIO_TYPE_LABELS[p.portfolioType || "other"]}
+                            {t(
+                              `portfolio.type.${(p.portfolioType || "other") as PortfolioType}`,
+                            )}
                           </td>
                           <td className="px-3 py-3">
                             {users.find((u) => u.id === p.ownerUserId)?.name ??
@@ -272,7 +292,9 @@ export function PortfoliosPage() {
                             <PortfolioStatusBadge status={p.status} />
                           </td>
                           <td className="px-3 py-3">
-                            {PORTFOLIO_PRIORITY_LABELS[p.priority || "medium"]}
+                            {t(
+                              `portfolio.priority.${(p.priority || "medium") as PortfolioPriority}`,
+                            )}
                           </td>
                           <td className="px-3 py-3 tabular-nums">
                             {(p.approvedBudgetSar || 0).toLocaleString("en-US")}
@@ -281,7 +303,9 @@ export function PortfoliosPage() {
                             {(p.actualSpendSar || 0).toLocaleString("en-US")}
                           </td>
                           <td className="px-3 py-3">
-                            {PORTFOLIO_HEALTH_LABELS[p.health || "unknown"]}
+                            {t(
+                              `portfolio.health.${(p.health || "unknown") as PortfolioHealth}`,
+                            )}
                           </td>
                           <td className="px-3 py-3 text-xs">
                             {(p.objectiveIds || [])
@@ -326,19 +350,19 @@ export function PortfoliosPage() {
                       {p.description}
                     </p>
                     <p className="text-[11px] text-steel-400">
-                      متبقي{" "}
-                      {remainingBudget(
-                        p.approvedBudgetSar || 0,
-                        p.actualSpendSar || 0,
-                      ).toLocaleString("en-US")}{" "}
-                      ر.س
+                      {t("common.remainingAmount", {
+                        amount: remainingBudget(
+                          p.approvedBudgetSar || 0,
+                          p.actualSpendSar || 0,
+                        ).toLocaleString("en-US"),
+                      })}
                     </p>
                   </Card>
                 </Link>
               ))}
               {pagination.paginated.length === 0 ? (
                 <Card className="p-8 text-center text-sm text-steel-500 md:col-span-2 xl:col-span-3">
-                  لا محافظ للعرض.
+                  {t("portfolios.empty.cards")}
                 </Card>
               ) : null}
             </div>

@@ -19,71 +19,71 @@ import {
 } from "lucide-react";
 import type { NavSectionDef } from "./types";
 
-/** Global module navigation only — no entity instance trees. */
+/** Global module navigation only — no entity instance trees. Labels via i18n keys. */
 export const SIDEBAR_SECTIONS: NavSectionDef[] = [
   {
     id: "workspace",
-    label: "مساحة العمل",
+    labelKey: "nav.section.workspace",
     items: [
-      { id: "dashboard", to: "/", label: "لوحة المؤشرات", icon: LayoutDashboard },
+      { id: "dashboard", to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
       {
         id: "strategy",
         to: "/strategy",
-        label: "النظرة الاستراتيجية",
-        hint: "تسلسل · علاقات · جدول",
+        labelKey: "nav.strategy",
+        hintKey: "nav.strategy.hint",
         icon: Network,
       },
       {
         id: "explorer",
         to: "/structure",
-        label: "مستكشف العمل",
-        hint: "الفروع والإدارات",
+        labelKey: "nav.explorer",
+        hintKey: "nav.explorer.hint",
         icon: GitBranch,
       },
     ],
   },
   {
     id: "strategic",
-    label: "التخطيط الاستراتيجي",
-    caption: "ارتباطات اختيارية · ليست شجرة إلزامية",
+    labelKey: "nav.section.strategic",
+    captionKey: "nav.section.strategic.caption",
     items: [
-      { id: "objectives", to: "/objectives", label: "الأهداف الاستراتيجية", icon: Flag },
+      { id: "objectives", to: "/objectives", labelKey: "nav.objectives", icon: Flag },
       {
         id: "portfolios",
         to: "/portfolios",
-        label: "المحافظ",
-        hint: "لوحة · إدارة",
+        labelKey: "nav.portfolios",
+        hintKey: "nav.portfolios.hint",
         icon: Briefcase,
       },
-      { id: "programs", to: "/programs", label: "البرامج", icon: Layers },
-      { id: "initiatives", to: "/initiatives", label: "المبادرات", icon: Compass },
+      { id: "programs", to: "/programs", labelKey: "nav.programs", icon: Layers },
+      { id: "initiatives", to: "/initiatives", labelKey: "nav.initiatives", icon: Compass },
     ],
   },
   {
     id: "execution",
-    label: "التنفيذ",
-    caption: "المشروع وحدة العمل — يمكن أن يكون مستقلاً",
+    labelKey: "nav.section.execution",
+    captionKey: "nav.section.execution.caption",
     items: [
       {
         id: "projects",
         to: "/projects",
-        label: "المشاريع",
-        hint: "تحت برنامج أو مستقلة",
+        labelKey: "nav.projects",
+        hintKey: "nav.projects.hint",
         icon: FolderKanban,
         matchPrefix: true,
       },
-      { id: "tasks", to: "/tasks", label: "مهامي", icon: ListTodo },
+      { id: "tasks", to: "/tasks", labelKey: "nav.tasks", icon: ListTodo },
     ],
   },
   {
     id: "resources",
-    label: "الموارد",
+    labelKey: "nav.section.resources",
     items: [
-      { id: "people", to: "/people", label: "الأعضاء والدعوات", icon: Users },
+      { id: "people", to: "/people", labelKey: "nav.people", icon: Users },
       {
         id: "vendors",
         to: "/vendors",
-        label: "الموردون",
+        labelKey: "nav.vendors",
         icon: Building2,
         matchPrefix: true,
       },
@@ -91,30 +91,30 @@ export const SIDEBAR_SECTIONS: NavSectionDef[] = [
   },
   {
     id: "insights",
-    label: "الرؤى",
+    labelKey: "nav.section.insights",
     items: [
-      { id: "reports", to: "/reports", label: "التقارير", icon: FileBarChart },
-      { id: "archive", to: "/archive", label: "الأرشيف الإلكتروني", icon: Archive },
+      { id: "reports", to: "/reports", labelKey: "nav.reports", icon: FileBarChart },
+      { id: "archive", to: "/archive", labelKey: "nav.archive", icon: Archive },
     ],
   },
   {
     id: "admin",
-    label: "الإدارة",
+    labelKey: "nav.section.admin",
     items: [
-      { id: "permissions", to: "/permissions", label: "الصلاحيات", icon: ShieldCheck },
-      { id: "lookups", to: "/lookups", label: "إدارة القوائم", icon: List },
+      { id: "permissions", to: "/permissions", labelKey: "nav.permissions", icon: ShieldCheck },
+      { id: "lookups", to: "/lookups", labelKey: "nav.lookups", icon: List },
       {
         id: "portfolio-settings",
         to: "/settings/portfolio",
-        label: "حوكمة المحافظ",
-        hint: "ملفات وسياسات ومسارات",
+        labelKey: "nav.portfolioSettings",
+        hintKey: "nav.portfolioSettings.hint",
         icon: Settings2,
       },
       {
         id: "billing-settings",
         to: "/settings/billing",
-        label: "الاشتراك والفوترة",
-        hint: "باقة · فواتير · دفع",
+        labelKey: "nav.billing",
+        hintKey: "nav.billing.hint",
         icon: CreditCard,
       },
     ],
