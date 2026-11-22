@@ -15,27 +15,39 @@ import {
   YAxis,
 } from "recharts";
 import { useTheme } from "../../store/ThemeContext";
+import { useLocale } from "../../store/LocaleContext";
 import { formatNumber } from "../../lib/format";
 
 const PIE_COLORS = ["#7cb342", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6"];
 
+const CHART_DONE = "done";
+const CHART_LATE = "late";
+
 function useAxis() {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const tick = theme === "dark" ? "#94a3b8" : "#64748b";
   const grid = theme === "dark" ? "#334155" : "#e2e8f0";
   const tooltipBg = theme === "dark" ? "#1e2430" : "#ffffff";
   const tooltipBorder = theme === "dark" ? "#334155" : "#e2e8f0";
-  return { tick, grid, tooltipBg, tooltipBorder };
+  const fontFamily = locale === "ar" ? "Cairo, sans-serif" : "Plus Jakarta Sans, sans-serif";
+  const direction = (locale === "ar" ? "rtl" : "ltr") as "rtl" | "ltr";
+  return { tick, grid, tooltipBg, tooltipBorder, fontFamily, direction };
 }
 
-const tooltipStyle = (bg: string, border: string) => ({
+const tooltipStyle = (
+  bg: string,
+  border: string,
+  fontFamily: string,
+  direction: "rtl" | "ltr",
+) => ({
   contentStyle: {
     background: bg,
     border: `1px solid ${border}`,
     borderRadius: 12,
     fontSize: 12,
-    fontFamily: "Cairo, sans-serif",
-    direction: "rtl" as const,
+    fontFamily,
+    direction,
   },
   labelStyle: { color: "#94a3b8" },
 });
@@ -43,14 +55,22 @@ const tooltipStyle = (bg: string, border: string) => ({
 const PERF_BAR_WIDTH = 88;
 const PERF_CHART_HEIGHT = 288;
 
-export function BranchPerformanceChart({
-  data,
-}: {
-  data: { name: string; منجز: number; متأخر: number }[];
-}) {
-  const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+export type BranchPerformanceRow = {
+  name: string;
+  done: number;
+  late: number;
+};
+
+export function BranchPerformanceChart({ data }: { data: BranchPerformanceRow[] }) {
+  const { tick, grid, tooltipBg, tooltipBorder, fontFamily, direction } = useAxis();
+  const { t, L } = useLocale();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollMinWidth = Math.max(data.length * PERF_BAR_WIDTH, 1);
+  const chartData = data.map((row) => ({
+    name: L(row.name),
+    [CHART_DONE]: row.done,
+    [CHART_LATE]: row.late,
+  }));
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -61,8 +81,8 @@ export function BranchPerformanceChart({
   return (
     <div className="perf-chart">
       <div className="perf-chart__legend" aria-hidden={false}>
-        <PerfLegendItem color="#7cb342" label="منجز" />
-        <PerfLegendItem color="#ef4444" label="متأخر" />
+        <PerfLegendItem color="#7cb342" label={t("chart.done")} />
+        <PerfLegendItem color="#ef4444" label={t("chart.late")} />
       </div>
 
       <div
@@ -79,7 +99,7 @@ export function BranchPerformanceChart({
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={data}
+              data={chartData}
               barGap={6}
               barCategoryGap="18%"
               margin={{
@@ -96,7 +116,7 @@ export function BranchPerformanceChart({
                 tick={{
                   fill: tick,
                   fontSize: 11,
-                  fontFamily: "Cairo",
+                  fontFamily,
                 }}
                 tickMargin={8}
                 tickLine={false}
@@ -104,25 +124,25 @@ export function BranchPerformanceChart({
               />
               <YAxis
                 width={44}
-                tick={{ fill: tick, fontSize: 11, fontFamily: "Cairo" }}
+                tick={{ fill: tick, fontSize: 11, fontFamily }}
                 tickLine={false}
                 axisLine={{ stroke: grid }}
                 tickMargin={6}
               />
               <Tooltip
                 cursor={{ fill: "rgba(124,179,66,0.08)" }}
-                {...tooltipStyle(tooltipBg, tooltipBorder)}
+                {...tooltipStyle(tooltipBg, tooltipBorder, fontFamily, direction)}
               />
               <Bar
-                dataKey="منجز"
-                name="منجز"
+                dataKey={CHART_DONE}
+                name={t("chart.done")}
                 fill="#7cb342"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
               />
               <Bar
-                dataKey="متأخر"
-                name="متأخر"
+                dataKey={CHART_LATE}
+                name={t("chart.late")}
                 fill="#ef4444"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={32}
@@ -152,12 +172,14 @@ export function CategoryPieChart({
 }: {
   data: { name: string; value: number }[];
 }) {
-  const { tooltipBg, tooltipBorder } = useAxis();
+  const { tooltipBg, tooltipBorder, fontFamily, direction } = useAxis();
+  const { L } = useLocale();
+  const localized = data.map((d) => ({ ...d, name: L(d.name) }));
   return (
     <ResponsiveContainer width="100%" height={280}>
       <PieChart>
         <Pie
-          data={data}
+          data={localized}
           dataKey="value"
           nameKey="name"
           innerRadius={55}
@@ -165,12 +187,12 @@ export function CategoryPieChart({
           paddingAngle={3}
           stroke="none"
         >
-          {data.map((_, i) => (
+          {localized.map((_, i) => (
             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip {...tooltipStyle(tooltipBg, tooltipBorder)} />
-        <Legend wrapperStyle={{ fontFamily: "Cairo", fontSize: 12 }} />
+        <Tooltip {...tooltipStyle(tooltipBg, tooltipBorder, fontFamily, direction)} />
+        <Legend wrapperStyle={{ fontFamily, fontSize: 12 }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -181,10 +203,12 @@ export function FlowLineChart({
 }: {
   data: { name: string; value: number }[];
 }) {
-  const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { tick, grid, tooltipBg, tooltipBorder, fontFamily, direction } = useAxis();
+  const { t, L } = useLocale();
+  const localized = data.map((d) => ({ ...d, name: L(d.name) }));
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+      <LineChart data={localized} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
         <defs>
           <linearGradient id="flowGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7cb342" stopOpacity={0.4} />
@@ -192,13 +216,18 @@ export function FlowLineChart({
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke={grid} vertical={false} />
-        <XAxis dataKey="name" tick={{ fill: tick, fontSize: 12, fontFamily: "Cairo" }} tickLine={false} axisLine={{ stroke: grid }} />
+        <XAxis
+          dataKey="name"
+          tick={{ fill: tick, fontSize: 12, fontFamily }}
+          tickLine={false}
+          axisLine={{ stroke: grid }}
+        />
         <YAxis tick={{ fill: tick, fontSize: 12 }} tickLine={false} axisLine={false} />
-        <Tooltip cursor={{ stroke: "#7cb342" }} {...tooltipStyle(tooltipBg, tooltipBorder)} />
+        <Tooltip cursor={{ stroke: "#7cb342" }} {...tooltipStyle(tooltipBg, tooltipBorder, fontFamily, direction)} />
         <Line
           type="monotone"
           dataKey="value"
-          name="المسجّل"
+          name={t("chart.registered")}
           stroke="#7cb342"
           strokeWidth={3}
           dot={{ r: 4, fill: "#7cb342" }}
@@ -218,6 +247,7 @@ export function RankedBars({
   data: { name: string; value: number }[];
   color?: string;
 }) {
+  const { L } = useLocale();
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
     <div className="space-y-2.5 py-1">
@@ -240,7 +270,7 @@ export function RankedBars({
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/25 text-[11px] font-extrabold">
                   {i + 1}
                 </span>
-                <span className="truncate drop-shadow-sm">{d.name}</span>
+                <span className="truncate drop-shadow-sm">{L(d.name)}</span>
               </span>
               <span className="shrink-0 text-sm font-extrabold tabular-nums text-white drop-shadow-sm">
                 {formatNumber(d.value)}
@@ -260,11 +290,13 @@ export function HorizontalBarChart({
   data: { name: string; value: number }[];
   color?: string;
 }) {
-  const { tick, grid, tooltipBg, tooltipBorder } = useAxis();
+  const { tick, grid, tooltipBg, tooltipBorder, fontFamily, direction } = useAxis();
+  const { t, L } = useLocale();
+  const localized = data.map((d) => ({ ...d, name: L(d.name) }));
   return (
     <ResponsiveContainer width="100%" height={Math.max(200, data.length * 44)}>
       <BarChart
-        data={data}
+        data={localized}
         layout="vertical"
         margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
       >
@@ -274,12 +306,12 @@ export function HorizontalBarChart({
           type="category"
           dataKey="name"
           width={120}
-          tick={{ fill: tick, fontSize: 12, fontFamily: "Cairo" }}
+          tick={{ fill: tick, fontSize: 12, fontFamily }}
           tickLine={false}
           axisLine={false}
         />
-        <Tooltip cursor={{ fill: "rgba(124,179,66,0.08)" }} {...tooltipStyle(tooltipBg, tooltipBorder)} />
-        <Bar dataKey="value" name="العدد" fill={color} radius={[0, 6, 6, 0]} maxBarSize={26} />
+        <Tooltip cursor={{ fill: "rgba(124,179,66,0.08)" }} {...tooltipStyle(tooltipBg, tooltipBorder, fontFamily, direction)} />
+        <Bar dataKey="value" name={t("chart.count")} fill={color} radius={[0, 6, 6, 0]} maxBarSize={26} />
       </BarChart>
     </ResponsiveContainer>
   );

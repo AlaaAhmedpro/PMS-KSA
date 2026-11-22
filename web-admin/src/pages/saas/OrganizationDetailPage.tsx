@@ -10,33 +10,32 @@ import { StatusPill } from "../../components/sa/StatusPill";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Textarea } from "../../components/ui/Input";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
-import { usePlatform, formatSar } from "../../store/PlatformStore";
+import { usePlatform } from "../../store/PlatformStore";
 import { useAuth } from "../../store/AuthContext";
 import { can } from "../../lib/platformRbac";
 import {
-  CUSTOMER_KIND_LABELS,
-  DEPLOYMENT_LABELS,
-  ENTITLEMENT_LABELS,
-  SUB_STATUS_LABELS,
   effectiveLimits,
   type EntitlementKey,
   type LimitOverrides,
 } from "../../lib/platformDomain";
+import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
+import { formatSar } from "../../lib/format";
 import { daysUntil } from "../../lib/orgLifecycle";
 
-const TABS = [
-  { id: "overview", label: "نظرة عامة" },
-  { id: "profile", label: "الملف" },
-  { id: "subscription", label: "الاشتراك" },
-  { id: "users", label: "المستخدمون" },
-  { id: "usage", label: "الاستخدام والحدود" },
-  { id: "billing", label: "الفوترة" },
-  { id: "integrations", label: "التكاملات" },
-  { id: "activity", label: "النشاط" },
-  { id: "settings", label: "الإعدادات" },
+const TAB_IDS = [
+  "overview",
+  "profile",
+  "subscription",
+  "users",
+  "usage",
+  "billing",
+  "integrations",
+  "activity",
+  "settings",
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TAB_IDS)[number];
 
 type ModalKind =
   | "suspend"
@@ -71,6 +70,45 @@ export function OrganizationDetailPage() {
     startSupportAccess,
     endSupportAccess,
   } = usePlatform();
+  const { t, L } = useLocale();
+  const {
+    customerKind,
+    deployment,
+    subStatus,
+    entitlement,
+    provisioning,
+  } = usePlatformLabels();
+  const tabs = useMemo(
+    () => TAB_IDS.map((id) => ({ id, label: t(`org.tab.${id}`) })),
+    [t],
+  );
+  const suspendCategoryOptions = useMemo(
+    () =>
+      (
+        ["billing", "policy", "security", "request", "other"] as const
+      ).map((value) => ({
+        value,
+        label: t(`org.suspend.cat.${value}`),
+      })),
+    [t],
+  );
+  const languageOptions = useMemo(
+    () => [
+      { value: "ar", label: t("common.languageAr") },
+      { value: "en", label: t("common.languageEn") },
+    ],
+    [t],
+  );
+  const limitFieldLabels = useMemo(
+    () =>
+      ({
+        maxUsers: t("org.limit.field.users"),
+        maxProjects: t("org.limit.field.projects"),
+        maxStorageGb: t("org.limit.field.storage"),
+        maxApiRequests: t("org.limit.field.api"),
+      }) as const,
+    [t],
+  );
   const { user } = useAuth();
   const writable = can(user?.role, "organizations.write");
   const org = organizations.find((o) => o.id === id);
@@ -114,32 +152,34 @@ export function OrganizationDetailPage() {
     const list: string[] = [];
     if (org.status === "suspended") {
       list.push(
-        `معلّقة: ${org.suspension?.reason || "بدون سبب مسجّل"}`,
+        t("org.alert.suspended", {
+          reason: org.suspension?.reason || t("org.alert.noReason"),
+        }),
       );
     }
-    if (sub?.status === "past_due") list.push("اشتراك متأخر السداد.");
+    if (sub?.status === "past_due") list.push(t("org.alert.pastDue"));
     if (sub?.status === "trial") {
       const d = daysUntil(org.trialEndsAt || sub.renewAt);
       if (d !== null && d <= 7)
-        list.push(`الفترة التجريبية تنتهي خلال ${d} يوماً.`);
+        list.push(t("org.alert.trialEnding", { d }));
     }
     if (org.usage.storageGb / Math.max(1, limits.maxStorageGb) >= 0.85) {
-      list.push("التخزين يقترب من الحد.");
+      list.push(t("org.alert.storage"));
     }
     if (org.provisioningStatus === "failed") {
-      list.push("فشل تجهيز البيئة.");
+      list.push(t("org.alert.provisionFail"));
     }
     const failedInv = orgInvoices.filter((i) => i.status === "failed");
     if (failedInv.length)
-      list.push(`${failedInv.length} فاتورة بفشل دفع.`);
+      list.push(t("org.alert.failedInvoices", { n: failedInv.length }));
     return list;
   }, [org, sub, limits, orgInvoices]);
 
   if (!org) {
     return (
-      <PageScaffold title="المنشأة غير موجودة">
+      <PageScaffold title={t("org.notFound")}>
         <Link to="/organizations" className="text-sm font-bold text-blue-600">
-          العودة للقائمة
+          {t("org.backToList")}
         </Link>
       </PageScaffold>
     );
@@ -162,7 +202,7 @@ export function OrganizationDetailPage() {
   return (
     <PageScaffold
       title={org.name}
-      subtitle={`${CUSTOMER_KIND_LABELS[org.customerKind]} · ${org.city} · ${DEPLOYMENT_LABELS[org.deploymentType]}`}
+      subtitle={`${customerKind(org.customerKind)} · ${L(org.city)} · ${deployment(org.deploymentType)}`}
       actions={
         writable ? (
           <div className="flex flex-wrap gap-2">
@@ -173,22 +213,22 @@ export function OrganizationDetailPage() {
                 setNotice(null);
               }}
             >
-              تعديل
+              {t("common.edit")}
             </Button>
             <Button variant="outline" onClick={() => setTab("subscription")}>
-              إدارة الاشتراك
+              {t("org.manageSubscription")}
             </Button>
             <Button variant="outline" onClick={() => setModal("invite")}>
-              دعوة مسؤول
+              {t("org.inviteAdmin")}
             </Button>
             <div className="relative">
               <Button variant="ghost" onClick={() => setModal(modal === "more" ? null : "more")}>
-                المزيد
+                {t("common.more")}
               </Button>
               {modal === "more" ? (
                 <div className="absolute end-0 z-30 mt-1 w-52 rounded-md border border-slate-200 bg-white py-1 shadow-sm">
                   <MenuBtn
-                    label="تعديل الحدود"
+                    label={t("org.action.limits")}
                     onClick={() => {
                       setLimitsForm({ ...org.limitOverrides });
                       setModal("limits");
@@ -196,22 +236,22 @@ export function OrganizationDetailPage() {
                   />
                   {org.status === "suspended" ? (
                     <MenuBtn
-                      label="إعادة تفعيل"
+                      label={t("org.action.reactivate")}
                       onClick={() => setModal("reactivate")}
                     />
                   ) : org.status !== "archived" ? (
                     <MenuBtn
-                      label="تعليق"
+                      label={t("org.action.suspend")}
                       onClick={() => setModal("suspend")}
                     />
                   ) : null}
                   <MenuBtn
-                    label="وصول دعم"
+                    label={t("org.action.supportAccess")}
                     onClick={() => setModal("support")}
                   />
                   {org.status !== "archived" ? (
                     <MenuBtn
-                      label="أرشفة"
+                      label={t("org.action.archive")}
                       danger
                       onClick={() => setModal("archive")}
                     />
@@ -232,7 +272,9 @@ export function OrganizationDetailPage() {
           <p className="text-xs text-slate-400">
             {org.id}
             {org.organizationId ? ` · ${org.organizationId}` : ""}
-            {org.crNumber ? ` · س.ت ${org.crNumber}` : ""}
+            {org.crNumber
+              ? t("org.crPrefix", { n: org.crNumber })
+              : ""}
           </p>
         </div>
         <OrgStatusPill status={org.status} />
@@ -242,16 +284,20 @@ export function OrganizationDetailPage() {
 
       {sessions.length > 0 ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          جلسة دعم نشطة حتى {sessions[0].endsAt.replace("T", " ").slice(0, 16)} —{" "}
-          {sessions[0].readOnly ? "قراءة فقط" : "صلاحية موسّعة"} ·{" "}
-          {sessions[0].reason}
+          {t("org.supportSessionActive", {
+            until: sessions[0].endsAt.replace("T", " ").slice(0, 16),
+            access: sessions[0].readOnly
+              ? t("common.readOnly")
+              : t("common.extendedAccess"),
+            reason: L(sessions[0].reason),
+          })}
           {writable ? (
             <button
               type="button"
               className="ms-2 font-bold underline"
               onClick={() => endSupportAccess(sessions[0].id)}
             >
-              إنهاء الجلسة
+              {t("org.endSession")}
             </button>
           ) : null}
         </div>
@@ -264,18 +310,18 @@ export function OrganizationDetailPage() {
       ) : null}
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
-        {TABS.map((t) => (
+        {tabs.map((tabItem) => (
           <button
-            key={t.id}
+            key={tabItem.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => setTab(tabItem.id)}
             className={`shrink-0 rounded-t-md px-3 py-2 text-xs font-bold ${
-              tab === t.id
+              tab === tabItem.id
                 ? "border border-b-white border-slate-200 bg-white text-blue-700"
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -290,7 +336,7 @@ export function OrganizationDetailPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500">لا تنبيهات تشغيلية حالياً.</p>
+              <p className="text-sm text-slate-500">{t("org.noAlerts")}</p>
             )}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <UsageCell used={org.usage.users} max={limits.maxUsers} />
@@ -301,30 +347,32 @@ export function OrganizationDetailPage() {
                 unit="GB"
               />
               <div className="text-sm">
-                <p className="text-xs font-semibold text-slate-500">التجهيز</p>
+                <p className="text-xs font-semibold text-slate-500">{t("org.provisioning")}</p>
                 <p className="mt-1 font-bold">
                   {org.provisioningStatus === "succeeded"
-                    ? "ناجح"
+                    ? provisioning("succeeded")
                     : org.provisioningStatus === "running"
-                      ? "جارٍ"
+                      ? provisioning("running")
                       : org.provisioningStatus === "failed"
-                        ? "فشل"
-                        : "خامل"}
+                        ? provisioning("failed")
+                        : provisioning("idle")}
                 </p>
                 <p className="mt-2 text-xs text-slate-400">
-                  التجديد: {(org.renewalAt || org.trialEndsAt || "—").slice(0, 10)}
+                  {t("org.renewalDate", {
+                    date: (org.renewalAt || org.trialEndsAt || "—").slice(0, 10),
+                  })}
                 </p>
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-extrabold">آخر الفواتير</h4>
+              <h4 className="text-sm font-extrabold">{t("org.lastInvoices")}</h4>
               <ul className="mt-2 space-y-1 text-sm text-slate-600">
                 {orgInvoices.slice(0, 3).map((inv) => (
                   <li key={inv.id}>
                     {inv.number} · {formatSar(inv.totalSar)} · {inv.status}
                   </li>
                 ))}
-                {orgInvoices.length === 0 ? <li>لا فواتير.</li> : null}
+                {orgInvoices.length === 0 ? <li>{t("org.noInvoices")}</li> : null}
               </ul>
             </div>
           </div>
@@ -335,16 +383,16 @@ export function OrganizationDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {(
                 [
-                  ["legalName", "الاسم القانوني"],
-                  ["crNumber", "السجل التجاري"],
-                  ["vatNumber", "الرقم الضريبي"],
-                  ["nationalAddress", "العنوان الوطني"],
-                  ["website", "الموقع"],
-                  ["city", "المدينة"],
-                  ["contactName", "جهة الاتصال"],
-                  ["contactEmail", "بريد التواصل"],
-                  ["contactPhone", "الجوال"],
-                  ["accountManagerName", "مدير الحساب"],
+                  ["legalName", t("org.field.legalName")],
+                  ["crNumber", t("org.field.cr")],
+                  ["vatNumber", t("org.field.vat")],
+                  ["nationalAddress", t("org.field.nationalAddress")],
+                  ["website", t("org.field.website")],
+                  ["city", t("org.field.city")],
+                  ["contactName", t("org.field.contact")],
+                  ["contactEmail", t("org.field.contactEmail")],
+                  ["contactPhone", t("org.field.contactPhone")],
+                  ["accountManagerName", t("org.field.accountManager")],
                 ] as const
               ).map(([key, label]) => (
                 <Field key={key} label={label}>
@@ -373,11 +421,11 @@ export function OrganizationDetailPage() {
                     contactPhone: draft.contactPhone,
                     accountManagerName: draft.accountManagerName,
                   });
-                  setNotice("تم حفظ الملف وتسجيل التدقيق.");
+                  setNotice(t("org.profileSaved"));
                   setProfileDraft({});
                 }}
               >
-                حفظ الملف
+                {t("org.saveProfile")}
               </Button>
             ) : null}
           </div>
@@ -386,30 +434,32 @@ export function OrganizationDetailPage() {
         {tab === "subscription" && (
           <div className="space-y-4">
             <p className="text-sm">
-              الحالة:{" "}
-              <strong>
-                {sub ? SUB_STATUS_LABELS[sub.status] : "—"}
-              </strong>{" "}
-              · الدورة: {sub?.billingCycle === "annual" ? "سنوي" : "شهري"} · MRR{" "}
-              {formatSar(sub?.mrrSar || 0)}
+              {t("org.subscriptionLine", {
+                status: sub ? subStatus(sub.status) : "—",
+                cycle:
+                  sub?.billingCycle === "annual"
+                    ? t("common.annualShort")
+                    : t("common.monthlyShort"),
+                mrr: formatSar(sub?.mrrSar || 0),
+              })}
             </p>
             {sub?.status === "trial" && writable ? (
               <Button variant="outline" onClick={() => extendTrial(org.id, 14)}>
-                تمديد التجربة 14 يوماً
+                {t("org.extendTrial")}
               </Button>
             ) : null}
             {writable ? (
               <div className="rounded-md border border-slate-200 p-3">
-                <h4 className="text-sm font-extrabold">تغيير الخطة</h4>
+                <h4 className="text-sm font-extrabold">{t("org.changePlan")}</h4>
                 <div className="mt-2 grid gap-3 lg:grid-cols-2">
                   <div>
                     <p className="mb-1 text-xs font-semibold text-slate-500">
-                      الحالية
+                      {t("org.current")}
                     </p>
                     <PlanCard planId={org.planId} plans={plans} />
                   </div>
                   <div>
-                    <Field label="الخطة المقترحة">
+                    <Field label={t("org.suggestedPlan")}>
                       <SearchableSelect
                         value={comparePlanId || org.planId}
                         onChange={setComparePlanId}
@@ -430,7 +480,7 @@ export function OrganizationDetailPage() {
                     checked={applyAtRenewal}
                     onChange={(e) => setApplyAtRenewal(e.target.checked)}
                   />
-                  تطبيق عند التجديد (تسجيل نية فقط في الديمو)
+                  {t("org.planAtRenewal")}
                 </label>
                 <Button
                   className="mt-3"
@@ -438,15 +488,17 @@ export function OrganizationDetailPage() {
                   onClick={() => {
                     if (applyAtRenewal) {
                       setNotice(
-                        `تم تسجيل تغيير الخطة إلى ${comparePlan?.name} عند التجديد.`,
+                        t("org.planChangeRenewalNotice", {
+                          name: L(comparePlan?.name),
+                        }),
                       );
                     } else {
                       changeOrganizationPlan(org.id, comparePlanId);
-                      setNotice("تم تغيير الخطة فوراً.");
+                      setNotice(t("org.planChanged"));
                     }
                   }}
                 >
-                  تأكيد تغيير الخطة
+                  {t("org.confirmPlanChange")}
                 </Button>
               </div>
             ) : null}
@@ -465,10 +517,10 @@ export function OrganizationDetailPage() {
             <table className="sa-table w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="py-2 text-start">الاسم</th>
-                  <th className="py-2 text-start">البريد</th>
-                  <th className="py-2 text-start">الدور</th>
-                  <th className="py-2 text-start">الحالة</th>
+                  <th className="py-2 text-start">{t("common.name")}</th>
+                  <th className="py-2 text-start">{t("common.email")}</th>
+                  <th className="py-2 text-start">{t("org.col.role")}</th>
+                  <th className="py-2 text-start">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -488,10 +540,10 @@ export function OrganizationDetailPage() {
                       <StatusPill
                         label={
                           u.status === "active"
-                            ? "نشط"
+                            ? t("common.active")
                             : u.status === "invited"
-                              ? "مدعو"
-                              : "محظور"
+                              ? t("common.invited")
+                              : t("common.blocked")
                         }
                         tone={
                           u.status === "active"
@@ -507,7 +559,7 @@ export function OrganizationDetailPage() {
                 {users.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-4 text-slate-400">
-                      لا مستخدمين مسجّلين لهذه المنشأة.
+                      {t("org.noUsers")}
                     </td>
                   </tr>
                 ) : null}
@@ -515,7 +567,7 @@ export function OrganizationDetailPage() {
             </table>
             {writable ? (
               <Button variant="outline" onClick={() => setModal("invite")}>
-                دعوة مسؤول
+                {t("org.inviteAdmin")}
               </Button>
             ) : null}
           </div>
@@ -525,7 +577,7 @@ export function OrganizationDetailPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Metric
-                label={`مستخدمون (حد ${limits.maxUsers})`}
+                label={t("org.limit.users", { n: limits.maxUsers })}
                 value={String(org.usage.users)}
                 pct={Math.min(
                   100,
@@ -535,7 +587,7 @@ export function OrganizationDetailPage() {
                 )}
               />
               <Metric
-                label={`مشاريع (حد ${limits.maxProjects})`}
+                label={t("org.limit.projects", { n: limits.maxProjects })}
                 value={String(org.usage.projects)}
                 pct={Math.min(
                   100,
@@ -545,7 +597,7 @@ export function OrganizationDetailPage() {
                 )}
               />
               <Metric
-                label={`تخزين (حد ${limits.maxStorageGb} GB)`}
+                label={t("org.limit.storage", { n: limits.maxStorageGb })}
                 value={`${org.usage.storageGb}`}
                 pct={Math.min(
                   100,
@@ -556,7 +608,7 @@ export function OrganizationDetailPage() {
                 )}
               />
               <Metric
-                label={`API (حد ${limits.maxApiRequests})`}
+                label={t("org.limit.api", { n: limits.maxApiRequests })}
                 value={String(org.usage.apiRequests)}
                 pct={Math.min(
                   100,
@@ -570,7 +622,7 @@ export function OrganizationDetailPage() {
             </div>
             {org.limitOverrides ? (
               <p className="text-xs text-slate-500">
-                تجاوز حدود نشط
+                {t("org.limitsOverrideActive")}
                 {org.limitOverrides.reason
                   ? `: ${org.limitOverrides.reason}`
                   : ""}
@@ -587,7 +639,7 @@ export function OrganizationDetailPage() {
                   setModal("limits");
                 }}
               >
-                تعديل التجاوزات
+                {t("org.editOverrides")}
               </Button>
             ) : null}
           </div>
@@ -597,10 +649,10 @@ export function OrganizationDetailPage() {
           <table className="sa-table w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="py-2 text-start">الفاتورة</th>
-                <th className="py-2 text-start">الاستحقاق</th>
-                <th className="py-2 text-start">المبلغ</th>
-                <th className="py-2 text-start">الحالة</th>
+                <th className="py-2 text-start">{t("org.invoice")}</th>
+                <th className="py-2 text-start">{t("page.billing.col.due")}</th>
+                <th className="py-2 text-start">{t("org.amount")}</th>
+                <th className="py-2 text-start">{t("common.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -628,7 +680,7 @@ export function OrganizationDetailPage() {
               {orgInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-4 text-slate-400">
-                    لا فواتير.
+                    {t("org.noInvoices")}
                   </td>
                 </tr>
               ) : null}
@@ -639,23 +691,23 @@ export function OrganizationDetailPage() {
         {tab === "integrations" && (
           <ul className="space-y-2 text-sm">
             {[
-              "Qiwa",
-              "GOSI",
-              "Mudad",
-              "Muqeem",
-              "Absher",
-              "ZATCA (جاهزية)",
-            ].map((name) => (
+              { key: "qiwa", label: "Qiwa" },
+              { key: "gosi", label: "GOSI" },
+              { key: "mudad", label: "Mudad" },
+              { key: "muqeem", label: "Muqeem" },
+              { key: "absher", label: "Absher" },
+              { key: "zatca", label: t("org.integration.zatca") },
+            ].map(({ key, label }) => (
               <li
-                key={name}
+                key={key}
                 className="flex justify-between rounded-md border border-slate-200 px-3 py-2"
               >
-                <span className="font-semibold">{name}</span>
-                <StatusPill label="جاهزية / تسمية" tone="info" />
+                <span className="font-semibold">{label}</span>
+                <StatusPill label={t("org.integrations.readiness")} tone="info" />
               </li>
             ))}
             <p className="text-xs text-slate-400">
-              لا تُعرض أسرار أو مفاتيح في هذه الشاشة.
+              {t("org.integrationsNote")}
             </p>
           </ul>
         )}
@@ -673,7 +725,7 @@ export function OrganizationDetailPage() {
                 id: `sub-${i}`,
                 at: h.at,
                 text: h.text,
-                meta: "اشتراك",
+                meta: t("org.activity.subscription"),
               })),
             ]
               .sort((a, b) => (a.at < b.at ? 1 : -1))
@@ -690,14 +742,14 @@ export function OrganizationDetailPage() {
                 </li>
               ))}
             {orgAudit.length === 0 && !(sub?.history || []).length ? (
-              <li className="text-slate-400">لا نشاط مسجّل.</li>
+              <li className="text-slate-400">{t("org.noActivity")}</li>
             ) : null}
           </ul>
         )}
 
         {tab === "settings" && (
           <div className="space-y-3">
-            <Field label="لغة الواجهة">
+            <Field label={t("org.uiLanguage")}>
               <SearchableSelect
                 value={org.settings?.language || "ar"}
                 onChange={(v) =>
@@ -709,13 +761,10 @@ export function OrganizationDetailPage() {
                     },
                   })
                 }
-                options={[
-                  { value: "ar", label: "العربية" },
-                  { value: "en", label: "English" },
-                ]}
+                options={languageOptions}
               />
             </Field>
-            <Field label="المنطقة الزمنية">
+            <Field label={t("org.timezone")}>
               <Input
                 value={org.settings?.timezone || "Asia/Riyadh"}
                 onChange={(e) =>
@@ -743,9 +792,9 @@ export function OrganizationDetailPage() {
                   })
                 }
               />
-              إشعارات الفوترة
+              {t("org.notifyBilling")}
             </label>
-            <p className="mt-4 text-sm font-extrabold">وحدات الكور</p>
+            <p className="mt-4 text-sm font-extrabold">{t("org.coreModules")}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {(
                 [
@@ -770,13 +819,13 @@ export function OrganizationDetailPage() {
                       })
                     }
                   />
-                  {ENTITLEMENT_LABELS[key]}
+                  {entitlement(key)}
                 </label>
               ))}
             </div>
             {orgTickets.length > 0 ? (
               <div>
-                <p className="mt-4 text-sm font-extrabold">تذاكر مرتبطة</p>
+                <p className="mt-4 text-sm font-extrabold">{t("org.relatedTickets")}</p>
                 <ul className="mt-1 space-y-1 text-sm">
                   {orgTickets.slice(0, 5).map((t) => (
                     <li key={t.id}>
@@ -797,12 +846,12 @@ export function OrganizationDetailPage() {
 
       {modal === "suspend" ? (
         <ModalShell
-          title="تعليق المنشأة"
+          title={t("org.suspend.title")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="danger"
@@ -817,36 +866,30 @@ export function OrganizationDetailPage() {
                   });
                   setNotice(
                     res.ok
-                      ? "تم التعليق ومنع دخول الكور."
-                      : res.reason || "تعذّر التعليق",
+                      ? t("org.suspend.ok")
+                      : res.reason || t("org.suspend.fail"),
                   );
                   setModal(null);
                 }}
               >
-                تأكيد التعليق
+                {t("org.confirmSuspend")}
               </Button>
             </>
           }
         >
           <p className="mb-3 text-sm text-slate-600">
-            سيُمنع مستخدمو المنشأة من دخول الكور دون حذف البيانات.
+            {t("org.alert.suspendNote")}
           </p>
-          <Field label="الفئة">
+          <Field label={t("org.suspend.category")}>
             <SearchableSelect
               value={suspendForm.category}
               onChange={(v) =>
                 setSuspendForm({ ...suspendForm, category: v })
               }
-              options={[
-                { value: "billing", label: "فوترة" },
-                { value: "policy", label: "سياسة / امتثال" },
-                { value: "security", label: "أمن" },
-                { value: "request", label: "طلب العميل" },
-                { value: "other", label: "أخرى" },
-              ]}
+              options={suspendCategoryOptions}
             />
           </Field>
-          <Field label="السبب" className="mt-3">
+          <Field label={t("org.suspend.reason")} className="mt-3">
             <Input
               value={suspendForm.reason}
               onChange={(e) =>
@@ -854,7 +897,7 @@ export function OrganizationDetailPage() {
               }
             />
           </Field>
-          <Field label="ملاحظات" className="mt-3">
+          <Field label={t("org.suspend.notes")} className="mt-3">
             <Textarea
               value={suspendForm.notes}
               onChange={(e) =>
@@ -867,48 +910,45 @@ export function OrganizationDetailPage() {
 
       {modal === "reactivate" ? (
         <ModalShell
-          title="إعادة تفعيل المنشأة"
+          title={t("org.reactivate.title")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={() => {
                   const res = reactivateOrganization(org.id);
                   setNotice(
                     res.ok
-                      ? "تم إعادة التفعيل."
-                      : res.reason || "تعذّر التفعيل",
+                      ? t("org.reactivate.ok")
+                      : res.reason || t("org.reactivate.fail"),
                   );
                   setModal(null);
                 }}
               >
-                تأكيد
+                {t("common.confirm")}
               </Button>
-            </>
+          </>
           }
         >
-          <p className="text-sm text-slate-600">
-            سيتم التحقق من حالة الاشتراك والفواتير قبل التفعيل. الاشتراك المتأخر
-            يمنع التفعيل.
-          </p>
+          <p className="text-sm text-slate-600">{t("org.alert.reactivateNote")}</p>
           <p className="mt-2 text-sm">
-            الاشتراك:{" "}
-            <strong>{sub ? SUB_STATUS_LABELS[sub.status] : "—"}</strong>
+            {t("org.subscriptionLabel")}{" "}
+            <strong>{sub ? subStatus(sub.status) : "—"}</strong>
           </p>
         </ModalShell>
       ) : null}
 
       {modal === "archive" ? (
         <ModalShell
-          title="أرشفة المنشأة"
+          title={t("org.archive.title")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="danger"
@@ -917,32 +957,35 @@ export function OrganizationDetailPage() {
                   const openInv = orgInvoices.filter(
                     (i) => i.status === "open" || i.status === "failed",
                   );
-                  if (openInv.length && !archiveReason.includes("مراجعة")) {
+                  const reviewKey = t("org.archive.reviewKeyword");
+                  if (
+                    openInv.length &&
+                    !archiveReason.toLowerCase().includes(reviewKey.toLowerCase())
+                  ) {
                     setNotice(
-                      `تنبيه: يوجد ${openInv.length} فاتورة مفتوحة/فاشلة. أضف «مراجعة» في السبب للمتابعة إن لزم.`,
+                      t("org.archiveOpenInvoicesWarn", { n: openInv.length }),
                     );
                   }
                   const res = archiveOrganization(org.id, archiveReason.trim());
                   setNotice(
-                    res.ok ? "تمت الأرشفة." : res.reason || "تعذّرت الأرشفة",
+                    res.ok ? t("org.archive.ok") : res.reason || t("org.archive.fail"),
                   );
                   setModal(null);
                 }}
               >
-                أرشفة
+                {t("org.action.archive")}
               </Button>
-            </>
+          </>
           }
         >
           <p className="mb-2 text-sm text-slate-600">
-            الفواتير المفتوحة:{" "}
-            {
-              orgInvoices.filter(
+            {t("org.openInvoicesLabel", {
+              n: orgInvoices.filter(
                 (i) => i.status === "open" || i.status === "failed",
-              ).length
-            }
+              ).length,
+            })}
           </p>
-          <Field label="سبب الأرشفة">
+          <Field label={t("org.archive.reason")}>
             <Input
               value={archiveReason}
               onChange={(e) => setArchiveReason(e.target.value)}
@@ -953,12 +996,12 @@ export function OrganizationDetailPage() {
 
       {modal === "support" ? (
         <ModalShell
-          title="وصول الدعم"
+          title={t("org.supportAccess.title")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 disabled={!supportForm.reason.trim()}
@@ -971,18 +1014,18 @@ export function OrganizationDetailPage() {
                   });
                   setNotice(
                     session
-                      ? `جلسة دعم مسجّلة (${session.id}). الدخول الصامت للكور غير مفعّل في هذه المرحلة — استخدم السجل والتعليمات الداخلية.`
-                      : "تعذّر إنشاء الجلسة.",
+                      ? t("org.supportSessionCreated", { id: session.id })
+                      : t("org.supportSessionFailed"),
                   );
                   setModal(null);
                 }}
               >
-                بدء الجلسة
+                {t("org.startSession")}
               </Button>
             </>
           }
         >
-          <Field label="السبب">
+          <Field label={t("org.suspend.reason")}>
             <Input
               value={supportForm.reason}
               onChange={(e) =>
@@ -990,7 +1033,7 @@ export function OrganizationDetailPage() {
               }
             />
           </Field>
-          <Field label="المدة (دقيقة)" className="mt-3">
+          <Field label={t("org.support.durationMin")} className="mt-3">
             <Input
               type="number"
               value={supportForm.minutes}
@@ -1013,19 +1056,19 @@ export function OrganizationDetailPage() {
                 })
               }
             />
-            قراءة فقط (افتراضي)
+            {t("org.readOnlyDefault")}
           </label>
         </ModalShell>
       ) : null}
 
       {modal === "limits" ? (
         <ModalShell
-          title="تجاوز حدود الخطة"
+          title={t("org.limits.title")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={() => {
@@ -1033,25 +1076,25 @@ export function OrganizationDetailPage() {
                     ...limitsForm,
                     at: new Date().toISOString(),
                   });
-                  setNotice("تم حفظ تجاوزات الحدود.");
+                  setNotice(t("org.limitsSaved"));
                   setModal(null);
                 }}
               >
-                حفظ
+                {t("common.save")}
               </Button>
-            </>
+          </>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {(
               [
-                ["maxUsers", "المستخدمون"],
-                ["maxProjects", "المشاريع"],
-                ["maxStorageGb", "التخزين GB"],
-                ["maxApiRequests", "طلبات API"],
+                "maxUsers",
+                "maxProjects",
+                "maxStorageGb",
+                "maxApiRequests",
               ] as const
-            ).map(([key, label]) => (
-              <Field key={key} label={label}>
+            ).map((key) => (
+              <Field key={key} label={limitFieldLabels[key]}>
                 <Input
                   type="number"
                   value={limitsForm[key] ?? limits[key]}
@@ -1065,7 +1108,7 @@ export function OrganizationDetailPage() {
               </Field>
             ))}
           </div>
-          <Field label="السبب" className="mt-3">
+          <Field label={t("org.suspend.reason")} className="mt-3">
             <Input
               value={limitsForm.reason || ""}
               onChange={(e) =>
@@ -1078,12 +1121,12 @@ export function OrganizationDetailPage() {
 
       {modal === "invite" ? (
         <ModalShell
-          title="دعوة مسؤول منشأة"
+          title={t("org.inviteOrgAdmin")}
           onClose={() => setModal(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModal(null)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={async () => {
@@ -1094,18 +1137,18 @@ export function OrganizationDetailPage() {
                   });
                   setNotice(
                     res.ok
-                      ? "تم تعيين المسؤول ومزامنة الكور (دعوة بدون كلمة مرور في الديمو)."
-                      : res.reason || "فشل",
+                      ? t("org.adminInviteOk")
+                      : res.reason || provisioning("failed"),
                   );
                   setModal(null);
                 }}
               >
-                إرسال الدعوة
+                {t("org.sendInvite")}
               </Button>
             </>
           }
         >
-          <Field label="الاسم">
+          <Field label={t("common.name")}>
             <Input
               value={adminForm.name}
               onChange={(e) =>
@@ -1113,7 +1156,7 @@ export function OrganizationDetailPage() {
               }
             />
           </Field>
-          <Field label="البريد" className="mt-3">
+          <Field label={t("common.email")} className="mt-3">
             <Input
               value={adminForm.email}
               onChange={(e) =>
@@ -1160,12 +1203,13 @@ function ModalShell({
   footer: ReactNode;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <button
         type="button"
         className="absolute inset-0"
-        aria-label="إغلاق"
+        aria-label={t("common.cancel")}
         onClick={onClose}
       />
       <div className="relative z-10 w-full max-w-lg rounded-md border border-slate-200 bg-white p-4 shadow-lg">
@@ -1184,20 +1228,27 @@ function PlanCard({
   planId: string;
   plans: ReturnType<typeof usePlatform>["plans"];
 }) {
+  const { t } = useLocale();
   const p = plans.find((x) => x.id === planId);
   if (!p) return null;
+  const annualPart =
+    p.priceAnnual != null
+      ? `${t("org.planCard.annualJoin")}${formatSar(p.priceAnnual)}${t("org.planCard.annualSuffix")}`
+      : "";
   return (
     <div className="mt-2 rounded-md border border-slate-200 p-3 text-xs">
       <p className="font-extrabold text-sm">{p.name}</p>
       <p className="mt-1 text-slate-500">
-        {formatSar(p.priceMonthly)} / شهر
-        {p.priceAnnual != null
-          ? ` · ${formatSar(p.priceAnnual)} / سنة`
-          : ""}
+        {formatSar(p.priceMonthly)}
+        {t("org.planCard.monthlySuffix")}
+        {annualPart}
       </p>
       <p className="mt-2 text-slate-600">
-        حدود: {p.limits.maxUsers} مستخدم · {p.limits.maxProjects} مشروع ·{" "}
-        {p.limits.maxStorageGb} GB
+        {t("org.planCard.limits", {
+          users: p.limits.maxUsers,
+          projects: p.limits.maxProjects,
+          storage: p.limits.maxStorageGb,
+        })}
       </p>
       <ul className="mt-2 space-y-0.5 text-slate-500">
         {p.features.slice(0, 4).map((f) => (
@@ -1217,6 +1268,7 @@ function Metric({
   value: string;
   pct: number;
 }) {
+  const { t } = useLocale();
   return (
     <div>
       <div className="flex justify-between text-sm">
@@ -1229,7 +1281,9 @@ function Metric({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="mt-1 text-[11px] text-slate-400">{pct}% من الحد</p>
+      <p className="mt-1 text-[11px] text-slate-400">
+        {t("org.metric.percentOfLimit", { pct })}
+      </p>
     </div>
   );
 }

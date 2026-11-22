@@ -21,13 +21,9 @@ import { can } from "../../lib/platformRbac";
 import { PLATFORM_LS } from "../../lib/demoSeed";
 import { loadJson, saveJson } from "../../demo-mode/storage";
 import { isExpiringSoon } from "../../lib/orgLifecycle";
-import {
-  CUSTOMER_KIND_LABELS,
-  DEPLOYMENT_LABELS,
-  ORG_STATUS_LABELS,
-  SUB_STATUS_LABELS,
-  effectiveLimits,
-} from "../../lib/platformDomain";
+import { effectiveLimits } from "../../lib/platformDomain";
+import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
 type AdvancedFilters = {
   customerKind: string;
@@ -51,15 +47,15 @@ const EMPTY_FILTERS: AdvancedFilters = {
   accountManager: "all",
 };
 
-const BUILTIN_VIEWS: SavedViewDef[] = [
-  { id: "all", label: "الكل", builtin: true },
-  { id: "enterprise", label: "مؤسسات", builtin: true },
-  { id: "government", label: "حكومي", builtin: true },
-  { id: "renewals_month", label: "تجديدات هذا الشهر", builtin: true },
-  { id: "trial_ending", label: "انتهاء التجربة", builtin: true },
-  { id: "high_storage", label: "تخزين مرتفع", builtin: true },
-  { id: "payment_issues", label: "مشاكل دفع", builtin: true },
-  { id: "recent", label: "مسجّل حديثاً", builtin: true },
+const BUILTIN_VIEW_DEFS: { id: string; labelKey: string; builtin?: boolean }[] = [
+  { id: "all", labelKey: "views.all", builtin: true },
+  { id: "enterprise", labelKey: "views.enterprise", builtin: true },
+  { id: "government", labelKey: "views.government", builtin: true },
+  { id: "renewals_month", labelKey: "views.renewals_month", builtin: true },
+  { id: "trial_ending", labelKey: "views.trial_ending", builtin: true },
+  { id: "high_storage", labelKey: "views.high_storage", builtin: true },
+  { id: "payment_issues", labelKey: "views.payment_issues", builtin: true },
+  { id: "recent", labelKey: "views.recent", builtin: true },
 ];
 
 type CustomView = SavedViewDef & { filters: AdvancedFilters; q: string };
@@ -88,6 +84,26 @@ export function OrganizationsPage() {
     archiveOrganization,
     updateOrganization,
   } = usePlatform();
+  const { t, L } = useLocale();
+  const {
+    customerKind,
+    deployment,
+    orgStatus,
+    subStatus,
+    customerKindOptions,
+    deploymentOptions,
+    orgStatusOptions,
+    subStatusOptions,
+  } = usePlatformLabels();
+  const builtinViews: SavedViewDef[] = useMemo(
+    () =>
+      BUILTIN_VIEW_DEFS.map((v) => ({
+        id: v.id,
+        builtin: v.builtin,
+        label: t(v.labelKey),
+      })),
+    [t],
+  );
   const { user } = useAuth();
   const writable = can(user?.role, "organizations.write");
   const navigate = useNavigate();
@@ -108,13 +124,18 @@ export function OrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [bulkArchive, setBulkArchive] = useState(false);
   const [assignMgrOpen, setAssignMgrOpen] = useState(false);
-  const [mgrName, setMgrName] = useState("لمى سعد القحطاني");
+  const defaultMgr = useMemo(() => L("لمى سعد القحطاني"), [L]);
+  const [mgrName, setMgrName] = useState(defaultMgr);
   const [menuId, setMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 350);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    setMgrName(L("لمى سعد القحطاني"));
+  }, [L]);
 
   useEffect(() => {
     const t = setTimeout(() => setQ(qInput), 280);
@@ -297,11 +318,11 @@ export function OrganizationsPage() {
           o.id,
           o.name,
           o.organizationId || "",
-          CUSTOMER_KIND_LABELS[o.customerKind],
+          customerKind(o.customerKind),
           o.city,
           plan?.name || o.planId,
-          ORG_STATUS_LABELS[o.status],
-          sub ? SUB_STATUS_LABELS[sub.status] : "",
+          orgStatus(o.status),
+          sub ? subStatus(sub.status) : "",
           String(o.usage.users),
           String(o.usage.projects),
           String(o.usage.storageGb),
@@ -340,7 +361,7 @@ export function OrganizationsPage() {
   };
 
   const saveCurrentView = () => {
-    const label = window.prompt("اسم العرض المحفوظ");
+    const label = window.prompt(t("page.orgs.saveViewPrompt"));
     if (!label?.trim()) return;
     const id = `cv-${crypto.randomUUID().slice(0, 6)}`;
     setCustomViews((prev) => [
@@ -350,20 +371,20 @@ export function OrganizationsPage() {
     setActiveView(id);
   };
 
-  const allViews: SavedViewDef[] = [...BUILTIN_VIEWS, ...customViews];
+  const allViews: SavedViewDef[] = [...builtinViews, ...customViews];
 
   return (
     <PageScaffold
-      title="المنشآت / المستأجرون"
-      subtitle={`${organizations.length} منشأة · إدارة دورة حياة العميل`}
+      title={t("page.orgs.title")}
+      subtitle={t("page.orgs.subtitleCount", { n: organizations.length })}
       actions={
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => exportRows()}>
-            تصدير CSV
+            {t("common.exportCsv")}
           </Button>
           {writable ? (
             <Button onClick={() => navigate("/organizations/new")}>
-              إضافة منشأة
+              {t("page.orgs.onboard")}
             </Button>
           ) : null}
         </div>
@@ -371,22 +392,22 @@ export function OrganizationsPage() {
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <button type="button" className="text-start" onClick={() => applyKpi("all")}>
-          <KpiStat label="الإجمالي" value={kpis.total} />
+          <KpiStat label={t("page.orgs.kpi.total")} value={kpis.total} />
         </button>
         <button type="button" className="text-start" onClick={() => applyKpi("active")}>
-          <KpiStat label="نشط" value={kpis.active} tone="success" />
+          <KpiStat label={t("page.orgs.kpi.active")} value={kpis.active} tone="success" />
         </button>
         <button type="button" className="text-start" onClick={() => applyKpi("trial")}>
-          <KpiStat label="تجريبي" value={kpis.trial} />
+          <KpiStat label={t("page.orgs.kpi.trial")} value={kpis.trial} />
         </button>
         <button type="button" className="text-start" onClick={() => applyKpi("pending")}>
-          <KpiStat label="قيد الانتظار" value={kpis.pending} />
+          <KpiStat label={t("page.orgs.kpi.pending")} value={kpis.pending} />
         </button>
         <button type="button" className="text-start" onClick={() => applyKpi("suspended")}>
-          <KpiStat label="معلّق" value={kpis.suspended} tone="danger" />
+          <KpiStat label={t("page.overview.kpi.suspended")} value={kpis.suspended} tone="danger" />
         </button>
         <button type="button" className="text-start" onClick={() => applyKpi("expiring")}>
-          <KpiStat label="ينتهي قريباً" value={kpis.expiring} tone="warning" />
+          <KpiStat label={t("page.orgs.kpi.expiringSoon")} value={kpis.expiring} tone="warning" />
         </button>
       </div>
 
@@ -416,26 +437,28 @@ export function OrganizationsPage() {
           <Input
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            placeholder="بحث: الاسم، المعرّف، بريد المسؤول، السجل التجاري، رقم فاتورة"
+            placeholder={t("page.orgs.searchPlaceholder")}
           />
         </div>
         <Button variant="outline" onClick={() => setDrawerOpen(true)}>
-          فلاتر متقدمة
+          {t("page.orgs.advancedFilters")}
         </Button>
         {writable && selected.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => exportRows(selected)}>
-              تصدير المحدد ({selected.length})
+              {t("page.orgs.exportSelected", { n: selected.length })}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setAssignMgrOpen(true)}>
-              تعيين مدير حساب
+              {t("page.orgs.assignManager")}
             </Button>
             <Button size="sm" variant="danger" onClick={() => setBulkArchive(true)}>
-              أرشفة المحدد
+              {t("page.orgs.bulkArchive")}
             </Button>
           </div>
         ) : (
-          <p className="self-center text-xs text-slate-400">{rows.length} نتيجة</p>
+          <p className="self-center text-xs text-slate-400">
+            {t("page.orgs.results", { n: rows.length })}
+          </p>
         )}
       </div>
 
@@ -464,18 +487,18 @@ export function OrganizationsPage() {
                     />
                   </th>
                 ) : null}
-                <th className="px-3 py-2">المنشأة</th>
-                <th className="px-3 py-2">النوع</th>
-                <th className="px-3 py-2">الصناعة</th>
-                <th className="px-3 py-2">الخطة</th>
-                <th className="px-3 py-2">حالة المنشأة</th>
-                <th className="px-3 py-2">حالة الاشتراك</th>
-                <th className="px-3 py-2">المستخدمون</th>
-                <th className="px-3 py-2">المشاريع</th>
-                <th className="px-3 py-2">التخزين</th>
-                <th className="px-3 py-2">التسجيل</th>
-                <th className="px-3 py-2">التجديد</th>
-                <th className="px-3 py-2">إجراءات</th>
+                <th className="px-3 py-2">{t("page.orgs.col.org")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.kind")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.industry")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.plan")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.status")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.sub")}</th>
+                <th className="px-3 py-2">{t("common.users")}</th>
+                <th className="px-3 py-2">{t("common.projects")}</th>
+                <th className="px-3 py-2">{t("common.storage")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.registered")}</th>
+                <th className="px-3 py-2">{t("page.orgs.col.renewal")}</th>
+                <th className="px-3 py-2">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -486,8 +509,8 @@ export function OrganizationsPage() {
                     className="px-3 py-10 text-center text-sm text-slate-400"
                   >
                     {organizations.length === 0
-                      ? "لا توجد منشآت مسجّلة."
-                      : "لا توجد نتائج مطابقة للبحث أو الفلاتر."}
+                      ? t("page.orgs.empty.none")
+                      : t("page.orgs.empty.filter")}
                   </td>
                 </tr>
               ) : (
@@ -524,7 +547,7 @@ export function OrganizationsPage() {
                         </Link>
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        {CUSTOMER_KIND_LABELS[o.customerKind]}
+                        {customerKind(o.customerKind)}
                       </td>
                       <td className="px-3 py-2 text-xs text-slate-600">
                         {o.industry}
@@ -535,7 +558,9 @@ export function OrganizationsPage() {
                         </span>
                         {sub ? (
                           <span className="block text-[10px] text-slate-400">
-                            {sub.billingCycle === "annual" ? "سنوي" : "شهري"}
+                            {sub.billingCycle === "annual"
+                              ? t("common.annualShort")
+                              : t("common.monthlyShort")}
                           </span>
                         ) : null}
                       </td>
@@ -591,7 +616,7 @@ export function OrganizationsPage() {
                               className="block px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                               onClick={() => setMenuId(null)}
                             >
-                              فتح التفاصيل
+                              {t("page.orgs.openDetail")}
                             </Link>
                             <button
                               type="button"
@@ -601,7 +626,7 @@ export function OrganizationsPage() {
                                 setMenuId(null);
                               }}
                             >
-                              تصدير الصف
+                              {t("page.orgs.exportRow")}
                             </button>
                           </div>
                         ) : null}
@@ -620,42 +645,40 @@ export function OrganizationsPage() {
           <button
             type="button"
             className="h-full flex-1"
-            aria-label="إغلاق"
+            aria-label={t("common.cancel")}
             onClick={() => setDrawerOpen(false)}
           />
           <aside className="flex h-full w-full max-w-md flex-col border-s border-slate-200 bg-white shadow-lg">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <h3 className="text-sm font-extrabold">فلاتر متقدمة</h3>
+              <h3 className="text-sm font-extrabold">{t("page.orgs.filtersTitle")}</h3>
               <Button variant="ghost" size="sm" onClick={() => setDrawerOpen(false)}>
-                إغلاق
+                {t("common.cancel")}
               </Button>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              <Field label="نوع العميل">
+              <Field label={t("page.orgs.filter.customerKind")}>
                 <SearchableSelect
                   value={filters.customerKind}
                   onChange={(v) =>
                     setFilters({ ...filters, customerKind: v })
                   }
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...Object.entries(CUSTOMER_KIND_LABELS).map(
-                      ([value, label]) => ({ value, label }),
-                    ),
+                    { value: "all", label: t("common.all") },
+                    ...customerKindOptions(),
                   ]}
                 />
               </Field>
-              <Field label="الصناعة">
+              <Field label={t("page.orgs.filter.industry")}>
                 <SearchableSelect
                   value={filters.industry}
                   onChange={(v) => setFilters({ ...filters, industry: v })}
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...industries.map((c) => ({ value: c, label: c })),
+                    { value: "all", label: t("common.all") },
+                    ...industries.map((c) => ({ value: c, label: L(c) })),
                   ]}
                 />
               </Field>
-              <Field label="حالة المنشأة">
+              <Field label={t("page.orgs.filter.orgStatus")}>
                 <SearchableSelect
                   value={filters.orgStatus}
                   onChange={(v) => {
@@ -666,66 +689,60 @@ export function OrganizationsPage() {
                     setParams(next);
                   }}
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...Object.entries(ORG_STATUS_LABELS).map(
-                      ([value, label]) => ({ value, label }),
-                    ),
+                    { value: "all", label: t("common.all") },
+                    ...orgStatusOptions(),
                   ]}
                 />
               </Field>
-              <Field label="حالة الاشتراك">
+              <Field label={t("page.orgs.filter.subStatus")}>
                 <SearchableSelect
                   value={filters.subStatus}
                   onChange={(v) => setFilters({ ...filters, subStatus: v })}
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...Object.entries(SUB_STATUS_LABELS).map(
-                      ([value, label]) => ({ value, label }),
-                    ),
+                    { value: "all", label: t("common.all") },
+                    ...subStatusOptions(),
                   ]}
                 />
               </Field>
-              <Field label="الخطة">
+              <Field label={t("page.orgs.filter.plan")}>
                 <SearchableSelect
                   value={filters.planId}
                   onChange={(v) => setFilters({ ...filters, planId: v })}
                   options={[
-                    { value: "all", label: "الكل" },
+                    { value: "all", label: t("common.all") },
                     ...plans.map((p) => ({ value: p.id, label: p.name })),
                   ]}
                 />
               </Field>
-              <Field label="المدينة">
+              <Field label={t("page.orgs.filter.city")}>
                 <SearchableSelect
                   value={filters.city}
                   onChange={(v) => setFilters({ ...filters, city: v })}
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...cities.map((c) => ({ value: c, label: c })),
+                    { value: "all", label: t("common.all") },
+                    ...cities.map((c) => ({ value: c, label: L(c) })),
                   ]}
                 />
               </Field>
-              <Field label="النشر">
+              <Field label={t("page.orgs.filter.deployment")}>
                 <SearchableSelect
                   value={filters.deployment}
                   onChange={(v) => setFilters({ ...filters, deployment: v })}
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...Object.entries(DEPLOYMENT_LABELS).map(
-                      ([value, label]) => ({ value, label }),
-                    ),
+                    { value: "all", label: t("common.all") },
+                    ...deploymentOptions(),
                   ]}
                 />
               </Field>
-              <Field label="مدير الحساب">
+              <Field label={t("page.orgs.col.manager")}>
                 <SearchableSelect
                   value={filters.accountManager}
                   onChange={(v) =>
                     setFilters({ ...filters, accountManager: v })
                   }
                   options={[
-                    { value: "all", label: "الكل" },
-                    ...managers.map((m) => ({ value: m, label: m })),
+                    { value: "all", label: t("common.all") },
+                    ...managers.map((m) => ({ value: m, label: L(m) })),
                   ]}
                 />
               </Field>
@@ -739,10 +756,10 @@ export function OrganizationsPage() {
                   setActiveView("all");
                 }}
               >
-                مسح
+                {t("page.orgs.clearFilters")}
               </Button>
               <Button className="flex-1" onClick={() => setDrawerOpen(false)}>
-                تطبيق
+                {t("page.orgs.applyFilters")}
               </Button>
             </div>
           </aside>
@@ -751,13 +768,13 @@ export function OrganizationsPage() {
 
       <ConfirmDialog
         open={bulkArchive}
-        title="أرشفة المنشآت المحددة"
-        message="سيتم أرشفة المنشآت المحددة. لا يمكن التراجع عن الأرشفة من هذه الشاشة دون تفعيل يدوي لاحق."
+        title={t("page.orgs.bulkArchiveTitle")}
+        message={t("page.orgs.bulkArchiveMsg")}
         danger
-        confirmLabel="أرشفة"
+        confirmLabel={t("org.action.archive")}
         onConfirm={() => {
           for (const id of selected) {
-            archiveOrganization(id, "أرشفة جماعية من الدليل");
+            archiveOrganization(id, t("page.orgs.bulkArchiveReason"));
           }
           setSelected([]);
           setBulkArchive(false);
@@ -768,8 +785,8 @@ export function OrganizationsPage() {
       {assignMgrOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-4 shadow-lg">
-            <h3 className="text-sm font-extrabold">تعيين مدير حساب</h3>
-            <Field label="الاسم" className="mt-3">
+            <h3 className="text-sm font-extrabold">{t("page.orgs.assignManager")}</h3>
+            <Field label={t("common.name")} className="mt-3">
               <Input
                 value={mgrName}
                 onChange={(e) => setMgrName(e.target.value)}
@@ -777,7 +794,7 @@ export function OrganizationsPage() {
             </Field>
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setAssignMgrOpen(false)}>
-                إلغاء
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={() => {
@@ -790,7 +807,7 @@ export function OrganizationsPage() {
                   setSelected([]);
                 }}
               >
-                حفظ
+                {t("common.save")}
               </Button>
             </div>
           </div>

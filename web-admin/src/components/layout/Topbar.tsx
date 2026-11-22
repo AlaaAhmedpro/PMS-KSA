@@ -3,12 +3,13 @@ import { LogOut, Menu, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../store/AuthContext";
 import { useLocale } from "../../store/LocaleContext";
-import { PLATFORM_ROLE_LABELS } from "../../lib/platformDomain";
 import { normalizePlatformRole } from "../../lib/platformRbac";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { user, logout } = useAuth();
-  const { locale, setLocale } = useLocale();
+  const { locale, setLocale, t, L } = useLocale();
+  const { platformRole } = usePlatformLabels();
   const [openUser, setOpenUser] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
   const role = normalizePlatformRole(user?.role || "readonly_admin");
@@ -36,19 +37,23 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           <Search className="pointer-events-none absolute top-1/2 start-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pe-3 ps-9 text-sm outline-none focus:border-blue-500 focus:bg-white"
-            placeholder="بحث في المنشآت، الفواتير، التذاكر…"
+            placeholder={t("common.searchOrgs")}
           />
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex rounded-md border border-slate-200 p-0.5 text-xs font-bold">
+        <div
+          className="flex rounded-md border border-slate-200 p-0.5 text-xs font-bold"
+          role="group"
+          aria-label={t("lang.switch")}
+        >
           <button
             type="button"
             className={`rounded px-2 py-1 ${locale === "ar" ? "bg-slate-900 text-white" : "text-slate-500"}`}
             onClick={() => setLocale("ar")}
           >
-            ع
+            {t("lang.arAbbr")}
           </button>
           <button
             type="button"
@@ -66,14 +71,14 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-100"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-              {user?.name?.charAt(0) || "؟"}
+              {user?.name?.charAt(0) || t("common.unknownInitial")}
             </span>
             <span className="hidden text-start leading-tight md:block">
               <span className="block text-sm font-bold text-slate-800">
-                {user?.name}
+                {L(user?.name)}
               </span>
               <span className="block text-[11px] text-slate-400">
-                {PLATFORM_ROLE_LABELS[role]}
+                {platformRole(role)}
               </span>
             </span>
           </button>
@@ -95,7 +100,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" />
-                  تسجيل الخروج
+                  {t("common.logout")}
                 </button>
               </motion.div>
             )}

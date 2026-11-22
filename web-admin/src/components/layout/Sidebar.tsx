@@ -20,13 +20,13 @@ import { cn } from "../../lib/cn";
 import { BRAND } from "../../lib/brand";
 import { useAuth } from "../../store/AuthContext";
 import { can, type PlatformPermission } from "../../lib/platformRbac";
-import { PLATFORM_ROLE_LABELS, type PlatformRoleId } from "../../lib/platformDomain";
 import { normalizePlatformRole } from "../../lib/platformRbac";
 import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
 type NavItem = {
   to: string;
-  label: string;
+  labelKey: string;
   icon: typeof LayoutDashboard;
   perm: PlatformPermission;
   end?: boolean;
@@ -34,52 +34,114 @@ type NavItem = {
 
 type NavGroup = {
   id: string;
-  label: string;
+  labelKey: string;
   items: NavItem[];
 };
 
 const GROUPS: NavGroup[] = [
   {
     id: "main",
-    label: "الرئيسية",
+    labelKey: "nav.group.main",
     items: [
-      { to: "/", label: "نظرة عامة", icon: LayoutDashboard, perm: "overview", end: true },
+      {
+        to: "/",
+        labelKey: "nav.overview",
+        icon: LayoutDashboard,
+        perm: "overview",
+        end: true,
+      },
     ],
   },
   {
     id: "customers",
-    label: "العملاء",
+    labelKey: "nav.group.customers",
     items: [
-      { to: "/organizations", label: "المنشآت / المستأجرون", icon: Building2, perm: "organizations" },
-      { to: "/platform-users", label: "المستخدمون والصلاحيات", icon: Users, perm: "platform_users" },
-      { to: "/support", label: "دعم العملاء", icon: Headphones, perm: "support" },
+      {
+        to: "/organizations",
+        labelKey: "nav.organizations",
+        icon: Building2,
+        perm: "organizations",
+      },
+      {
+        to: "/platform-users",
+        labelKey: "nav.platformUsers",
+        icon: Users,
+        perm: "platform_users",
+      },
+      {
+        to: "/support",
+        labelKey: "nav.support",
+        icon: Headphones,
+        perm: "support",
+      },
     ],
   },
   {
     id: "commerce",
-    label: "التجارة",
+    labelKey: "nav.group.commerce",
     items: [
-      { to: "/plans", label: "الخطط والاشتراكات", icon: CreditCard, perm: "plans" },
-      { to: "/subscriptions", label: "الاشتراكات", icon: Receipt, perm: "subscriptions" },
-      { to: "/billing", label: "الفوترة والمالية", icon: Receipt, perm: "billing" },
-      { to: "/analytics", label: "التحليلات والتقارير", icon: BarChart3, perm: "analytics" },
-      { to: "/leads", label: "الفرص والمبيعات", icon: Target, perm: "leads" },
+      {
+        to: "/plans",
+        labelKey: "nav.plans",
+        icon: CreditCard,
+        perm: "plans",
+      },
+      {
+        to: "/subscriptions",
+        labelKey: "nav.subscriptions",
+        icon: Receipt,
+        perm: "subscriptions",
+      },
+      {
+        to: "/billing",
+        labelKey: "nav.billing",
+        icon: Receipt,
+        perm: "billing",
+      },
+      {
+        to: "/analytics",
+        labelKey: "nav.analytics",
+        icon: BarChart3,
+        perm: "analytics",
+      },
+      {
+        to: "/leads",
+        labelKey: "nav.leads",
+        icon: Target,
+        perm: "leads",
+      },
     ],
   },
   {
     id: "system",
-    label: "النظام",
+    labelKey: "nav.group.system",
     items: [
-      { to: "/monitoring", label: "مراقبة النظام", icon: Activity, perm: "monitoring" },
-      { to: "/audit", label: "الأمن والتدقيق", icon: Shield, perm: "audit" },
-      { to: "/settings", label: "إعدادات المنصة", icon: Settings2, perm: "settings" },
+      {
+        to: "/monitoring",
+        labelKey: "nav.monitoring",
+        icon: Activity,
+        perm: "monitoring",
+      },
+      {
+        to: "/audit",
+        labelKey: "nav.audit",
+        icon: Shield,
+        perm: "audit",
+      },
+      {
+        to: "/settings",
+        labelKey: "nav.settings",
+        icon: Settings2,
+        perm: "settings",
+      },
     ],
   },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useAuth();
-  const { dir } = useLocale();
+  const { dir, t, L } = useLocale();
+  const { platformRole } = usePlatformLabels();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     main: true,
@@ -94,9 +156,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     () =>
       GROUPS.map((g) => ({
         ...g,
-        items: g.items.filter((i) => can(role, i.perm)),
+        label: t(g.labelKey),
+        items: g.items
+          .filter((i) => can(role, i.perm))
+          .map((i) => ({ ...i, label: t(i.labelKey) })),
       })).filter((g) => g.items.length > 0),
-    [role],
+    [role, t],
   );
 
   return (
@@ -116,10 +181,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold text-white">
-              Super Admin
+              {t("brand.superAdmin")}
             </p>
             <p className="truncate text-[11px] text-slate-400">
-              {BRAND.companyName}
+              {L(BRAND.companyName)}
             </p>
           </div>
         )}
@@ -127,10 +192,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {!collapsed && user && (
         <div className="border-b border-white/10 px-4 py-3">
-          <p className="truncate text-sm font-bold text-slate-100">{user.name}</p>
+          <p className="truncate text-sm font-bold text-slate-100">
+            {L(user.name)}
+          </p>
           <p className="truncate text-[11px] text-slate-400">{user.email}</p>
           <p className="mt-1 text-[10px] font-semibold text-blue-300">
-            {PLATFORM_ROLE_LABELS[role as PlatformRoleId]}
+            {platformRole(role)}
           </p>
         </div>
       )}
@@ -193,7 +260,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           ) : (
             <>
               <PanelLeftClose className="h-4 w-4" />
-              طي القائمة
+              {t("nav.collapse")}
             </>
           )}
         </button>

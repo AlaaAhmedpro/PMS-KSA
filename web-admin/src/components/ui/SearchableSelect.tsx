@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 export interface SelectOption {
   value: string;
@@ -22,12 +23,15 @@ export function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = "اختر...",
-  searchPlaceholder = "بحث...",
+  placeholder,
+  searchPlaceholder,
   disabled,
   className,
   "aria-label": ariaLabel,
 }: Props) {
+  const { t } = useLocale();
+  const ph = placeholder ?? t("ui.select.placeholder");
+  const searchPh = searchPlaceholder ?? t("ui.select.searchPlaceholder");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -66,7 +70,7 @@ export function SearchableSelect({
         )}
       >
         <span className={cn("truncate text-right", !selected && "text-steel-400")}>
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : ph}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-steel-400" />
       </button>
@@ -79,7 +83,7 @@ export function SearchableSelect({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={searchPh}
               className="w-full bg-transparent text-sm outline-none placeholder:text-steel-400"
             />
           </div>
@@ -103,7 +107,7 @@ export function SearchableSelect({
             ))}
             {filtered.length === 0 && (
               <p className="px-3 py-3 text-center text-xs text-steel-400">
-                لا توجد نتائج
+                {t("ui.select.noResults")}
               </p>
             )}
           </div>

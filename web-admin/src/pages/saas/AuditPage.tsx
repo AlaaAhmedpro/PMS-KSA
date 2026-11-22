@@ -3,9 +3,11 @@ import { PageScaffold } from "../../components/sa/PageScaffold";
 import { StatusPill } from "../../components/sa/StatusPill";
 import { Input } from "../../components/ui/Input";
 import { usePlatform } from "../../store/PlatformStore";
+import { useLocale } from "../../store/LocaleContext";
 
 export function AuditPage() {
   const { auditEvents } = usePlatform();
+  const { t } = useLocale();
   const [q, setQ] = useState("");
 
   const rows = useMemo(() => {
@@ -18,12 +20,12 @@ export function AuditPage() {
 
   return (
     <PageScaffold
-      title="الأمن والتدقيق"
-      subtitle="كل إجراء إداري حسّاس قابل للتتبع"
+      title={t("page.audit.title")}
+      subtitle={t("page.audit.subtitle")}
       actions={
         <Input
           className="w-64"
-          placeholder="بحث في السجل…"
+          placeholder={t("page.audit.search")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -33,14 +35,14 @@ export function AuditPage() {
         <table className="sa-table w-full min-w-[960px]">
           <thead>
             <tr className="border-b">
-              <th className="px-3 py-2 text-start">الوقت</th>
-              <th className="px-3 py-2 text-start">المنفّذ</th>
-              <th className="px-3 py-2 text-start">الإجراء</th>
-              <th className="px-3 py-2 text-start">الهدف</th>
-              <th className="px-3 py-2 text-start">قبل</th>
-              <th className="px-3 py-2 text-start">بعد</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.time")}</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.actor")}</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.action")}</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.target")}</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.before")}</th>
+              <th className="px-3 py-2 text-start">{t("page.audit.col.after")}</th>
               <th className="px-3 py-2 text-start">IP</th>
-              <th className="px-3 py-2 text-start">النتيجة</th>
+              <th className="px-3 py-2 text-start">{t("common.status")}</th>
             </tr>
           </thead>
           <tbody>
@@ -54,8 +56,8 @@ export function AuditPage() {
                 <td className="px-3 py-2 text-xs">
                   {e.targetType}/{e.targetId}
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-500">{e.before || "—"}</td>
-                <td className="px-3 py-2 text-xs text-slate-500">{e.after || "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-500">{e.before || t("common.dash")}</td>
+                <td className="px-3 py-2 text-xs text-slate-500">{e.after || t("common.dash")}</td>
                 <td className="px-3 py-2 font-mono text-xs">{e.ip}</td>
                 <td className="px-3 py-2">
                   <StatusPill
@@ -74,7 +76,7 @@ export function AuditPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
-                  لا سجلات مطابقة.
+                  {t("page.audit.empty")}
                 </td>
               </tr>
             ) : null}

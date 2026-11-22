@@ -1,4 +1,5 @@
 import { cn } from "../../../lib/cn";
+import { useLocale } from "../../../store/LocaleContext";
 
 export type SavedViewDef = {
   id: string;
@@ -19,6 +20,7 @@ export function SavedViewsBar({
   onSaveCurrent?: () => void;
   onDelete?: (id: string) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {views.map((v) => (
@@ -61,7 +63,7 @@ export function SavedViewsBar({
           onClick={onSaveCurrent}
           className="rounded border border-dashed border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:border-blue-300 hover:text-blue-700"
         >
-          حفظ العرض الحالي
+          {t("views.saveCurrent")}
         </button>
       ) : null}
     </div>

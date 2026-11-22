@@ -3,7 +3,7 @@ import type { Branch, CategoryItem, Department, Entity } from "./types";
 import { effectiveStatus, isOverdue } from "./status";
 import type { RecordItem } from "./types";
 
-export type PerfChartRow = { name: string; منجز: number; متأخر: number };
+export type PerfChartRow = { name: string; done: number; late: number };
 
 export function perfByBranch(
   records: RecordItem[],
@@ -15,7 +15,7 @@ export function perfByBranch(
       (r) => effectiveStatus(r) === "done" || effectiveStatus(r) === "closed",
     ).length;
     const overdue = inBranch.filter(isOverdue).length;
-    return { name: b.name, "منجز": done, "متأخر": overdue };
+    return { name: b.name, done, late: overdue };
   });
 }
 
@@ -33,7 +33,7 @@ export function perfByDepartmentInBranch(
         effectiveStatus(r) === "done" || effectiveStatus(r) === "closed",
     ).length;
     const overdue = inDept.filter(isOverdue).length;
-    return { name: d.name, "منجز": done, "متأخر": overdue };
+    return { name: d.name, done, late: overdue };
   });
 }
 

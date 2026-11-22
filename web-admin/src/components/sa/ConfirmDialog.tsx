@@ -1,11 +1,12 @@
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
+import { useLocale } from "../../store/LocaleContext";
 
 export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "تأكيد",
+  confirmLabel,
   danger,
   onConfirm,
   onClose,
@@ -18,13 +19,14 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   if (!open) return null;
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="text-sm text-slate-600">{message}</p>
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>
-          إلغاء
+          {t("common.cancel")}
         </Button>
         <Button
           variant={danger ? "danger" : "primary"}
@@ -33,7 +35,7 @@ export function ConfirmDialog({
             onClose();
           }}
         >
-          {confirmLabel}
+          {confirmLabel ?? t("common.confirm")}
         </Button>
       </div>
     </Modal>

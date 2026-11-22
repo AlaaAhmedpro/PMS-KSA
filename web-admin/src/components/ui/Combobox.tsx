@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { useLocale } from "../../store/LocaleContext";
 
 export interface ComboOption {
   id: string;
@@ -22,10 +23,13 @@ export function Combobox({
   value,
   onChange,
   onCreate,
-  placeholder = "اختر...",
-  searchPlaceholder = "بحث...",
+  placeholder,
+  searchPlaceholder,
   allowCreate = false,
 }: Props) {
+  const { t } = useLocale();
+  const ph = placeholder ?? t("ui.select.placeholder");
+  const searchPh = searchPlaceholder ?? t("ui.select.searchPlaceholder");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +69,7 @@ export function Combobox({
         className="flex w-full items-center justify-between rounded-xl border border-steel-300 bg-white px-3.5 py-2.5 text-sm text-steel-800 transition-colors focus-ring dark:border-steel-700 dark:bg-steel-900 dark:text-steel-100"
       >
         <span className={cn(!selected && "text-steel-400")}>
-          {selected ? selected.name : placeholder}
+          {selected ? selected.name : ph}
         </span>
         <ChevronDown className="h-4 w-4 text-steel-400" />
       </button>
@@ -78,7 +82,7 @@ export function Combobox({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={searchPh}
               className="w-full bg-transparent text-sm outline-none placeholder:text-steel-400"
             />
           </div>
@@ -107,12 +111,12 @@ export function Combobox({
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-500/10 dark:text-brand-400"
               >
                 <Plus className="h-4 w-4" />
-                إضافة "{query.trim()}"
+                {t("ui.combobox.add", { name: query.trim() })}
               </button>
             )}
             {filtered.length === 0 && !showCreate && (
               <p className="px-3 py-3 text-center text-xs text-steel-400">
-                لا توجد نتائج
+                {t("ui.select.noResults")}
               </p>
             )}
           </div>

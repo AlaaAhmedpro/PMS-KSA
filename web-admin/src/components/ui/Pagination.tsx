@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { formatNumber } from "../../lib/format";
+import { useLocale } from "../../store/LocaleContext";
 
 export function Pagination({
   page,
@@ -19,6 +20,7 @@ export function Pagination({
   rangeEnd: number;
   className?: string;
 }) {
+  const { t } = useLocale();
   if (total === 0) return null;
 
   const pages = buildPageList(page, totalPages);
@@ -31,11 +33,11 @@ export function Pagination({
       )}
     >
       <p className="text-xs font-medium text-steel-500 dark:text-steel-400">
-        عرض{" "}
+        {t("ui.pagination.showing")}{" "}
         <span className="font-bold text-steel-700 dark:text-steel-200">
           {formatNumber(rangeStart)}–{formatNumber(rangeEnd)}
         </span>{" "}
-        من{" "}
+        {t("ui.pagination.of")}{" "}
         <span className="font-bold text-steel-700 dark:text-steel-200">
           {formatNumber(total)}
         </span>
@@ -45,10 +47,10 @@ export function Pagination({
         <PageBtn
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          aria-label="الصفحة السابقة"
+          aria-label={t("ui.pagination.prevPage")}
         >
           <ChevronRight className="h-4 w-4" />
-          <span className="hidden sm:inline">السابق</span>
+          <span className="hidden sm:inline">{t("ui.pagination.prev")}</span>
         </PageBtn>
 
         {pages.map((p, i) =>
@@ -79,9 +81,9 @@ export function Pagination({
         <PageBtn
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          aria-label="الصفحة التالية"
+          aria-label={t("ui.pagination.nextPage")}
         >
-          <span className="hidden sm:inline">التالي</span>
+          <span className="hidden sm:inline">{t("ui.pagination.next")}</span>
           <ChevronLeft className="h-4 w-4" />
         </PageBtn>
       </div>

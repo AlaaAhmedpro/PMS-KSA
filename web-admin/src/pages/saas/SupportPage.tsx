@@ -8,15 +8,8 @@ import { usePlatform } from "../../store/PlatformStore";
 import { useAuth } from "../../store/AuthContext";
 import { can } from "../../lib/platformRbac";
 import type { TicketStatus } from "../../lib/platformDomain";
-
-const STATUS_LABEL: Record<TicketStatus, string> = {
-  open: "مفتوحة",
-  in_progress: "قيد المعالجة",
-  pending_customer: "بانتظار العميل",
-  escalated: "مصعّدة",
-  resolved: "محلولة",
-  closed: "مغلقة",
-};
+import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
 export function SupportPage() {
   const {
@@ -28,67 +21,74 @@ export function SupportPage() {
     replyTicket,
   } = usePlatform();
   const { user } = useAuth();
+  const { t, L } = useLocale();
+  const { ticketStatus, ticketStatusOptions, ticketPriority, ticketPriorityOptions } =
+    usePlatformLabels();
   const writable = can(user?.role, "support");
   const [status, setStatus] = useState("all");
   const [activeId, setActiveId] = useState<string | null>(tickets[0]?.id || null);
   const [reply, setReply] = useState("");
 
   const rows = useMemo(
-    () => tickets.filter((t) => status === "all" || t.status === status),
+    () => tickets.filter((tkt) => status === "all" || tkt.status === status),
     [tickets, status],
   );
-  const active = tickets.find((t) => t.id === activeId) || rows[0];
+  const active = tickets.find((tkt) => tkt.id === activeId) || rows[0];
+
+  const priorityOptions =
+    ticketPriorityOptions?.() ??
+    (["low", "normal", "high", "critical"] as const).map((p) => ({
+      value: p,
+      label: ticketPriority(p),
+    }));
 
   return (
     <PageScaffold
-      title="دعم العملاء"
-      subtitle="تذاكر الدعم عبر المنشآت"
+      title={t("page.support.title")}
+      subtitle={t("page.support.subtitle")}
       actions={
         <SearchableSelect
           value={status}
           onChange={setStatus}
           options={[
-            { value: "all", label: "كل الحالات" },
-            ...Object.entries(STATUS_LABEL).map(([value, label]) => ({
-              value,
-              label,
-            })),
+            { value: "all", label: t("page.subs.allStatuses") },
+            ...ticketStatusOptions(),
           ]}
         />
       }
     >
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         <div className="sa-surface max-h-[70vh] overflow-y-auto divide-y divide-slate-100">
-          {rows.map((t) => (
+          {rows.map((tkt) => (
             <button
-              key={t.id}
+              key={tkt.id}
               type="button"
-              onClick={() => setActiveId(t.id)}
+              onClick={() => setActiveId(tkt.id)}
               className={`block w-full px-3 py-3 text-start hover:bg-slate-50 ${
-                active?.id === t.id ? "bg-blue-50" : ""
+                active?.id === tkt.id ? "bg-blue-50" : ""
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-400">{t.number}</span>
+                <span className="text-xs font-bold text-slate-400">{tkt.number}</span>
                 <StatusPill
-                  label={STATUS_LABEL[t.status]}
+                  label={ticketStatus(tkt.status)}
                   tone={
-                    t.status === "escalated"
+                    tkt.status === "escalated"
                       ? "danger"
-                      : t.status === "resolved"
+                      : tkt.status === "resolved"
                         ? "success"
                         : "info"
                   }
                 />
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-800">{t.subject}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{tkt.subject}</p>
               <p className="text-[11px] text-slate-400">
-                {organizations.find((o) => o.id === t.organizationId)?.name}
+                {organizations.find((o) => o.id === tkt.organizationId)?.name}
               </p>
             </button>
           ))}
           {rows.length === 0 ? (
-            <p className="p-4 text-sm text-slate-400">لا تذاكر.</p>
+            <p className="p-4 text-sm text-slate-400">{t("page.support.empty")}</p>
           ) : null}
         </div>
 
@@ -97,7 +97,8 @@ export function SupportPage() {
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-extrabold">{active.subject}</h3>
               <p className="mt-1 text-xs text-slate-500">
-                {active.number} · {active.requesterName} · أولوية {active.priority}
+                {active.number} · {active.requesterName} ·{" "}
+                {t("page.support.priority", { p: ticketPriority(active.priority) })}
               </p>
               {writable ? (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -106,10 +107,7 @@ export function SupportPage() {
                     onChange={(v) =>
                       updateTicketStatus(active.id, v as TicketStatus)
                     }
-                    options={Object.entries(STATUS_LABEL).map(([value, label]) => ({
-                      value,
-                      label,
-                    }))}
+                    options={ticketStatusOptions()}
                   />
                   <SearchableSelect
                     value={active.priority}
@@ -119,21 +117,16 @@ export function SupportPage() {
                         v as "low" | "normal" | "high" | "critical",
                       )
                     }
-                    options={[
-                      { value: "low", label: "منخفضة" },
-                      { value: "normal", label: "عادية" },
-                      { value: "high", label: "عالية" },
-                      { value: "critical", label: "حرجة" },
-                    ]}
+                    options={priorityOptions}
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      assignTicket(active.id, user?.name || "وكيل الدعم")
+                      assignTicket(active.id, user?.name || t("domain.platformRole.support_agent"))
                     }
                   >
-                    تعيين لي
+                    {t("page.support.assignMe")}
                   </Button>
                 </div>
               ) : null}
@@ -149,7 +142,7 @@ export function SupportPage() {
                   }`}
                 >
                   <p className="text-[11px] font-bold text-slate-500">
-                    {m.authorName} · {m.at.replace("T", " ").slice(0, 16)}
+                    {L(m.authorName)} · {m.at.replace("T", " ").slice(0, 16)}
                   </p>
                   <p className="mt-1 text-slate-800">{m.text}</p>
                 </div>
@@ -161,7 +154,7 @@ export function SupportPage() {
                   rows={3}
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  placeholder="رد الوكيل…"
+                  placeholder={t("page.support.agentReply")}
                 />
                 <div className="mt-2 flex justify-end">
                   <Button
@@ -170,7 +163,7 @@ export function SupportPage() {
                       setReply("");
                     }}
                   >
-                    إرسال
+                    {t("page.support.send")}
                   </Button>
                 </div>
               </div>

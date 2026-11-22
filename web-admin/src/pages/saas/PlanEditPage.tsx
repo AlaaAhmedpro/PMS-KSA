@@ -8,14 +8,31 @@ import { usePlatform } from "../../store/PlatformStore";
 import { useAuth } from "../../store/AuthContext";
 import { can } from "../../lib/platformRbac";
 import {
-  ENTITLEMENT_LABELS,
   entitlementsToModules,
   type EntitlementKey,
   type PlanEntitlements,
   type SubscriptionPlan,
 } from "../../lib/platformDomain";
+import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
-const ENT_KEYS = Object.keys(ENTITLEMENT_LABELS) as EntitlementKey[];
+const ENT_KEYS: EntitlementKey[] = [
+  "portfolio",
+  "program",
+  "initiative",
+  "strategicObjectives",
+  "advancedReporting",
+  "resourceManagement",
+  "customWorkflows",
+  "advancedRbac",
+  "apiAccess",
+  "aiFeatures",
+  "advancedAnalytics",
+  "customBranding",
+  "sso",
+  "dedicatedDatabase",
+  "prioritySupport",
+];
 
 function emptyPlan(): SubscriptionPlan {
   const entitlements = Object.fromEntries(
@@ -45,6 +62,8 @@ export function PlanEditPage() {
   const isNew = id === "new";
   const { plans, upsertPlan, updatePlan } = usePlatform();
   const { user } = useAuth();
+  const { t } = useLocale();
+  const { entitlement, clientLabel } = usePlatformLabels();
   const writable = can(user?.role, "plans.write");
   const navigate = useNavigate();
   const existing = plans.find((p) => p.id === id);
@@ -58,15 +77,18 @@ export function PlanEditPage() {
   const [saved, setSaved] = useState(false);
 
   const title = useMemo(
-    () => (isNew ? "إنشاء خطة" : `تعديل: ${existing?.name || id}`),
-    [isNew, existing, id],
+  () =>
+      isNew
+        ? t("page.planEdit.create")
+        : `${t("page.planEdit.title")}: ${existing?.name || id}`,
+    [isNew, existing, id, t],
   );
 
   if (!isNew && !existing) {
     return (
-      <PageScaffold title="الخطة غير موجودة">
+      <PageScaffold title={t("page.planEdit.notFound")}>
         <Link to="/plans" className="text-sm font-bold text-blue-600">
-          العودة
+          {t("common.back")}
         </Link>
       </PageScaffold>
     );
@@ -91,24 +113,24 @@ export function PlanEditPage() {
   return (
     <PageScaffold
       title={title}
-      subtitle="الامتيازات والحدود تُقرأ من الخطة — لا تُثبَّت في صفحات أخرى"
+      subtitle={t("page.planEdit.subtitle")}
       actions={
         writable ? (
-          <Button onClick={save}>حفظ</Button>
+          <Button onClick={save}>{t("common.save")}</Button>
         ) : (
-          <StatusReadonly />
+          <StatusReadonly label={t("domain.platformRole.readonly_admin")} />
         )
       }
     >
       <div className="sa-surface grid gap-4 p-4 lg:grid-cols-2">
-        <Field label="الاسم">
+        <Field label={t("common.name")}>
           <Input
             disabled={!writable}
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
         </Field>
-        <Field label="فئة العميل">
+        <Field label={t("page.planEdit.clientType")}>
           <SearchableSelect
             value={draft.clientType}
             onChange={(v) =>
@@ -117,21 +139,19 @@ export function PlanEditPage() {
                 clientType: v as SubscriptionPlan["clientType"],
               })
             }
-            options={[
-              { value: "small", label: "شركة صغيرة" },
-              { value: "enterprise", label: "مؤسسة" },
-              { value: "government", label: "حكومي" },
-            ]}
+            options={(
+              ["small", "enterprise", "government"] as const
+            ).map((v) => ({ value: v, label: clientLabel(v) }))}
           />
         </Field>
-        <Field label="الوصف" className="lg:col-span-2">
+        <Field label={t("common.description")} className="lg:col-span-2">
           <Textarea
             disabled={!writable}
             value={draft.description}
             onChange={(e) => setDraft({ ...draft, description: e.target.value })}
           />
         </Field>
-        <Field label="سعر شهري (ر.س)">
+        <Field label={t("page.planEdit.priceMonthly")}>
           <Input
             type="number"
             disabled={!writable}
@@ -141,7 +161,7 @@ export function PlanEditPage() {
             }
           />
         </Field>
-        <Field label="سعر سنوي (ر.س)">
+        <Field label={t("page.planEdit.priceAnnual")}>
           <Input
             type="number"
             disabled={!writable}
@@ -151,7 +171,7 @@ export function PlanEditPage() {
             }
           />
         </Field>
-        <Field label="أيام التجربة">
+        <Field label={t("page.planEdit.trialDays")}>
           <Input
             type="number"
             disabled={!writable}
@@ -161,7 +181,7 @@ export function PlanEditPage() {
             }
           />
         </Field>
-        <Field label="المقاعد المشمولة">
+        <Field label={t("page.planEdit.seats")}>
           <Input
             type="number"
             disabled={!writable}
@@ -173,10 +193,10 @@ export function PlanEditPage() {
         </Field>
         {(
           [
-            ["maxUsers", "حد المستخدمين"],
-            ["maxProjects", "حد المشاريع"],
-            ["maxStorageGb", "حد التخزين GB"],
-            ["maxApiRequests", "حد طلبات API"],
+            ["maxUsers", t("page.planEdit.limit.users")],
+            ["maxProjects", t("page.planEdit.limit.projects")],
+            ["maxStorageGb", t("page.planEdit.limit.storage")],
+            ["maxApiRequests", t("page.planEdit.limit.api")],
           ] as const
         ).map(([key, label]) => (
           <Field key={key} label={label}>
@@ -196,7 +216,7 @@ export function PlanEditPage() {
             />
           </Field>
         ))}
-        <Field label="قائمة الميزات (سطر لكل ميزة)" className="lg:col-span-2">
+        <Field label={t("page.planEdit.features")} className="lg:col-span-2">
           <Textarea
             disabled={!writable}
             rows={4}
@@ -207,7 +227,7 @@ export function PlanEditPage() {
       </div>
 
       <div className="sa-surface p-4">
-        <h3 className="text-sm font-extrabold">الامتيازات (Entitlements)</h3>
+        <h3 className="text-sm font-extrabold">{t("page.planEdit.entitlements")}</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {ENT_KEYS.map((key) => (
             <label key={key} className="flex items-center gap-2 text-sm">
@@ -225,7 +245,7 @@ export function PlanEditPage() {
                   })
                 }
               />
-              {ENTITLEMENT_LABELS[key]}
+              {entitlement(key)}
             </label>
           ))}
         </div>
@@ -235,6 +255,6 @@ export function PlanEditPage() {
   );
 }
 
-function StatusReadonly() {
-  return <span className="text-xs font-semibold text-slate-400">عرض فقط</span>;
+function StatusReadonly({ label }: { label: string }) {
+  return <span className="text-xs font-semibold text-slate-400">{label}</span>;
 }

@@ -7,6 +7,7 @@ import { Button } from "../ui/Button";
 import { cn } from "../../lib/cn";
 import { formatDate } from "../../lib/format";
 import { exportReportToCsv, type ReportTable } from "../../lib/reports";
+import { useLocale } from "../../store/LocaleContext";
 
 const toneText: Record<string, string> = {
   steel: "text-steel-700 dark:text-steel-100",
@@ -25,6 +26,7 @@ export function ReportModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -94,7 +96,7 @@ export function ReportModal({
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handlePrint}>
                   <Printer className="h-4 w-4" />
-                  طباعة
+                  {t("report.print")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -102,7 +104,7 @@ export function ReportModal({
                   onClick={() => exportReportToCsv(report)}
                 >
                   <FileSpreadsheet className="h-4 w-4" />
-                  تصدير Excel
+                  {t("report.exportExcel")}
                 </Button>
                 <button
                   onClick={onClose}
@@ -118,13 +120,15 @@ export function ReportModal({
               {/* Print-only official header */}
               <div className="mb-5 hidden print:block">
                 <p className="text-xl font-extrabold text-steel-900">
-                  شركة نماء للتطوير — Namaa Development
+                  {t("report.companyLine")}
                 </p>
                 <p className="text-base font-bold text-steel-800">
                   {report.title}
                 </p>
                 <p className="text-sm text-steel-600">
-                  تاريخ الإصدار: {formatDate(report.generatedAt)}
+                  {t("report.issuedAt", {
+                    date: formatDate(report.generatedAt),
+                  })}
                 </p>
                 <hr className="mt-3 border-steel-300" />
               </div>
@@ -169,7 +173,7 @@ export function ReportModal({
                             colSpan={report.columns.length}
                             className="px-4 py-10 text-center text-sm text-steel-400"
                           >
-                            لا توجد بيانات لهذا التقرير
+                            {t("report.noData")}
                           </td>
                         </tr>
                       ) : (
@@ -232,7 +236,7 @@ export function ReportModal({
               </div>
 
               <p className="mt-4 text-center text-xs text-steel-400 print:hidden">
-                إجمالي السجلات: {rows.length}
+                {t("report.totalRows", { n: rows.length })}
               </p>
             </div>
           </motion.div>

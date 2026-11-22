@@ -4,24 +4,20 @@ import { PageScaffold } from "../../components/sa/PageScaffold";
 import { StatusPill } from "../../components/sa/StatusPill";
 import { Button } from "../../components/ui/Button";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
-import { usePlatform, formatSar } from "../../store/PlatformStore";
+import { usePlatform } from "../../store/PlatformStore";
 import { useAuth } from "../../store/AuthContext";
 import { can } from "../../lib/platformRbac";
 import type { InvoiceStatus } from "../../lib/platformDomain";
-
-const INV_LABEL: Record<InvoiceStatus, string> = {
-  draft: "مسودة",
-  open: "مفتوحة",
-  paid: "مدفوعة",
-  failed: "فشل الدفع",
-  refunded: "مستردة",
-  void: "ملغاة",
-};
+import { formatSar } from "../../lib/format";
+import { useLocale } from "../../store/LocaleContext";
+import { usePlatformLabels } from "../../lib/platformI18n";
 
 export function BillingPage() {
   const { invoices, organizations, settings, updateInvoiceStatus } =
     usePlatform();
   const { user } = useAuth();
+  const { t } = useLocale();
+  const { invoiceStatus, invoiceStatusOptions } = usePlatformLabels();
   const writable = can(user?.role, "billing.write");
   const [status, setStatus] = useState("all");
 
@@ -41,22 +37,34 @@ export function BillingPage() {
     return { paid, open, failed };
   }, [invoices]);
 
+  const toneFor = (s: InvoiceStatus) =>
+    s === "paid"
+      ? "success"
+      : s === "failed"
+        ? "danger"
+        : s === "open"
+          ? "warning"
+          : "neutral";
+
   return (
     <PageScaffold
-      title="الفوترة والمالية"
-      subtitle={`ضريبة افتراضية ${(settings.vatRate * 100).toFixed(0)}% · العملة ${settings.defaultCurrency}`}
+      title={t("page.billing.title")}
+      subtitle={t("page.billing.subtitle", {
+        vat: (settings.vatRate * 100).toFixed(0),
+        currency: settings.defaultCurrency,
+      })}
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="sa-kpi p-4">
-          <p className="text-xs font-semibold text-slate-500">محصّل</p>
+          <p className="text-xs font-semibold text-slate-500">{t("page.billing.collected")}</p>
           <p className="mt-1 text-xl font-extrabold">{formatSar(totals.paid)}</p>
         </div>
         <div className="sa-kpi p-4">
-          <p className="text-xs font-semibold text-slate-500">مفتوح</p>
+          <p className="text-xs font-semibold text-slate-500">{t("page.billing.open")}</p>
           <p className="mt-1 text-xl font-extrabold">{formatSar(totals.open)}</p>
         </div>
         <div className="sa-kpi p-4">
-          <p className="text-xs font-semibold text-slate-500">فشل دفع</p>
+          <p className="text-xs font-semibold text-slate-500">{t("page.billing.failed")}</p>
           <p className="mt-1 text-xl font-extrabold text-red-700">{totals.failed}</p>
         </div>
       </div>
@@ -66,11 +74,8 @@ export function BillingPage() {
           value={status}
           onChange={setStatus}
           options={[
-            { value: "all", label: "كل الفواتير" },
-            ...Object.entries(INV_LABEL).map(([value, label]) => ({
-              value,
-              label,
-            })),
+            { value: "all", label: t("page.billing.allInvoices") },
+            ...invoiceStatusOptions(),
           ]}
         />
       </div>
@@ -79,15 +84,15 @@ export function BillingPage() {
         <table className="sa-table w-full min-w-[900px]">
           <thead>
             <tr className="border-b">
-              <th className="px-3 py-2 text-start">الرقم</th>
-              <th className="px-3 py-2 text-start">المنشأة</th>
-              <th className="px-3 py-2 text-start">الإصدار</th>
-              <th className="px-3 py-2 text-start">الاستحقاق</th>
-              <th className="px-3 py-2 text-start">قبل الضريبة</th>
-              <th className="px-3 py-2 text-start">الضريبة</th>
-              <th className="px-3 py-2 text-start">الإجمالي</th>
-              <th className="px-3 py-2 text-start">الحالة</th>
-              <th className="px-3 py-2 text-start">إجراء</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.number")}</th>
+              <th className="px-3 py-2 text-start">{t("page.subs.col.org")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.issue")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.due")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.subtotal")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.vat")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.total")}</th>
+              <th className="px-3 py-2 text-start">{t("common.status")}</th>
+              <th className="px-3 py-2 text-start">{t("page.billing.col.action")}</th>
             </tr>
           </thead>
           <tbody>
@@ -112,18 +117,7 @@ export function BillingPage() {
                     {formatSar(inv.totalSar)}
                   </td>
                   <td className="px-3 py-2">
-                    <StatusPill
-                      label={INV_LABEL[inv.status]}
-                      tone={
-                        inv.status === "paid"
-                          ? "success"
-                          : inv.status === "failed"
-                            ? "danger"
-                            : inv.status === "open"
-                              ? "warning"
-                              : "neutral"
-                      }
-                    />
+                    <StatusPill label={invoiceStatus(inv.status)} tone={toneFor(inv.status)} />
                   </td>
                   <td className="px-3 py-2">
                     {writable && inv.status === "open" ? (
@@ -132,7 +126,7 @@ export function BillingPage() {
                         variant="outline"
                         onClick={() => updateInvoiceStatus(inv.id, "paid")}
                       >
-                        تسجيل دفع
+                        {t("page.billing.recordPayment")}
                       </Button>
                     ) : writable && inv.status === "failed" ? (
                       <Button
@@ -140,10 +134,10 @@ export function BillingPage() {
                         variant="outline"
                         onClick={() => updateInvoiceStatus(inv.id, "open")}
                       >
-                        إعادة فتح
+                        {t("page.billing.reopen")}
                       </Button>
                     ) : (
-                      "—"
+                      t("common.dash")
                     )}
                   </td>
                 </tr>

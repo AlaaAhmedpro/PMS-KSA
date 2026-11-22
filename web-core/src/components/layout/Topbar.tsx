@@ -38,7 +38,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     useNotifications();
   const { resetHierarchy } = useHierarchy();
   const confirm = useConfirm();
-  const { locale, setLocale, t } = useLocale();
+  const { locale, setLocale, t, L } = useLocale();
   const navigate = useNavigate();
   const [openBell, setOpenBell] = useState(false);
   const [openUser, setOpenUser] = useState(false);
@@ -77,7 +77,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-steel-200 bg-white/80 px-4 backdrop-blur-xl dark:border-steel-800 dark:bg-steel-900/80 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-steel-200 bg-white px-4 dark:border-steel-800 dark:bg-steel-900 md:px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -89,12 +89,10 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         </button>
         <div className="hidden sm:block">
           <p className="text-sm font-bold text-steel-800 dark:text-steel-100">
-            {t("brand.systemName")}
+            {t("nav.section.workspace")}
           </p>
-          <p className="text-[11px] text-steel-400">
-            {t("brand.portalOrg", {
-              org: organization?.name ?? t("brand.company"),
-            })}
+          <p className="text-[11px] text-steel-500">
+            {organization?.name ?? t("brand.company")}
           </p>
         </div>
       </div>
@@ -115,7 +113,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             onClick={() => setLocale("ar")}
           >
-            ع
+            {t("lang.arAbbr")}
           </button>
           <button
             type="button"
@@ -227,10 +225,10 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-steel-700 dark:text-steel-200">
-                          {n.title}
+                          {L(n.title)}
                         </p>
                         <p className="mt-0.5 line-clamp-2 text-xs text-steel-400">
-                          {n.detail}
+                          {L(n.detail)}
                         </p>
                         <p className="mt-1 text-[11px] font-semibold text-steel-500 dark:text-steel-400">
                           {formatNotificationDateTime(n.createdAt)}
@@ -271,10 +269,10 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-steel-700 dark:text-steel-200">
-                          {a.title}
+                          {L(a.title)}
                         </p>
                         <p className="mt-0.5 line-clamp-2 text-xs text-steel-400">
-                          {a.detail}
+                          {L(a.detail)}
                         </p>
                       </div>
                     </button>

@@ -45,10 +45,10 @@ import type {
   TicketStatus,
   PlanEntitlements,
 } from "../lib/platformDomain";
-import {
-  entitlementsToModules,
-  formatSar,
-} from "../lib/platformDomain";
+import { entitlementsToModules } from "../lib/platformDomain";
+import { formatSar } from "../lib/format";
+import { localizeDeep } from "../i18n/localizeContent";
+import { useLocale } from "./LocaleContext";
 import {
   canTransitionOrg,
   canTransitionSub,
@@ -193,6 +193,7 @@ const PlatformContext = createContext<PlatformContextValue | null>(null);
 export function PlatformProvider({ children }: { children: ReactNode }) {
   applyDemoDataMigration();
   const { user } = useAuth();
+  const { locale } = useLocale();
 
   const [organizations, setOrganizations] = useState<PlatformOrganization[]>(() =>
     loadJson(PLATFORM_LS.tenants, SEED_ORGANIZATIONS).map(normalizeOrganization),
@@ -309,19 +310,19 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
     };
 
     return {
-      organizations,
-      tenants: organizations,
-      plans,
-      subscriptions,
-      invoices,
-      leads,
-      tickets,
-      invites,
-      loginHistory,
-      auditEvents,
-      monitoring,
-      settings,
-      demoRequests: leads,
+      organizations: localizeDeep(organizations, locale),
+      tenants: localizeDeep(organizations, locale),
+      plans: localizeDeep(plans, locale),
+      subscriptions: localizeDeep(subscriptions, locale),
+      invoices: localizeDeep(invoices, locale),
+      leads: localizeDeep(leads, locale),
+      tickets: localizeDeep(tickets, locale),
+      invites: localizeDeep(invites, locale),
+      loginHistory: localizeDeep(loginHistory, locale),
+      auditEvents: localizeDeep(auditEvents, locale),
+      monitoring: localizeDeep(monitoring, locale),
+      settings: localizeDeep(settings, locale),
+      demoRequests: localizeDeep(leads, locale),
       orgAdminAssignments: [],
       logAudit,
 
@@ -1115,6 +1116,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
     settings,
     logAudit,
     user,
+    locale,
   ]);
 
   return (

@@ -1,38 +1,51 @@
 import { PageScaffold } from "../../components/sa/PageScaffold";
 import { StatusPill } from "../../components/sa/StatusPill";
 import { usePlatform } from "../../store/PlatformStore";
+import { useLocale } from "../../store/LocaleContext";
 
 export function MonitoringPage() {
   const { monitoring } = usePlatform();
+  const { t } = useLocale();
+
+  const dbLabel =
+    monitoring.dbHealth === "healthy"
+      ? t("domain.db.healthy")
+      : monitoring.dbHealth === "degraded"
+        ? t("domain.db.degraded")
+        : t("domain.db.down");
+
+  const integLabel = (s: "up" | "down" | "degraded") =>
+    s === "up"
+      ? t("domain.integrations.up")
+      : s === "degraded"
+        ? t("domain.integrations.degraded")
+        : t("domain.integrations.down");
 
   return (
     <PageScaffold
-      title="مراقبة النظام"
-      subtitle="مؤشرات تشغيلية للديمو — تساعد على رصد المشاكل بسرعة"
+      title={t("page.monitoring.title")}
+      subtitle={t("page.monitoring.subtitle")}
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card label="توفر API" value={`${monitoring.apiAvailabilityPct}%`} ok />
-        <Card label="متوسط الاستجابة" value={`${monitoring.avgResponseMs} ms`} />
+        <Card label={t("page.monitoring.api")} value={`${monitoring.apiAvailabilityPct}%`} ok />
         <Card
-          label="مهام فاشلة (24س)"
+          label={t("page.monitoring.latency")}
+          value={`${monitoring.avgResponseMs} ms`}
+        />
+        <Card
+          label={t("page.monitoring.failedJobs")}
           value={String(monitoring.failedJobs24h)}
           warn={monitoring.failedJobs24h > 0}
         />
         <Card
-          label="معدل الأخطاء"
+          label={t("page.monitoring.errorRate")}
           value={`${monitoring.errorRatePct}%`}
           warn={monitoring.errorRatePct > 1}
         />
-        <Card label="التخزين" value={`${monitoring.storageUsedTb} TB`} />
+        <Card label={t("page.monitoring.storage")} value={`${monitoring.storageUsedTb} TB`} />
         <Card
-          label="قاعدة البيانات"
-          value={
-            monitoring.dbHealth === "healthy"
-              ? "سليمة"
-              : monitoring.dbHealth === "degraded"
-                ? "متدهورة"
-                : "متوقفة"
-          }
+          label={t("page.monitoring.database")}
+          value={dbLabel}
           ok={monitoring.dbHealth === "healthy"}
           warn={monitoring.dbHealth !== "healthy"}
         />
@@ -40,7 +53,7 @@ export function MonitoringPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="sa-surface p-4">
-          <h3 className="text-sm font-extrabold">حالة التكاملات</h3>
+          <h3 className="text-sm font-extrabold">{t("page.monitoring.integrations")}</h3>
           <ul className="mt-3 space-y-2">
             {monitoring.integrations.map((i) => (
               <li
@@ -49,13 +62,7 @@ export function MonitoringPage() {
               >
                 <span className="font-semibold">{i.name}</span>
                 <StatusPill
-                  label={
-                    i.status === "up"
-                      ? "يعمل"
-                      : i.status === "degraded"
-                        ? "متدهور"
-                        : "متوقف"
-                  }
+                  label={integLabel(i.status)}
                   tone={
                     i.status === "up"
                       ? "success"
@@ -69,7 +76,7 @@ export function MonitoringPage() {
           </ul>
         </div>
         <div className="sa-surface p-4">
-          <h3 className="text-sm font-extrabold">سجل أخطاء حديث</h3>
+          <h3 className="text-sm font-extrabold">{t("page.monitoring.errors")}</h3>
           <ul className="mt-3 space-y-2">
             {monitoring.recentErrors.map((e, idx) => (
               <li
@@ -106,9 +113,7 @@ function Card({
       className={`sa-kpi p-4 ${warn ? "border-amber-200" : ok ? "border-emerald-200" : ""}`}
     >
       <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-extrabold tabular-nums text-slate-900">
-        {value}
-      </p>
+      <p className="mt-2 text-xl font-extrabold tabular-nums text-slate-900">{value}</p>
     </div>
   );
 }
