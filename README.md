@@ -2,10 +2,10 @@
 
 مشروعان React منفصلان بالكامل — كل واحد فولدر ولينك خاص به.
 
-| المنتج | المجلد | المنفذ | الرابط |
-|--------|--------|--------|--------|
-| **Core PMS** (منظومة المنشأة) | [`web-core/`](web-core/) | 5174 | http://127.0.0.1:5174 |
-| **Super Admin** (منصة الاشتراكات) | [`web-admin/`](web-admin/) | 5175 | http://127.0.0.1:5175 |
+| المنتج | المجلد | محلي | GitHub Pages |
+|--------|--------|------|--------------|
+| **Core PMS** (منظومة المنشأة) | [`web-core/`](web-core/) | http://127.0.0.1:5174 | https://alaaahmedpro.github.io/PMS-KSA/ |
+| **Super Admin** (منصة الاشتراكات) | [`web-admin/`](web-admin/) | http://127.0.0.1:5175 | https://alaaahmedpro.github.io/PMS-KSA/admin/ |
 
 نفس الهوية البصرية (أخضر brand / glass login / RTL)، مع فصل تام للكود و`localStorage`.
 

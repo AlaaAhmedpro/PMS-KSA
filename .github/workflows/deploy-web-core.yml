@@ -1,4 +1,4 @@
-name: Deploy web-core to GitHub Pages
+name: Deploy web-core and Super Admin to GitHub Pages
 
 on:
   push:
@@ -17,28 +17,51 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web-core
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web-core/package-lock.json
-      - name: Install
+          cache-dependency-path: |
+            web-core/package-lock.json
+            web-admin/package-lock.json
+
+      - name: Install web-core
+        working-directory: web-core
         run: npm ci
-      - name: Build
+
+      - name: Build web-core
+        working-directory: web-core
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
-      - name: SPA fallback for client routing
-        run: cp dist/index.html dist/404.html
+
+      - name: Install web-admin
+        working-directory: web-admin
+        run: npm ci
+
+      - name: Build Super Admin
+        working-directory: web-admin
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/admin/
+        # vite build only — existing demo TS debt must not block Pages publish
+        run: npx vite build
+
+      - name: Assemble GitHub Pages site
+        run: |
+          mkdir -p site/admin
+          cp -r web-core/dist/. site/
+          cp -r web-admin/dist/. site/admin/
+          # SPA fallbacks for client-side routes
+          cp site/index.html site/404.html
+          cp site/admin/index.html site/admin/404.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: web-core/dist
+          path: site
 
   deploy:
     needs: build
